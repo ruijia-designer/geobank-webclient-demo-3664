@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Layers, RotateCcw, ChevronUp, ChevronDown, Plus, Minus, Globe, Check, LocateFixed, Map as MapIcon, Image as ImageIcon } from 'lucide-react';
+import { Layers, RotateCcw, ChevronUp, ChevronDown, Plus, Minus, Globe, Check, LocateFixed } from 'lucide-react';
 import type { Project } from '../types';
 import { mapWorldTransform, projectLayer, projectMapPoint, resolveMapGeometry } from '../services/mapView';
 import type { Basemap } from '../services/mapView';
@@ -81,7 +81,7 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
     </div>
     <div className="map-zoom"><button className="map-round" aria-label={t('放大地图')} onClick={() => onZoom(Math.min(4, zoom + .4))}><Plus/></button><button className="map-round" aria-label={t('缩小地图')} onClick={() => onZoom(Math.max(1, zoom - .4))}><Minus/></button>
       <div className="basemap-control" ref={menuRef}><button ref={basemapButton} className="map-round" title={t('切换底图')} aria-label={t('切换底图')} aria-haspopup="menu" aria-controls={menuId} aria-expanded={basemapOpen} onClick={() => setBasemapOpen(v => !v)}><Globe/></button>
-        {basemapOpen && <div id={menuId} className="basemap-options" role="menu" aria-label={t('底图类型')}><strong>{t('切换底图')}</strong><button role="menuitemradio" aria-checked={basemap === 'map'} onClick={() => chooseBasemap('map')}><span className="basemap-thumb schematic"/><span className="basemap-label"><span><MapIcon size={18} strokeWidth={2}/>{t('地图')}</span><small>{t('地理示意')}</small></span>{basemap === 'map' && <Check size={16}/>}</button><button role="menuitemradio" aria-checked={basemap === 'imagery'} onClick={() => chooseBasemap('imagery')}><span className="basemap-thumb imagery"/><span className="basemap-label"><span><ImageIcon size={18} strokeWidth={2}/>{t('影像')}</span><small>{t('设计参考影像')}</small></span>{basemap === 'imagery' && <Check size={16}/>}</button></div>}
+        {basemapOpen && <div id={menuId} className="basemap-options" role="menu" aria-label={t('底图类型')}><strong>{t('切换底图')}</strong><button role="menuitemradio" aria-checked={basemap === 'map'} onClick={() => chooseBasemap('map')}><span className="basemap-thumb schematic"/><span className="basemap-label"><span>{t('地图')}</span><small>{t('地理示意')}</small></span>{basemap === 'map' && <Check size={16}/>}</button><button role="menuitemradio" aria-checked={basemap === 'imagery'} onClick={() => chooseBasemap('imagery')}><span className="basemap-thumb imagery"/><span className="basemap-label"><span>{t('影像')}</span><small>{t('设计参考影像')}</small></span>{basemap === 'imagery' && <Check size={16}/>}</button></div>}
       </div>
     </div>
     <div className="coordinates" title={t('固定演示坐标，非实时定位数据')}><LocateFixed size={20} aria-label={t('圆形定位图标')}/><span className="coordinates-divider" aria-hidden="true"/><span className="coordinates-value">136.23° E, 39.89° N, 10.81</span></div>

@@ -69,8 +69,6 @@ describe('客户确认的地图控件', () => {
     const imageryOption = screen.getByRole('menuitemradio', { name: /^影像/ });
     expect(mapOption.querySelector('.basemap-thumb.schematic')).not.toBeNull();
     expect(imageryOption.querySelector('.basemap-thumb.imagery')).not.toBeNull();
-    expect(mapOption.querySelector('.basemap-label .lucide-map')).not.toBeNull();
-    expect(imageryOption.querySelector('.basemap-label .lucide-image')).not.toBeNull();
     await user.click(screen.getByRole('menuitemradio', { name: /^地图/ }));
     expect(screen.getByAltText('地理示意地图（非测绘数据）')).toHaveAttribute('src', './assets/schematic-map.svg');
     expect(screen.getByText('地图 · 地理示意，非测绘数据')).toBeInTheDocument();
