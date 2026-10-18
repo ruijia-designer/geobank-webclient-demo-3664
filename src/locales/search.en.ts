@@ -1,0 +1,21 @@
+const searchEnglish:Record<string,string>={
+ '全部字段':'All fields','盆地/工区':'Basin / work area','勘探类型':'Survey dimension','盆地名称':'Basin name',
+ '当前检索命中 {count} 个项目，项目类型为{types}，勘探类型为{dimensions}。\n{details}':'Found {count} projects. Project types: {types}. Survey dimensions: {dimensions}.\n{details}',
+ '{basin}项目年度为 {year} 年':'Project in {basin}: {year}',
+ '；':'; ',
+ '当前条件没有匹配的项目，可以调整关键词或筛选条件后重新检索。':'No projects match the current criteria. Change the keyword or filters and search again.',
+ '已复制 AI 演示摘要':'AI demo summary copied','复制不可用，请选中摘要文字复制':'Copy is unavailable. Select the summary text and copy it manually.',
+ '数据检索':'Data search','输入关键词检索数据资源与文档资料，可开启 AI 智能搜索':'Search data assets and documents by keyword. Enable AI for a demo summary.',
+ 'AI 搜索':'AI search','已开启':'On','已关闭':'Off','检索字段':'Search field','检索关键词':'Search keyword','输入关键词检索…':'Enter a search keyword…',
+ '试试关键词':'Suggested searches','试试：':'Try:','检索结果栏目':'Result categories',
+ '筛选条件':'Filters','未选择时检索全部':'No selection searches all results','{value}检索结果数量':'Result count for {value}','暂无匹配选项':'No matching options','已选筛选条件':'Selected filters','取消筛选 {value}':'Remove filter {value}',
+ 'AI 智能总结':'AI summary','已生成':'Generated','重新生成演示摘要':'Regenerate demo summary','已根据当前结果重新生成演示摘要':'Demo summary regenerated from the current results','重新生成':'Regenerate','复制':'Copy',
+ '依据当前 {count} 条项目结果生成 · 本地演示摘要':'Based on {count} current project results · Local demo summary',
+ '共找到':'Found','项目结果数量':'Project result count','条项目结果':'project results','当前检索：':'Current search:','排序':'Sort','相关度':'Relevance','↓ 年度':'↓ Year','列表':'List',
+ '所属区域':'Region','项目年度':'Project year','查看参数':'View parameters','请调整关键词或筛选条件后重试':'Change the keyword or filters and try again',
+ '1–{count} / 共 {count} 条':'1–{count} of {count} results','每页结果数量':'Results per page','30 条/页':'30 per page','首页':'First','末页':'Last',
+ '暂无{tab}结果':'No results for {tab}','当前设计未提供{tab}结果样例':'The current design has no sample results for {tab}',
+ '项目参数':'Project parameters','归档状态':'Archive status',
+ '采集项目':'Acquisition project','处理项目':'Processing project','解释项目':'Interpretation project','井筒项目':'Well project','非地震项目':'Non-seismic project',
+};
+export default searchEnglish;

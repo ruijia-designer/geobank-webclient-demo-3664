@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
 import { MIN_RESULT_LAYOUT_WIDTH, resolveResultColumns, resizeResultColumns } from '../services/resultLayout';
@@ -17,6 +18,7 @@ interface DragSession {
 
 /** Layout preferences live only for this mounted results page, never in storage. */
 export function useResultColumns(mode: ResultLayoutMode, enabled: boolean) {
+  const {t}=useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(() => window.innerWidth);
     const [preference, setPreference] = useState<ResultColumnPreference>({ directoryWidth: null, informationRatio: null });
@@ -77,11 +79,11 @@ export function useResultColumns(mode: ResultLayoutMode, enabled: boolean) {
         role: 'separator' as const,
         tabIndex: 0,
         'aria-orientation': 'vertical' as const,
-        'aria-label': divider === 'directory' ? '调整成果目录宽度' : '调整项目信息与成果区宽度',
+        'aria-label': t(divider === 'directory' ? '调整成果目录宽度' : '调整项目信息与成果区宽度'),
         'aria-valuemin': divider === 'directory' ? 200 : 420,
         'aria-valuemax': divider === 'directory' ? Math.min(360, mode === 'split' ? sizes.directory + sizes.information - 420 : Math.max(MIN_RESULT_LAYOUT_WIDTH, width) - 840) : sizes.information + sizes.right - 420,
         'aria-valuenow': Math.round(divider === 'directory' ? sizes.directory : sizes.information),
-        title: '拖动调整宽度，或用左右方向键微调',
+        title: t('拖动调整宽度，或用左右方向键微调'),
         className: `results-resizer results-resizer-${divider}${resizing === divider ? ' active' : ''}`,
         onPointerDown: (event: PointerEvent<HTMLDivElement>) => startResize(divider, event),
         onPointerMove: moveResize,

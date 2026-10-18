@@ -119,7 +119,7 @@ describe('审批关键词、类型、状态与详情',()=>{
   expect(screen.queryByRole('button',{name:'撤销 DD-2026-0728-001'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('button',{name:'流程配置'}));
   expect(screen.getByText('data-download.bpmn')).toBeInTheDocument();
-  await user.click(screen.getByRole('button',{name:'项目归档审批'}));
+  await user.click(screen.getByRole('button',{name:'归档审批'}));
   expect(screen.queryByText('下载订单')).not.toBeInTheDocument();
   expect(screen.queryByRole('button',{name:'查询'})).not.toBeInTheDocument();
  });

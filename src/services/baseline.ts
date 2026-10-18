@@ -34,7 +34,7 @@ const contact = [name, { key: 'address', label: '地址' }, { key: 'phone', labe
 export const NAMING_GROUPS = [{ name: '处理成果', items: ['水平叠加纯波数据', '水平叠加成果数据', '叠后偏移纯波数据', '叠后偏移成果数据', '叠前时间偏移纯波数据', '叠前时间偏移成果数据', '叠前深度偏移纯波数据', '叠前深度偏移成果数据'] }, { name: '道集成果', items: ['原始炮集数据', '最终CMP道集数据', '叠前时间偏移后CRP道集数据', '叠前深度偏移后CIP道集数据'] }, { name: '速度成果', items: ['表层速度模型数据体', '最终叠加速度场'] }];
 const structure: BaselineRow[] = [['百色盆地', '4501', '盆地', 1, ''], ['东部坳陷', '450101', '坳陷', 2, '1'], ['田东凹陷', '', '凹陷', 3, '2'], ['田阳凹陷', '', '凹陷', 3, '2'], ['南部隆起', '450103', '坳陷', 2, '1'], ['靖西凸起', '', '凹陷', 3, '5'], ['西部坳陷', '450102', '坳陷', 2, '1'], ['百色凹陷', '', '凹陷', 3, '7'], ['那坡凹陷', '', '凹陷', 3, '7'], ['北部湾盆地', '8403', '盆地', 1, ''], ['北部坳陷', '840301', '坳陷', 2, '10'], ['福山凹陷', '', '凹陷', 3, '11'], ['海中凹陷', '', '凹陷', 3, '11'], ['涠西南凹陷', '', '凹陷', 3, '11'], ['东部隆起', '840304', '坳陷', 2, '10'], ['涠洲凸起', '', '凹陷', 3, '15'], ['斜阳凸起', '', '凹陷', 3, '15'], ['南部坳陷', '840303', '坳陷', 2, '10'], ['昌化凹陷', '', '凹陷', 3, '18']].map(([n, c, t, l, p], i) => ({ id: String(i + 1), name: String(n), code: String(c), type: String(t), level: Number(l), parent: String(p) }));
 export const BASELINE_CONFIGS: BaselineConfig[] = [
-    { id: 'types', title: '项目类型', description: '维护两级项目分类，分别设置一级与二级类型的显示颜色', tree: true, columns: [['name', '名称'], ['color', '颜色']], fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }], rows: [{ id: '1', name: '采集', color: '#277DA8', level: 1 }, { id: '2', name: '三维陆上常规采集', color: '#4C92B5', level: 2, parent: '1' }, { id: '3', name: '三维陆上混叠采集', color: '#4B9A88', level: 2, parent: '1' }, { id: '4', name: '二维陆上采集', color: '#8D7BAA', level: 2, parent: '1' }, ...['处理', '解释', '井筒', '非地震'].map((n, i) => ({ id: String(i + 5), name: n, color: ['#2B8C82', '#7B6FA6', '#B38439', '#647C97'][i], level: 1 }))] },
+    { id: 'types', title: '项目类型', description: '维护最多三级项目分类，分别设置各级类型的显示颜色', tree: true, columns: [['name', '名称'], ['color', '颜色']], fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }], rows: [{ id: '1', name: '采集', color: '#277DA8', level: 1 }, { id: '2', name: '三维陆上常规采集', color: '#4C92B5', level: 2, parent: '1' }, { id: '3', name: '三维陆上混叠采集', color: '#4B9A88', level: 2, parent: '1' }, { id: '4', name: '二维陆上采集', color: '#8D7BAA', level: 2, parent: '1' }, ...['处理', '解释', '井筒', '非地震'].map((n, i) => ({ id: String(i + 5), name: n, color: ['#2B8C82', '#7B6FA6', '#B38439', '#647C97'][i], level: 1 }))] },
     { id: 'naming', title: '命名规则', description: '统一成果数据的编号、目录名称与文件命名规则', columns: [], fields: [], rows: [] },
     { id: 'structure', title: '构造单元', description: '维护盆地、坳陷、凹陷与凸起的层级关系', tree: true, columns: [['name', '名称'], ['code', '编码'], ['type', '类型'], ['level', '等级'], ['note', '备注']], fields: [name, code, { key: 'sort', label: '排序值', kind: 'number' }, note], rows: structure },
     { id: 'areas', title: '工区', description: '维护工区名称、空间归属与地表信息', columns: [['name', '名称'], ['code', '代码'], ['basin', '所属盆地'], ['surface', '地表类型'], ['note', '备注']], fields: [name, { key: 'code', label: '工区代码' }, basin, { key: 'surface', label: '地表类型', kind: 'select', options: ['草原', '水域', '河流', '山地', '平原'] }, { key: 'range', label: '范围（GeoJSON）', kind: 'file' }, note], rows: simple(['东台坳陷海安凹陷孙家洼次凹', '东台坳陷白驹凹陷大丰次凹', '东台坳陷白驹凹陷大丰次凹海丰构造', '大丰次凹', '大安区块', '川南低陡褶带南缘YS112井区', '川南低陡褶带南缘云山坝区块', '川南低陡褶带南缘太阳工区', '川南低陡褶带南缘太阳背斜构造', '川南低陡褶带南缘建武向斜西南斜坡']).map((r, i) => ({ ...r, basin: i === 4 ? '四川盆地' : '', surface: i === 3 ? '草原, 水域, 河流' : '' })) },
@@ -60,10 +60,124 @@ export function baselineFilter(rows: BaselineRow[], query: string, codeQuery: st
     }
 } return rows.filter(r => ids.has(r.id)); }
 
-export const demoRows: Record<string, BaselineRow[]> = Object.fromEntries(BASELINE_CONFIGS.map(c => [c.id, c.rows.map(r => ({ ...r }))]));
+export const SORTABLE_BASELINE_IDS = new Set(['types', 'structure', 'areas', 'mining', 'imagery', 'wells']);
+export function baselineParentKey(row: Pick<BaselineRow, 'parent'>) { return row.parent || ''; }
+export function baselineSiblings(rows: BaselineRow[], row: BaselineRow) {
+    return rows.filter(candidate => baselineParentKey(candidate) === baselineParentKey(row));
+}
+
+export const MAX_PROJECT_TYPE_LEVEL = 3;
+export function baselineDescendantIds(rows: BaselineRow[], rowId: string): Set<string> {
+    const ids = new Set([rowId]);
+    let previous = 0;
+    while (ids.size !== previous) {
+        previous = ids.size;
+        for (const row of rows) if (row.parent && ids.has(row.parent)) ids.add(row.id);
+    }
+    return ids;
+}
+export function baselinePath(rows: BaselineRow[], rowId: string): string {
+    const names: string[] = [], visited = new Set<string>();
+    let row = rows.find(candidate => candidate.id === rowId);
+    while (row && !visited.has(row.id)) {
+        visited.add(row.id);
+        names.unshift(row.name);
+        row = row.parent ? rows.find(candidate => candidate.id === row!.parent) : undefined;
+    }
+    return names.join(' / ');
+}
+export function projectTypeParentOptions(rows: BaselineRow[], rowId: string) {
+    const descendants = baselineDescendantIds(rows, rowId);
+    return rows.filter(row => (row.level || 1) < MAX_PROJECT_TYPE_LEVEL && !descendants.has(row.id))
+        .map(row => ({ value: row.id, label: baselinePath(rows, row.id) }));
+}
+export function projectTypeParentError(rows: BaselineRow[], record: BaselineRow): string {
+    if (!record.parent) return '';
+    const parent = rows.find(row => row.id === record.parent);
+    if (!parent) return '请选择有效的上级类型';
+    if (baselineDescendantIds(rows, record.id).has(parent.id)) return '上级类型不能是自身或下级类型';
+    const depth = (id: string, visited = new Set<string>()): number => {
+        if (visited.has(id)) return 0;
+        const nextVisited = new Set(visited).add(id);
+        return 1 + Math.max(0, ...rows.filter(row => row.parent === id).map(row => depth(row.id, nextVisited)));
+    };
+    return (parent.level || 1) + depth(record.id) > MAX_PROJECT_TYPE_LEVEL
+        ? '项目类型最多支持三级，请选择更高一级的上级类型' : '';
+}
+
+/** Keep sibling order authoritative, flatten trees without separating their descendants. */
+export function normalizeBaselineOrder(id: string, rows: BaselineRow[]): BaselineRow[] {
+    if (!SORTABLE_BASELINE_IDS.has(id)) return rows.map(row => ({ ...row }));
+    const config = BASELINE_CONFIGS.find(candidate => candidate.id === id);
+    const hasSortField = config?.fields.some(field => field.key === 'sort');
+    const groups = new Map<string, BaselineRow[]>();
+    for (const row of rows) {
+        const parent = config?.tree ? baselineParentKey(row) : '';
+        const siblings = groups.get(parent) || [];
+        siblings.push({ ...row, ...(config?.tree ? { parent } : {}) });
+        groups.set(parent, siblings);
+    }
+    if (hasSortField) for (const siblings of groups.values()) {
+        siblings.forEach((row, index) => { row.sort = index + 1; });
+    }
+    if (!config?.tree) return groups.get('') || [];
+    const ordered: BaselineRow[] = [], visited = new Set<string>();
+    const append = (row: BaselineRow, parentLevel = 0) => {
+        if (visited.has(row.id)) return;
+        visited.add(row.id);
+        if (id === 'types') row.level = parentLevel + 1;
+        ordered.push(row);
+        for (const child of groups.get(row.id) || []) append(child, row.level || parentLevel + 1);
+    };
+    for (const root of groups.get('') || []) append(root);
+    // Retain incomplete external data rather than silently dropping an orphan node.
+    for (const siblings of groups.values()) for (const row of siblings) append(row);
+    return ordered;
+}
+
+export function moveBaselineRow(id: string, rows: BaselineRow[], rowId: string, direction: -1 | 1): BaselineRow[] {
+    if (!SORTABLE_BASELINE_IDS.has(id)) return rows;
+    const ordered = normalizeBaselineOrder(id, rows);
+    const row = ordered.find(candidate => candidate.id === rowId);
+    if (!row) return rows;
+    const siblings = baselineSiblings(ordered, row);
+    const position = siblings.findIndex(candidate => candidate.id === rowId);
+    const target = siblings[position + direction];
+    if (!target) return rows;
+    const currentIndex = ordered.findIndex(candidate => candidate.id === rowId);
+    const targetIndex = ordered.findIndex(candidate => candidate.id === target.id);
+    [ordered[currentIndex], ordered[targetIndex]] = [ordered[targetIndex], ordered[currentIndex]];
+    return normalizeBaselineOrder(id, ordered);
+}
+
+/** A manual sort value is a 1-based position within the same parent, not a global tree position. */
+export function placeBaselineRow(id: string, rows: BaselineRow[], record: BaselineRow, position?: number): BaselineRow[] {
+    const without = rows.filter(row => row.id !== record.id);
+    const nextRecord = { ...record, ...(BASELINE_CONFIGS.find(config => config.id === id)?.tree ? { parent: baselineParentKey(record) } : {}) };
+    if (!SORTABLE_BASELINE_IDS.has(id)) {
+        const previousIndex = rows.findIndex(row => row.id === record.id);
+        without.splice(previousIndex < 0 ? without.length : previousIndex, 0, nextRecord);
+        return without;
+    }
+    const siblings = baselineSiblings(without, nextRecord);
+    const previous = rows.find(row => row.id === record.id);
+    const oldPosition = previous && baselineParentKey(previous) === baselineParentKey(nextRecord)
+        ? baselineSiblings(rows, previous).findIndex(row => row.id === record.id) : siblings.length;
+    const destination = position === undefined || !Number.isFinite(position)
+        ? oldPosition : Math.max(0, Math.min(siblings.length, Math.trunc(position) - 1));
+    const before = siblings[destination];
+    without.splice(before ? without.findIndex(row => row.id === before.id) : without.length, 0, nextRecord);
+    return normalizeBaselineOrder(id, without);
+}
+
+export const demoRows: Record<string, BaselineRow[]> = Object.fromEntries(BASELINE_CONFIGS.map(c => [c.id, normalizeBaselineOrder(c.id, c.rows)]));
 export const namingCache: Record<string, {
     number: string;
     suffix: string;
 }> = {};
 
-export function saveBaselineRows(id:string,rows:BaselineRow[]){demoRows[id]=rows.map(r=>({...r}));return demoRows[id]}
+// This demo cache intentionally lives only for the current browser session.
+export function saveBaselineRows(id: string, rows: BaselineRow[]) {
+    demoRows[id] = normalizeBaselineOrder(id, rows);
+    return demoRows[id];
+}

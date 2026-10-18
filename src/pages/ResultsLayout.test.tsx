@@ -113,7 +113,7 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(sizes(container).contentStart).toBeCloseTo(start.contentStart - 25);
   });
 
-  it('两个最大化状态均可拖目录，还原后恢复隐藏栏比例与活动页签', async () => {
+  it('独立全屏与隐藏状态均可拖目录，显示与还原后恢复比例及活动页签', async () => {
     const user = userEvent.setup();
     const { container } = render(<Harness/>);
     drag(divider('directory'), 20);
@@ -121,19 +121,23 @@ describe('成果页三栏真实拖拽流程', () => {
     const split = sizes(container);
     const ratio = split.information / (1280 - split.directory);
     await user.click(screen.getByRole('button', { name: '综合成图' }));
-    await user.click(screen.getByRole('button', { name: '最大化右侧内容' }));
+    await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
     expect(screen.getAllByRole('separator')).toHaveLength(1);
     expect(sizes(container).contentStart).toBe(sizes(container).directory);
     drag(divider('directory'), 30);
     expect(sizes(container).directory).toBe(split.directory + 30);
     expect(sizes(container).information / (1280 - sizes(container).directory)).toBeCloseTo(ratio);
 
-    await user.click(screen.getByRole('button', { name: '最大化项目信息' }));
+    await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
     expect(screen.getAllByRole('separator')).toHaveLength(1);
     drag(divider('directory'), -10);
     expect(sizes(container).directory).toBe(split.directory + 20);
     expect(screen.getByLabelText('已打开5个页签')).toHaveTextContent('5');
-    await user.click(screen.getByRole('button', { name: '恢复默认分屏' }));
+    await user.click(screen.getByRole('button', { name: '显示成果视图' }));
+    expect(lastApi.state.rightMaximized).toBe(true);
+    expect(lastApi.state.informationMaximized).toBe(false);
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: '还原' }));
     const restored = sizes(container);
     expect(screen.getAllByRole('separator')).toHaveLength(2);
     expect(restored.directory).toBe(split.directory + 20);

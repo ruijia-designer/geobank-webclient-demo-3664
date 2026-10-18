@@ -1,7 +1,7 @@
 import type { Dispatch,SetStateAction } from 'react';
 export type Role='admin'|'ordinary';
 export type Page='overview'|'results'|'search'|'approval'|'baseline'|'admin'|'login'|'statistics';
-export interface Project { id:string;name:string;year:string;basin:string;type:string;area:string;point:[number,number];readable:boolean;archived:boolean;dataId?:string }
+export interface Project { id:string;name:string;year:string;basin:string;type:string;area:string;point:[number,number];readable:boolean;archived:boolean;dataId?:string;typeId?:string;typePath?:string[] }
 export interface SearchRecord { id:string;name:string;basin:string;areaName:string;type:string;dimension:string;year:string;archived:boolean }
 export type Filters=Record<string,string[]>;
 export interface SearchState { field:string;query:string;draft:string;filters:Filters;ai:boolean;summaryCollapsed:boolean;sort:'relevance'|'year' }

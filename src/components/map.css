@@ -1,1 +1,52 @@
-.map-view{position:relative;overflow:hidden;background:#344d40;height:100%;min-height:450px}.map-scene{position:absolute;inset:0;transform-origin:50% 50%;transition:transform .65s cubic-bezier(.2,.7,.15,1)}.map-scene>img{height:100%;width:100%;object-fit:cover;user-select:none}.map-point{position:absolute;transform:translate(-50%,-50%);border:0;background:none;padding:0;width:24px;height:24px;z-index:1}.point-core{display:block;position:absolute;inset:3px;border:5px solid white;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px #ffffff66}.region-polygon{position:absolute;left:-28px;top:-28px;width:80px;height:80px;background:currentColor;opacity:.25;clip-path:polygon(10% 0,90% 10%,100% 75%,50% 100%,0 60%)}.point-caption{display:none;position:absolute;bottom:35px;left:50%;transform:translateX(-50%);padding:8px 18px;min-width:150px;max-width:330px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-radius:22px;background:white;color:#0a6f9e;box-shadow:0 2px 10px #0002;font-size:12px}.map-point:hover .point-caption,.map-point.selected .point-caption{display:block}.map-layer-controls{position:absolute;right:24px;top:22px;width:345px;z-index:5}.layer-toolbar{display:flex;gap:10px;margin-bottom:10px}.layer-pill{height:44px;background:white;border:1px solid #d8e3e9;border-radius:24px;display:flex;align-items:center;gap:16px;padding:0 21px;flex:1;color:#183a52;box-shadow:0 2px 10px #0001;font-size:16px}.layer-pill span{flex:1;text-align:left}.map-round{flex-shrink:0;width:44px;height:44px;border-radius:50%;background:white;border:1px solid #d8e3e9;display:grid;place-items:center;color:#435e70;box-shadow:0 2px 10px #0002}.map-round:hover{background:#eaf5f9}.map-layer-panel{border:1px solid #cfdae0;border-radius:12px;background:white;overflow:hidden;box-shadow:0 3px 22px #0002}.map-layer-panel header{height:50px;background:#0a6f9e;display:flex;align-items:center;gap:16px;padding:0 21px;color:white}.map-layer-panel header strong{font-size:16px;flex:1}.map-layer-panel header button{border:0;background:none;display:grid;place-items:center;color:white;width:32px;height:32px}.map-layer-panel>div{padding:5px 18px}.layer-row{height:36px;border-bottom:1px solid #edf2f4;display:flex;align-items:center}.layer-row:last-child{border-bottom:0}.layer-row.indent{padding-left:24px;color:#7d919f}.layer-row label{display:flex;align-items:center;gap:11px;font-size:14px;width:100%;cursor:pointer}.layer-row input{width:16px;height:16px;accent-color:#0a6f9e;margin:0}.layer-color{width:4px;height:12px;border-radius:2px}.layer-disclosure{border:0;background:none;display:grid;place-items:center;padding:0;width:15px;height:24px;color:#183a52}.map-zoom{position:absolute;right:24px;bottom:24px;display:grid;gap:12px}.coordinates{position:absolute;left:16px;bottom:12px;background:#fffef3;padding:8px 12px;display:flex;align-items:center;gap:12px;border-radius:4px;font-size:12px;box-shadow:0 1px 8px #0002}.rotating svg{animation:refresh .45s ease-out}@keyframes refresh{to{transform:rotate(360deg)}}@media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.map-layer-panel header,.layer-pill{padding:0 16px}}
+.map-view{position:relative;overflow:hidden;background:#344d40;height:100%;min-height:450px}
+/* The background and project points share one measured world rectangle. */
+.map-scene{position:absolute;inset:auto;transform-origin:50% 50%;transition:transform .65s cubic-bezier(.2,.7,.15,1)}
+.map-scene>img{display:block;height:100%;width:100%;object-fit:fill;pointer-events:none;user-select:none}
+.map-point{position:absolute;transform:translate(-50%,-50%);border:0;background:none;padding:0;width:24px;height:24px;z-index:1}
+.point-core{display:block;position:absolute;inset:3px;border:5px solid white;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px #ffffff66}
+.region-polygon{position:absolute;left:-28px;top:-28px;width:80px;height:80px;background:currentColor;opacity:.25;clip-path:polygon(10% 0,90% 10%,100% 75%,50% 100%,0 60%)}
+.point-caption{display:none;position:absolute;bottom:35px;left:50%;transform:translateX(-50%);padding:8px 18px;min-width:150px;max-width:330px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-radius:22px;background:white;color:#0a6f9e;box-shadow:0 2px 10px #0002;font-size:12px}
+.map-point:hover .point-caption,.map-point.selected .point-caption{display:block}
+.map-layer-controls{position:absolute;right:24px;top:22px;width:345px;z-index:5}
+.layer-toolbar{display:flex;margin-bottom:10px}
+.layer-pill{height:44px;background:white;border:1px solid #d8e3e9;border-radius:24px;display:flex;align-items:center;gap:16px;padding:0 21px;flex:1;color:#183a52;box-shadow:0 2px 10px #0001;font-size:16px;font-weight:400;line-height:22px}
+.layer-pill span{flex:1;text-align:left}
+.layer-pill>svg,.layer-reset>svg{flex-shrink:0}
+.map-round{flex-shrink:0;width:44px;height:44px;border-radius:50%;background:white;border:1px solid #d8e3e9;display:grid;place-items:center;color:#435e70;box-shadow:0 2px 10px #0002}
+.map-round:hover{background:#eaf5f9}
+.map-layer-panel{border:1px solid #cfdae0;border-radius:12px;background:white;overflow:hidden;box-shadow:0 3px 22px #0002}
+.map-layer-panel header{height:50px;background:#0a6f9e;color:white}
+.map-layer-panel header .layer-reset{border:0;background:none;display:flex;align-items:center;gap:16px;width:100%;height:100%;padding:0 21px;color:white;font-size:16px;font-weight:400;line-height:22px;text-align:left}
+.map-layer-panel header .layer-reset:hover{background:#ffffff20}
+.map-layer-panel>div{padding:5px 18px}
+.layer-row{height:36px;border-bottom:1px solid #edf2f4;display:flex;align-items:center}
+.layer-row:last-child{border-bottom:0}
+.layer-row.indent{padding-left:24px;color:#7d919f}
+.layer-row label{display:flex;align-items:center;gap:11px;font-size:14px;min-width:0;width:100%;cursor:pointer}
+.layer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-row input,.layer-color{flex-shrink:0}
+.layer-row input{width:16px;height:16px;accent-color:#0a6f9e;margin:0}
+.layer-color{width:4px;height:12px;border-radius:2px}
+.layer-disclosure{border:0;background:none;display:grid;place-items:center;padding:0;width:15px;height:24px;color:#183a52}
+.map-zoom{position:absolute;right:24px;bottom:24px;display:grid;gap:12px}
+.coordinates{position:absolute;left:16px;bottom:12px;min-height:40px;background:#f5f7f9;border:1px solid #d3dfe5;padding:8px 12px;display:flex;align-items:center;gap:12px;border-radius:6px;box-shadow:0 1px 8px #0002}
+.coordinates svg{color:#0a6f9e;flex-shrink:0}
+.coordinates-divider{height:22px;width:1px;background:#c9d6de;flex-shrink:0}
+.coordinates-value{color:#304f65;font-size:14px;font-weight:600;line-height:22px;white-space:nowrap}
+.rotating svg{animation:refresh .45s ease-out}
+@keyframes refresh{to{transform:rotate(360deg)}}
+.basemap-control{position:relative}
+.basemap-options{position:absolute;right:56px;bottom:0;min-width:210px;background:white;border:1px solid #d8e3e9;border-radius:8px;box-shadow:0 5px 22px #183a5233;overflow:hidden;padding:8px;z-index:8}
+.basemap-options>strong{display:block;color:#7d919f;font-size:12px;font-weight:500;padding:5px 8px 9px}
+.basemap-options>button{display:flex;align-items:center;gap:10px;width:100%;min-height:57px;padding:7px;border:0;border-radius:5px;background:white;color:#435e70;text-align:left;font-size:14px}
+.basemap-options>button:hover,.basemap-options>button[aria-checked=true]{background:#eaf5f9}
+.basemap-label{flex:1;white-space:nowrap}
+.basemap-label>span{display:flex;align-items:center;gap:7px}
+.basemap-label svg{color:#0a6f9e;flex-shrink:0}
+.basemap-options small{display:block;color:#7d919f;font-size:10px;margin-top:4px}
+.basemap-thumb{width:47px;height:37px;background-position:center;background-size:cover;border:1px solid #d8e3e9;border-radius:4px;flex-shrink:0}
+.basemap-thumb.imagery{background-image:url('/assets/satellite-map.webp')}
+.basemap-thumb.schematic{background-image:url('/assets/schematic-map.svg')}
+.map-demo-attribution{position:absolute;left:16px;bottom:60px;max-width:calc(100% - 90px);background:#fffffff0;border-radius:4px;padding:5px 8px;font-size:11px;color:#59717b;pointer-events:none}
+@media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.layer-pill,.map-layer-panel header .layer-reset{padding:0 16px}}
+@media(prefers-reduced-motion:reduce){.map-scene{transition:none}.rotating svg{animation:none}}
