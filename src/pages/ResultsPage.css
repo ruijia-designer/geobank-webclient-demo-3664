@@ -37,7 +37,7 @@
 .results-directory>nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .result-project-options small{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .result-project-options .project-type-label{display:inline-block;border-radius:3px;padding:2px 7px;color:#fff;font-size:11px;white-space:nowrap}
-.result-project-options small>span:last-child{margin-left:auto;white-space:nowrap}
+.result-project-options small>span:last-child{white-space:nowrap}
 .result-facts dd,.result-sgy dd,.result-geology dd{flex:1;min-width:0}
 .information-card input,.information-card select,.project-note-editor{width:100%;min-width:0;border:1px solid #cbdde8;border-radius:4px;background:#fff;color:#435e70;padding:6px;font-size:13px}
 .information-card input,.information-card select{height:33px}
