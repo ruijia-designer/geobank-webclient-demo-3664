@@ -9,12 +9,17 @@ beforeEach(()=>{
   window.history.replaceState(null,'','/#/overview');
 });
 
+async function chooseLanguage(user:ReturnType<typeof userEvent.setup>,language:'中文'|'English'){
+  await user.click(screen.getByRole('button',{name:/^(选择语言|Choose language)$/}));
+  await user.click(screen.getByRole('menuitemradio',{name:language}));
+}
+
 describe('顶部中英文切换',()=>{
   it('真正切换导航及概览，保留筛选关键词、图层勾选和业务项目名',async()=>{
     const user=userEvent.setup(); render(<App/>);
     await user.type(screen.getByRole('textbox',{name:'搜索项目'}),'2024');
     await user.click(screen.getByRole('checkbox',{name:'处理'}));
-    await user.click(screen.getByRole('button',{name:'切换为英文'}));
+    await chooseLanguage(user,'English');
     expect(document.documentElement.lang).toBe('en');
     const nav=screen.getByRole('navigation',{name:'Main navigation'});
     for(const label of ['Overview','Results','Search','Statistics','Approvals','Reference','Tools']){
@@ -24,7 +29,7 @@ describe('顶部中英文切换',()=>{
     expect(screen.getByRole('checkbox',{name:'Processing'})).not.toBeChecked();
     expect(screen.getByRole('button',{name:'Project: 2024年山西省左权西乡处理项目'})).toBeInTheDocument();
     expect(window.location.hash).toBe('#/overview');
-    await user.click(screen.getByRole('button',{name:'Switch to Chinese'}));
+    await chooseLanguage(user,'中文');
     expect(screen.getByRole('textbox',{name:'搜索项目'})).toHaveValue('2024');
     expect(screen.getByRole('checkbox',{name:'处理'})).not.toBeChecked();
   });
@@ -35,7 +40,7 @@ describe('顶部中英文切换',()=>{
     expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
     const content=document.querySelector('.result-right-content') as HTMLElement;
     content.scrollTop=240;fireEvent.scroll(content);
-    await user.click(screen.getByRole('button',{name:'切换为英文'}));
+    await chooseLanguage(user,'English');
     expect(document.querySelector('.result-right-content')).toBe(content);
     expect(content.scrollTop).toBe(240);
     expect(screen.getByRole('heading',{name:'Results overview'})).toBeInTheDocument();
@@ -52,13 +57,91 @@ describe('顶部中英文切换',()=>{
 
   it('刷新记住语言，并支持切回中文',async()=>{
     const user=userEvent.setup();const first=render(<App/>);
-    await user.click(screen.getByRole('button',{name:'切换为英文'}));
+    await chooseLanguage(user,'English');
     first.unmount();render(<App/>);
-    expect(screen.getByRole('button',{name:'Switch to Chinese'})).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Choose language'})).toBeInTheDocument();
     expect(document.title).toBe('Geophysical Data Bank');
-    await user.click(screen.getByRole('button',{name:'Switch to Chinese'}));
+    await chooseLanguage(user,'中文');
     expect(sessionStorage.getItem('geobank-demo-locale')).toBe('zh');
     expect(document.documentElement.lang).toBe('zh-CN');
     expect(document.title).toBe('物探数据银行');
+  });
+
+  it('语言菜单显示四个选项，阿拉伯语和西班牙语仅展示，不改变当前语言',async()=>{
+    const user=userEvent.setup();render(<App/>);
+    const trigger=screen.getByRole('button',{name:'选择语言'});
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded','true');
+    const menu=screen.getByRole('menu',{name:'语言'});
+    expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(4);
+    expect(within(menu).getByRole('menuitemradio',{name:'中文'})).toHaveAttribute('aria-checked','true');
+    for(const name of ['العربية','Español']){
+      const option=within(menu).getByRole('menuitemradio',{name});
+      expect(option).toBeDisabled();
+      await user.click(option);
+      expect(sessionStorage.getItem('geobank-demo-locale')).toBe('zh');
+      expect(document.documentElement.lang).toBe('zh-CN');
+    }
+    await user.click(within(menu).getByRole('menuitemradio',{name:'English'}));
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    const englishTrigger=screen.getByRole('button',{name:'Choose language'});
+    expect(englishTrigger).toHaveTextContent('EN');
+    expect(englishTrigger).toHaveFocus();
+    await user.click(englishTrigger);
+    expect(screen.getByRole('menuitemradio',{name:'English'})).toHaveAttribute('aria-checked','true');
+    expect(screen.getByRole('menuitemradio',{name:'العربية'})).toBeDisabled();
+    expect(screen.getByRole('menuitemradio',{name:'Español'})).toBeDisabled();
+  });
+
+  it('语言菜单支持方向键和Esc，与Demo菜单互斥并可点击外部关闭',async()=>{
+    const user=userEvent.setup();render(<App/>);
+    const trigger=screen.getByRole('button',{name:'选择语言'});
+    trigger.focus();await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemradio',{name:'中文'})).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemradio',{name:'English'})).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemradio',{name:'中文'})).toHaveFocus();
+    await user.keyboard('{End}{Enter}');
+    expect(screen.getByRole('button',{name:'Choose language'})).toHaveFocus();
+    expect(document.documentElement.lang).toBe('en');
+    await user.keyboard('{ArrowUp}{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Choose language'})).toHaveFocus();
+    await user.click(screen.getByRole('button',{name:'Demo account menu'}));
+    expect(screen.getByRole('menuitem',{name:'System management'})).toBeVisible();
+    await user.click(screen.getByRole('button',{name:'Choose language'}));
+    expect(screen.queryByRole('menuitem',{name:'System management'})).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'Demo account menu'}));
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'Choose language'}));
+    await user.click(screen.getByRole('textbox',{name:'Search projects'}));
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('工具提供两个新窗口示例链接，支持键盘和中英文，与其他菜单互斥',async()=>{
+    const user=userEvent.setup();render(<App/>);
+    const tools=screen.getByRole('button',{name:'工具'});
+    expect(tools).toBeEnabled();tools.focus();await user.keyboard('{ArrowDown}');
+    const menu=screen.getByRole('menu',{name:'工具'});
+    const links=within(menu).getAllByRole('menuitem');
+    expect(links.map(link=>link.textContent)).toEqual(['资产监控','AI 开放平台']);
+    expect(links[0]).toHaveFocus();
+    for(const link of links){expect(link).toHaveAttribute('target','_blank');expect(link).toHaveAttribute('rel','noopener noreferrer');}
+    expect(links[0]).toHaveAttribute('href','https://example.com/#asset-monitoring');
+    expect(links[1]).toHaveAttribute('href','https://example.com/#ai-open-platform');
+    await user.keyboard('{ArrowDown}');expect(links[1]).toHaveFocus();
+    await user.keyboard('{Escape}');expect(screen.queryByRole('menu')).not.toBeInTheDocument();expect(tools).toHaveFocus();
+    await user.click(screen.getByRole('button',{name:'Demo 用户菜单'}));
+    expect(screen.getByRole('menuitem',{name:'系统管理'})).toBeVisible();
+    await user.click(tools);expect(screen.queryByRole('menuitem',{name:'系统管理'})).not.toBeInTheDocument();
+    await chooseLanguage(user,'English');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'Tools'}));
+    expect(screen.getByRole('menuitem',{name:'Asset monitoring'})).toBeVisible();
+    const platform=screen.getByRole('menuitem',{name:'AI Open Platform'});
+    await user.click(platform);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(window.location.hash).toBe('#/overview');
   });
 });

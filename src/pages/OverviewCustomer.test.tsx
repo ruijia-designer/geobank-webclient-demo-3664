@@ -25,9 +25,10 @@ beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('innerWidth',1920);vi.stubGloba
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();Object.assign(demoRows,structuredClone(original));});
 
 describe('概览及客户联动要求',()=>{
-  it('未归档使用纹理色条和黄色标签，可查阅保持；配色面板没有权限标签',async()=>{
+  it('未归档保留纹理色条但不显示归档标签，可查阅保持；配色面板没有权限标签',async()=>{
     const user=userEvent.setup();const {container}=render(<Harness/>);
-    expect(screen.getAllByText('未归档')).toHaveLength(3);
+    expect(screen.queryByText('未归档')).not.toBeInTheDocument();
+    expect(api.state.projects.filter(project=>!project.archived&&project.id!=='current')).toHaveLength(3);
     expect(container.querySelectorAll('.project-stripe.unarchived')).toHaveLength(3);
     expect(screen.getAllByText('可查阅')).toHaveLength(3);
     const first=container.querySelector('.project-stripe-type') as HTMLElement;
