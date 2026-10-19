@@ -91,19 +91,33 @@ describe('基准同级排序服务', () => {
 });
 
 describe('基准操作列与类型表单', () => {
-    it('固定新增、编辑、上移、下移、删除顺序，三级省略新增仍占用同一列槽位', () => {
+    it('仅一级类型有新增按钮，二三级保持编辑、上下移和删除的列槽位', () => {
         saveBaselineRows('types', [...demoRows.types, { id: 'third', name: '三级类型', parent: '2', level: 3, color: '#277DA8' }]);
         render(<Harness section="types" />);
         const toggle = screen.getByRole('button', { name: '展开三维陆上常规采集' });
         fireEvent.click(toggle);
         const parentActions = nameRow('采集').querySelector('.baseline-row-actions') as HTMLElement;
         expect(within(parentActions).getAllByRole('button').map(button => button.title)).toEqual(['新增下级', '编辑', '上移', '下移', '删除']);
+        const secondLevelActions = nameRow('三维陆上常规采集').querySelector('.baseline-row-actions') as HTMLElement;
+        expect(within(secondLevelActions).getAllByRole('button').map(button => button.title)).toEqual(['编辑', '上移', '下移', '删除']);
+        expect(within(secondLevelActions).getByTitle('编辑')).toHaveClass('action-edit');
         const childActions = nameRow('三级类型').querySelector('.baseline-row-actions') as HTMLElement;
         expect(within(childActions).getAllByRole('button').map(button => button.title)).toEqual(['编辑', '上移', '下移', '删除']);
         expect(within(childActions).getByTitle('编辑')).toHaveClass('action-edit');
         expect(within(childActions).getByTitle('删除')).toHaveClass('action-delete');
         expect(screen.getByRole('columnheader', { name: '操作' })).toHaveClass('baseline-actions-heading');
         expect(screen.queryByRole('button', { name: /^查看/ })).not.toBeInTheDocument();
+    });
+    it('一级项目类型和二级构造单元仍可通过行按钮新增下级', async () => {
+        const user = userEvent.setup();
+        render(<Harness section="types" />);
+        await user.click(screen.getByRole('button', { name: '新增采集下级' }));
+        expect(within(screen.getByRole('dialog')).getByRole('combobox', { name: '上级类型' })).toHaveValue('1');
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
+        await user.click(within(screen.getByRole('navigation', { name: '基准栏目' })).getByRole('button', { name: '构造单元' }));
+        await user.click(screen.getByRole('button', { name: '新增东部坳陷下级' }));
+        expect(screen.getByRole('dialog')).toHaveTextContent('上级单元：东部坳陷');
+        expect(screen.getByRole('dialog')).toHaveTextContent('等级：3');
     });
     it('名称仍可打开详情，磁盘扫描保留且删除放在末尾', async () => {
         const user = userEvent.setup();
@@ -160,11 +174,13 @@ describe('基准操作列与类型表单', () => {
         expect(tableRows()[0]).toHaveTextContent('中国地质分布图');
         expect(demoRows.imagery.map(row => row.sort)).toEqual([1, 2]);
     });
-    it('二级可新增三级，三级不可新增第四级，上级下拉显示路径且不包含第三级', async () => {
+    it('新增表单保留三级分类支持，上级下拉显示路径且不包含第三级', async () => {
         const user = userEvent.setup();
         render(<Harness section="types" />);
-        await user.click(screen.getByRole('button', { name: '新增三维陆上常规采集下级' }));
+        expect(screen.queryByRole('button', { name: '新增三维陆上常规采集下级' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: '新增项目类型' }));
         let dialog = screen.getByRole('dialog');
+        await user.selectOptions(within(dialog).getByRole('combobox', { name: '上级类型' }), '2');
         expect(within(dialog).getByRole('combobox', { name: '上级类型' })).toHaveValue('2');
         expect(within(dialog).getByRole('option', { name: '采集 / 三维陆上常规采集' })).toBeInTheDocument();
         await user.type(within(dialog).getByRole('textbox', { name: /名称/ }), '三级类型');
