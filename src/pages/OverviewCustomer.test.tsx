@@ -25,15 +25,18 @@ beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('innerWidth',1920);vi.stubGloba
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();Object.assign(demoRows,structuredClone(original));});
 
 describe('概览及客户联动要求',()=>{
-  it('未归档保留纹理色条但不显示归档标签，可查阅保持；配色面板没有权限标签',async()=>{
+  it('未归档以打开的锁图标标识，所有项目使用实色色条并保留类型提示',async()=>{
     const user=userEvent.setup();const {container}=render(<Harness/>);
     expect(screen.queryByText('未归档')).not.toBeInTheDocument();
     expect(api.state.projects.filter(project=>!project.archived&&project.id!=='current')).toHaveLength(3);
-    expect(container.querySelectorAll('.project-stripe.unarchived')).toHaveLength(3);
+    expect(screen.getAllByRole('img',{name:'未归档'})).toHaveLength(3);
+    expect(container.querySelectorAll('.project-stripe')).toHaveLength(6);
+    expect(container.querySelector('.project-stripe')).toHaveAttribute('title','三维陆上常规采集');
     expect(screen.getAllByText('可查阅')).toHaveLength(3);
     const first=container.querySelector('.project-stripe-type') as HTMLElement;
     expect(first.style.color).toBe('rgb(76, 146, 181)');
     await user.click(screen.getByRole('button',{name:'配色方式'}));
+    expect(screen.queryByRole('img',{name:'未归档'})).not.toBeInTheDocument();
     expect(screen.queryByText('可查阅')).not.toBeInTheDocument();
     expect(screen.queryByText('未归档')).not.toBeInTheDocument();
     expect(container.querySelector('.project-stripe')).not.toBeInTheDocument();

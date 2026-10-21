@@ -4,19 +4,49 @@ import {render,screen,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ResultsPage from './ResultsPage';
 import {LanguageProvider,useTranslation} from '../i18n';
-import {CURRENT_PROJECT,initialState} from '../services/demo';
+import {CURRENT_PROJECT,PROJECTS,initialState} from '../services/demo';
 import type {AppApi,AppState,Project,Route} from '../types';
 import {bytesLabel,getDownloadSummary,getResultDirectories,getResultSummary,INITIAL_RESULT_FILES,parseFileBytes,resultDownloadsCache,resultFilesCache,resultInfoCache} from '../services/results';
 let lastApi:AppApi;
 const notify=vi.fn();
-function Harness({section}:{section?:string}){
- const [state,setState]=useState<AppState>(()=>({...initialState('admin'),route:{page:'results',section}}));
+function Harness({section,projectId='current'}:{section?:string;projectId?:string}){
+ const [state,setState]=useState<AppState>(()=>({...initialState('admin'),route:{page:'results',section},currentProjectId:projectId}));
  const navigate=(route:Route)=>setState(previous=>({...previous,route,currentProjectId:route.projectId||previous.currentProjectId}));
  const api:AppApi={state,setState,navigate,notify,deny:vi.fn(),openProject:vi.fn()};lastApi=api;
  return <ResultsPage api={api}/>;
 }
 beforeEach(()=>{sessionStorage.removeItem('geobank-demo-locale');vi.clearAllMocks();[resultFilesCache,resultInfoCache,resultDownloadsCache].forEach(cache=>Object.keys(cache).forEach(key=>delete cache[key]));vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>{callback(0);return 1;});});
 describe('成果页本轮客户流程',()=>{
+ it('盆地以只读输入展示，其他下拉可编辑，保存和导入均保留原盆地',async()=>{
+  const project=PROJECTS.find(project=>project.basin==='四川盆地')!;
+  const user=userEvent.setup();render(<Harness projectId={project.id}/>);
+  await user.click(screen.getByRole('button',{name:'编辑'}));
+  const basin=screen.getByRole('textbox',{name:'所属盆地'});
+  expect(basin).toHaveAttribute('readonly');expect(basin).toHaveValue(project.basin);
+  expect(screen.queryByRole('combobox',{name:'所属盆地'})).not.toBeInTheDocument();
+  await user.type(basin,'不允许修改');expect(basin).toHaveValue(project.basin);
+  await user.selectOptions(screen.getByRole('combobox',{name:'所属工区'}),'大安区块');
+  await user.click(screen.getByRole('button',{name:'保存'}));
+  expect(resultInfoCache[project.id]).toMatchObject({basin:project.basin,areaName:'大安区块'});
+  await user.click(screen.getByRole('button',{name:'导入'}));
+  await user.upload(screen.getByLabelText('选择Excel文件'),new File(['demo'],'demo.xlsx'));
+  expect(resultInfoCache[project.id].basin).toBe(project.basin);
+  expect(lastApi.state.projects.find(row=>row.id===project.id)?.basin).toBe(project.basin);
+ });
+ it('目录切换清空选择并重置分页，避免在另一个目录删除上次勾选文件',async()=>{
+  resultFilesCache.current=Array.from({length:51},(_,i)=>({...INITIAL_RESULT_FILES[0],id:'page-'+i,name:'page-'+i+'.las'}));
+  const user=userEvent.setup();render(<Harness section="wells"/>);
+  await user.click(screen.getByRole('checkbox',{name:'选择page-0.las'}));
+  await user.click(screen.getByRole('button',{name:'下一页'}));
+  expect(screen.getByText('已选 1 个文件')).toBeVisible();
+  const directory=within(screen.getByRole('navigation',{name:'成果目录'}));
+  await user.click(directory.getByRole('button',{name:'时深关系'}));
+  expect(screen.getByRole('button',{name:/^删除$/})).toBeDisabled();
+  await user.click(directory.getByRole('button',{name:'测井数据'}));
+  expect(screen.getByText('第 1–50 条，共 51 条')).toBeVisible();
+  expect(screen.getByRole('checkbox',{name:'选择page-0.las'})).not.toBeChecked();
+ });
+
  it('右侧最大化均隐藏顶部上传成果，其他布局显示且目录上传独立',async()=>{
   const user=userEvent.setup();render(<Harness/>);
   expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();

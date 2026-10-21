@@ -113,7 +113,7 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(sizes(container).contentStart).toBeCloseTo(start.contentStart - 25);
   });
 
-  it('独立全屏与隐藏状态均可拖目录，显示与还原后恢复比例及活动页签', async () => {
+  it('右侧全屏隐藏目录与分界线，退出后恢复比例及活动页签', async () => {
     const user = userEvent.setup();
     const { container } = render(<Harness/>);
     drag(divider('directory'), 20);
@@ -122,25 +122,25 @@ describe('成果页三栏真实拖拽流程', () => {
     const ratio = split.information / (1280 - split.directory);
     await user.click(screen.getByRole('button', { name: '综合成图' }));
     await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
-    expect(screen.getAllByRole('separator')).toHaveLength(1);
-    expect(sizes(container).contentStart).toBe(sizes(container).directory);
-    drag(divider('directory'), 30);
-    expect(sizes(container).directory).toBe(split.directory + 30);
+    expect(screen.queryAllByRole('separator')).toHaveLength(0);
+    expect(screen.queryByRole('navigation', {name:'成果目录'})).not.toBeInTheDocument();
+    expect(sizes(container).contentStart).toBe(0);
+    expect(sizes(container).directory).toBe(split.directory);
     expect(sizes(container).information / (1280 - sizes(container).directory)).toBeCloseTo(ratio);
 
     await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
     expect(screen.getAllByRole('separator')).toHaveLength(1);
     drag(divider('directory'), -10);
-    expect(sizes(container).directory).toBe(split.directory + 20);
+    expect(sizes(container).directory).toBe(split.directory - 10);
     expect(screen.getByLabelText('已打开5个页签')).toHaveTextContent('5');
     await user.click(screen.getByRole('button', { name: '显示成果视图' }));
     expect(lastApi.state.rightMaximized).toBe(true);
     expect(lastApi.state.informationMaximized).toBe(false);
-    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.queryAllByRole('separator')).toHaveLength(0);
     await user.click(screen.getByRole('button', { name: '还原' }));
     const restored = sizes(container);
     expect(screen.getAllByRole('separator')).toHaveLength(2);
-    expect(restored.directory).toBe(split.directory + 20);
+    expect(restored.directory).toBe(split.directory - 10);
     expect(restored.information / (1280 - restored.directory)).toBeCloseTo(ratio);
     expect(restored.contentStart).toBeCloseTo(restored.directory + restored.information);
     expect(lastApi.state.resultTab).toBe('gis');

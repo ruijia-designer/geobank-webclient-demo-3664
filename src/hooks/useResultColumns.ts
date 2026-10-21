@@ -96,7 +96,7 @@ export function useResultColumns(mode: ResultLayoutMode, enabled: boolean) {
     const style = {
         '--results-directory-width': `${sizes.directory}px`,
         '--results-information-width': `${sizes.information}px`,
-        '--results-content-start': `${mode === 'right' ? sizes.directory : sizes.directory + sizes.information}px`,
+        '--results-content-start': `${mode === 'right' ? 0 : sizes.directory + sizes.information}px`,
     } as CSSProperties;
 
     return { containerRef, style, resizing, separatorProps };

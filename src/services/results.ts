@@ -48,7 +48,7 @@ export const resultInfoCache: Record<string, ResultInfo> = {};
 export const resultFilesCache: Record<string, ResultFile[]> = {};
 export function saveProjectInfo(id:string,info:ResultInfo){resultInfoCache[id]={...info};return resultInfoCache[id]}
 export function saveDirectoryFiles(id:string,files:ResultFile[]){resultFilesCache[id]=files.map(f=>({...f}));return resultFilesCache[id]}
-export function importProjectInformation(info:ResultInfo){return {...info,basin:'沁水盆地',location:'太岳山东侧',area:'96.8',start:'2024-05-30',end:'2024-11-15',year:'2024'}}
+export function importProjectInformation(info:ResultInfo){return {...info,location:'太岳山东侧',area:'96.8',start:'2024-05-30',end:'2024-11-15',year:'2024'}}
 export function appendUploadedFiles(current:ResultFile[],files:ResultFile[],directory:string){return [...current,...files.map((f,i)=>({...f,id:'uploaded-'+Date.now()+'-'+i,directory,uploaded:new Date().toLocaleString('sv-SE'),user:'Demo'}))]}
 export function removeFiles(files:ResultFile[],ids:string[]){return files.filter(f=>!ids.includes(f.id))}
 export function bytesLabel(n: number) {

@@ -1,4 +1,6 @@
 const resultsEnglish:Record<string,string>={
+ '成果文件列表':'Result files','文件分页':'File pagination','每页行数':'Rows per page','全选当前页文件':'Select all files on this page',
+ '第 {start}–{end} 条，共 {total} 条':'{start}–{end} of {total} files','{count} 条/页':'{count} per page','第 {page} / {pages} 页':'Page {page} of {pages}','已选 {count} 个文件':'{count} files selected',
  '项目名称':'Project name','所属盆地':'Basin','所属工区':'Work area','坳陷':'Depression','凹陷':'Sag','工区位置':'Location','工区面积（km²）':"Area (km²)",'甲方':'Client','承包商':'Contractor','起始日期':'Start date','结束日期':'End date','年度':'Year',
  '数据名':'Data name','数据域类型':'Domain','地震数据维度':'Seismic dimension','数据大小（GB）':'Data size (GB)','线道间隔/采样率（ms）':'Trace spacing / sample rate (ms)',
  '正断层':'Normal fault','逆断层':'Reverse fault','走滑断层':'Strike-slip fault','潜山':'Buried hill','河道':'Channel','溶洞':'Cave','坡体':'Slope','盐丘':'Salt dome','侵入体':'Intrusion','不整合面':'Unconformity','层位（个）':'Horizon count','断层（条）':'Fault count','井数':'Well count','测井曲线':'Well log curves','是否有时深关系':'Time-depth relation',
