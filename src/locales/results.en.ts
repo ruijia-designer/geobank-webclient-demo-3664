@@ -1,4 +1,9 @@
 const resultsEnglish:Record<string,string>={
+ '归档操作':'Archive actions','申请归档':'Request archiving','查看归档申请':'View archiving request','归档审批中':'Archiving pending',
+ '提交项目归档审批':'Submit project archiving request','项目归档申请详情':'Project archiving request details','提交审批':'Submit for approval',
+ '文件总大小':'Total file size','文件个数':'File count','共 {count} 个文件':'{count} files','理由':'Reason','请输入理由…':'Enter a reason…',
+ '审批流程':'Approval workflow','请输入申请理由':'Enter a reason for this request','归档申请已提交（本地演示）':'Archiving request submitted (local demo)',
+ '{count} 条数据':'{count} records',
  '成果文件列表':'Result files','文件分页':'File pagination','每页行数':'Rows per page','全选当前页文件':'Select all files on this page',
  '第 {start}–{end} 条，共 {total} 条':'{start}–{end} of {total} files','{count} 条/页':'{count} per page','第 {page} / {pages} 页':'Page {page} of {pages}','已选 {count} 个文件':'{count} files selected',
  '项目名称':'Project name','所属盆地':'Basin','所属工区':'Work area','坳陷':'Depression','凹陷':'Sag','工区位置':'Location','工区面积（km²）':"Area (km²)",'甲方':'Client','承包商':'Contractor','起始日期':'Start date','结束日期':'End date','年度':'Year',

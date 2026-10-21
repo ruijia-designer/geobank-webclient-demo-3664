@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AppApi, AppState, Route } from '../types';
 import { initialState } from '../services/demo';
@@ -8,9 +8,9 @@ import { resultFilesCache, resultInfoCache } from '../services/results';
 import ResultsPage from './ResultsPage';
 
 let lastApi: AppApi;
-function Harness() {
+function Harness({ section }: { section?: string }) {
   const [state, setState] = useState<AppState>(() => ({
-    ...initialState('admin'), route: { page: 'results' }, currentProjectId: 'current',
+    ...initialState('admin'), route: { page: 'results', section }, currentProjectId: 'current',
   }));
   const navigate = (route: Route) => setState(s => ({
     ...s, route, currentProjectId: route.projectId || s.currentProjectId,
@@ -162,9 +162,83 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(sizes(container)).toEqual(resized);
     expect(screen.queryByRole('button', { name: 'B1-1.las' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '测井数据' }));
-    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: '项目信息' }));
     expect(sizes(container)).toEqual(resized);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+  });
+
+  it('切换各类目录只更新中间详情，保留右侧预览、滚动位置和拖拽宽度', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Harness/>);
+    drag(divider('information'), 25);
+    const split = sizes(container);
+    const information = container.querySelector('.results-information') as HTMLElement;
+    const right = container.querySelector('.result-right-content') as HTMLElement;
+    const directory = within(screen.getByRole('navigation', { name: '成果目录' }));
+    right.scrollTop = 237;
+
+    for (const name of ['测井数据', '关联项目', '偏移叠加纯波数据', '层位', '叠后反演结果', '地层厚度图', '项目成果文档', '项目信息']) {
+      await user.click(directory.getByRole('button', { name }));
+      expect(within(information).getByRole('heading', { name, level: 1 })).toBeVisible();
+      expect(within(right).getByRole('heading', { name: '成果概览', level: 2 })).toBeVisible();
+      expect(container.querySelector('.result-right-content')).toBe(right);
+      expect(right.scrollTop).toBe(237);
+      expect(sizes(container)).toEqual(split);
+      expect(screen.getAllByRole('separator')).toHaveLength(2);
+      expect(lastApi.state.rightMaximized).toBe(false);
+      expect(lastApi.state.informationMaximized).toBe(false);
+    }
+
+    await user.click(screen.getByRole('button', { name: 'B1-1.las' }));
+    await user.click(directory.getByRole('button', { name: '测井数据' }));
+    expect(within(information).getByRole('table', { name: '成果文件列表' })).toBeVisible();
+    expect(within(right).getByRole('heading', { name: 'B1-1.las' })).toBeVisible();
+    expect(lastApi.state.resultTab).toBe('las');
+    drag(divider('information'), 10);
+    expect(sizes(container).information).toBeCloseTo(split.information + 10);
+  });
+
+  it('文件目录直接进入双栏，隐藏、显示和最大化后仍保留当前详情', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Harness section="wells"/>);
+    const information = container.querySelector('.results-information') as HTMLElement;
+    const right = container.querySelector('.result-right-content') as HTMLElement;
+    const split = sizes(container);
+    expect(within(information).getByRole('heading', { name: '测井数据' })).toBeVisible();
+    expect(right).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
+    expect(right).not.toBeVisible();
+    await user.click(within(screen.getByRole('navigation', { name: '成果目录' })).getByRole('button', { name: '关联项目' }));
+    expect(within(information).getByRole('heading', { name: '关联项目' })).toBeVisible();
+    expect(right).not.toBeVisible();
+    await user.click(screen.getByRole('button', { name: '显示成果视图' }));
+    expect(right).toBeVisible();
+    expect(sizes(container)).toEqual(split);
+
+    await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
+    expect(information).not.toBeVisible();
+    await user.click(screen.getByRole('button', { name: '还原' }));
+    expect(within(information).getByRole('heading', { name: '关联项目' })).toBeVisible();
+    expect(sizes(container)).toEqual(split);
+  });
+
+  it('成果概览的目录入口显示中间详情，从右侧全屏进入时恢复双栏', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Harness/>);
+    const information = container.querySelector('.results-information') as HTMLElement;
+    const right = container.querySelector('.result-right-content') as HTMLElement;
+    await user.click(within(right).getByRole('button', { name: '测井数据' }));
+    expect(within(information).getByRole('heading', { name: '测井数据' })).toBeVisible();
+    expect(right).toBeVisible();
+    expect(lastApi.state.route.section).toBe('wells');
+
+    await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
+    await user.click(within(right).getByRole('button', { name: '地层厚度图' }));
+    expect(within(information).getByRole('heading', { name: '地层厚度图' })).toBeVisible();
+    expect(right).toBeVisible();
+    expect(lastApi.state.rightMaximized).toBe(false);
     expect(screen.getAllByRole('separator')).toHaveLength(2);
   });
 

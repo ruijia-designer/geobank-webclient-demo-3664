@@ -22,12 +22,15 @@
 .layer-row{height:36px;border-bottom:1px solid #edf2f4;display:flex;align-items:center}
 .layer-row:last-child{border-bottom:0}
 .layer-row.indent{padding-left:24px;color:#7d919f}
-.layer-row label{display:flex;align-items:center;gap:11px;font-size:14px;min-width:0;width:100%;cursor:pointer}
+.layer-row label{display:flex;flex:1;align-items:center;gap:11px;font-size:14px;min-width:0;cursor:pointer}
 .layer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer-row input,.layer-color{flex-shrink:0}
 .layer-row input{width:16px;height:16px;accent-color:#0a6f9e;margin:0}
 .layer-color{width:4px;height:12px;border-radius:2px}
-.layer-disclosure{border:0;background:none;display:grid;place-items:center;padding:0;width:15px;height:24px;color:#183a52}
+.layer-disclosure{border:0;background:none;display:grid;place-items:center;padding:0;width:32px;height:32px;flex-shrink:0;margin-right:6px;border-radius:5px;color:#183a52}
+button.layer-disclosure{cursor:pointer}
+button.layer-disclosure:hover{background:#eaf5fa;color:#0a6f9e}
+button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1px;background:#eaf5fa}
 .map-zoom{position:absolute;right:24px;bottom:24px;display:grid;gap:12px}
 .coordinates{position:absolute;left:16px;bottom:12px;min-height:40px;background:#f5f7f9;border:1px solid #d3dfe5;padding:8px 12px;display:flex;align-items:center;gap:12px;border-radius:6px;box-shadow:0 1px 8px #0002}
 .coordinates svg{color:#0a6f9e;flex-shrink:0}

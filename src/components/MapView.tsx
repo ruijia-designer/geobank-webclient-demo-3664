@@ -59,7 +59,7 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
     const expandable = name === '采集' || kind === 'data' && name === '边界';
     const open = name === '边界' ? boundaryOpen : acquisitionOpen;
     return <div className={'layer-row' + (indent ? ' indent' : '')} key={name} style={indent ? { paddingLeft: 24 * depth } : undefined}>
-      {expandable ? <button className="layer-disclosure" aria-label={t((open ? '收起' : '展开') + name)} aria-expanded={open} onClick={() => name === '边界' ? setBoundaryOpen(v => !v) : setAcquisitionOpen(v => !v)}>{open ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}</button> : <span className="layer-disclosure" aria-hidden="true"/>}
+      {expandable ? <button className="layer-disclosure" aria-label={t((open ? '收起' : '展开') + name)} aria-expanded={open} onClick={() => name === '边界' ? setBoundaryOpen(v => !v) : setAcquisitionOpen(v => !v)}>{open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}</button> : <span className="layer-disclosure" aria-hidden="true"/>}
       <label><input type="checkbox" checked={checks[name] !== false} onChange={() => toggleCheck(name)}/><span className="layer-color" style={{ background: kind === 'project' ? projectTypeColor({ type: name }) : name === '处理' ? '#8874b0' : name === '解释' ? '#c68457' : name === '井筒' ? '#49a397' : '#249bb9' }}/><span className="layer-name" title={t(name)}>{t(name)}</span></label>
     </div>;
   };
