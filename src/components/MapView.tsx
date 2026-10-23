@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Layers, RotateCcw, ChevronUp, ChevronDown, Plus, Minus, Globe, Check, LocateFixed } from 'lucide-react';
 import type { Project } from '../types';
-import { mapWorldTransform, projectLayer, projectMapPoint, resolveMapGeometry } from '../services/mapView';
+import { isProjectInViewport, mapWorldTransform, projectLayer, projectMapPoint, resolveMapGeometry } from '../services/mapView';
 import type { Basemap } from '../services/mapView';
 import { projectTypeColor } from '../services/projectClassification';
 import { useTranslation } from '../i18n';
@@ -11,14 +11,16 @@ export interface MapViewProps {
   projects: Project[]; selectedId: string | null; zoom: number; collapsed: boolean;
   colorMode?: 'type' | 'year'; kind?: 'project' | 'data'; onToggle: () => void;
   onRefresh: () => void; onZoom: (n: number) => void; onLocate?: (id: string) => void;
+  onVisibleProjectsChange?: (ids: string[]) => void;
 }
-export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'type', kind = 'project', onToggle, onRefresh, onZoom, onLocate }: MapViewProps) {
+export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'type', kind = 'project', onToggle, onRefresh, onZoom, onLocate, onVisibleProjectsChange }: MapViewProps) {
   const { t } = useTranslation();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [acquisitionOpen, setAcquisitionOpen] = useState(true), [boundaryOpen, setBoundaryOpen] = useState(true);
   const [refreshing, setRefreshing] = useState(false), [basemap, setBasemap] = useState<Basemap>('imagery'), [basemapOpen, setBasemapOpen] = useState(false);
   const containerRef = useRef<HTMLElement>(null), menuRef = useRef<HTMLDivElement>(null), basemapButton = useRef<HTMLButtonElement>(null);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reportedVisibleIds = useRef<string[] | null>(null);
   const [geometry, setGeometry] = useState(() => resolveMapGeometry(1200, 800));
   const panelId = useId(), menuId = useId();
   const selected = projects.find(p => p.id === selectedId), label = kind === 'project' ? '项目类型' : '数据类型';
@@ -28,7 +30,8 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
     if (!container) return;
     const measure = () => {
       const rect = container.getBoundingClientRect();
-      setGeometry(resolveMapGeometry(rect.width || container.clientWidth, rect.height || container.clientHeight));
+      const next = resolveMapGeometry(rect.width || container.clientWidth, rect.height || container.clientHeight);
+      setGeometry(current => current.viewportWidth === next.viewportWidth && current.viewportHeight === next.viewportHeight ? current : next);
     };
     measure();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
@@ -36,6 +39,14 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
     window.addEventListener('resize', measure);
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, []);
+  useEffect(() => {
+    if (!onVisibleProjectsChange) { reportedVisibleIds.current = null; return; }
+    const ids = projects.filter(project => isProjectInViewport(project, geometry, zoom, selected)).map(project => project.id);
+    const previous = reportedVisibleIds.current;
+    if (previous && previous.length === ids.length && previous.every((id, index) => id === ids[index])) return;
+    reportedVisibleIds.current = ids;
+    onVisibleProjectsChange(ids);
+  }, [projects, geometry, zoom, selected, onVisibleProjectsChange]);
   useEffect(() => () => { if (refreshTimer.current) clearTimeout(refreshTimer.current); }, []);
   useEffect(() => {
     if (!basemapOpen) return;
