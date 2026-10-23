@@ -37,6 +37,7 @@ describe('顶部中英文切换',()=>{
   it('真正切换导航及概览，保留筛选关键词、图层勾选和业务项目名',async()=>{
     const user=userEvent.setup(); render(<App/>);
     await user.type(screen.getByRole('textbox',{name:'搜索项目'}),'2024');
+    await user.click(screen.getByRole('button',{name:'项目类型'}));
     await user.click(screen.getByRole('checkbox',{name:'处理'}));
     await chooseLanguage(user,'English');
     expect(document.documentElement.lang).toBe('en');

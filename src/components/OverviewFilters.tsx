@@ -37,12 +37,12 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
     <label className="field">{t('归档类型')}<select value={draft.archived?.[0] || ''} onChange={event => set('archived', event.target.value ? [event.target.value] : [])}>
       <option value="">{t('全部')}</option><option value="true">{t('已归档')}</option>{role === 'admin' && <option value="false">{t('未归档')}</option>}
     </select></label>
-    <fieldset><legend>{t('年度范围')}</legend><div className="overview-year-range">
+    <fieldset><legend>{t('年度范围')}<span id={hintId} className="year-range-hint">（{t('支持只输入一个年份进行筛选')}）</span></legend><div className="overview-year-range">
       <input ref={fromInput} aria-label={t('起始年度')} aria-describedby={error ? errorId : hintId} aria-invalid={!!error} inputMode="numeric" maxLength={4} placeholder={t('起始年度')} value={draft.yearFrom?.[0] || ''} onChange={event => set('yearFrom', event.target.value ? [event.target.value] : [])}/>
       <span>{t('至')}</span>
       <input ref={toInput} aria-label={t('结束年度')} aria-describedby={error ? errorId : hintId} aria-invalid={!!error} inputMode="numeric" maxLength={4} placeholder={t('结束年度')} value={draft.yearTo?.[0] || ''} onChange={event => set('yearTo', event.target.value ? [event.target.value] : [])}/>
-    </div><p id={hintId} className="filter-hint">{t('可只填写起始或结束年度')}</p>{error && <p id={errorId} className="filter-error" role="alert">{t(error)}</p>}</fieldset>
-    <fieldset><legend>{t('所属盆地')}</legend><div className="basin-picker" ref={picker}>
+    </div>{error && <p id={errorId} className="filter-error" role="alert">{t(error)}</p>}</fieldset>
+    <fieldset><legend>{t('所属盆地')}</legend><div className="basin-picker" ref={picker} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
       <button ref={trigger} type="button" className="basin-trigger" aria-label={t('选择盆地')} aria-expanded={open} aria-controls={menuId} onClick={() => { setOpen(!open); setQuery(''); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); } }}>
         <span className={selected.length ? '' : 'muted'}>{selected.length ? t('已选 {count} 个盆地', { count: selected.length }) : t('全部盆地')}</span><ChevronDown size={16} style={{ transform: open ? 'rotate(180deg)' : undefined }}/>
       </button>

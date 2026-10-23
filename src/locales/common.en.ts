@@ -34,7 +34,7 @@ const commonEnglish: Record<string, string> = {
   '应用配色': 'Apply colors', '关闭筛选': 'Close filters', '归档类型': 'Archive status', '年度范围': 'Years', '区域': 'Region',
   '仅显示可查阅项目': 'Only show accessible projects', '重置筛选条件': 'Reset filters', '应用筛选': 'Apply filters',
   '项目筛选条件': 'Project filters', '起始年度': 'Start year', '结束年度': 'End year',
-  '可只填写起始或结束年度': 'Either year may be left blank', '请输入四位年份': 'Enter a four-digit year',
+  '支持只输入一个年份进行筛选': 'Enter just one year to filter', '请输入四位年份': 'Enter a four-digit year',
   '起始年度不能晚于结束年度': 'Start year must not be later than end year',
   '选择盆地': 'Select basins', '全部盆地': 'All basins', '已选 {count} 个盆地': '{count} basins selected',
   '盆地选项': 'Basin options', '搜索盆地': 'Search basins', '已选 {count} 项': '{count} selected',
