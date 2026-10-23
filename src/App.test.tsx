@@ -51,6 +51,9 @@ describe('概览与跨页面流程',()=>{
   const u=userEvent.setup();render(<App/>);
   await u.click(screen.getByRole('button',{name:'配色方式'}));
   expect(screen.queryByText('可查阅')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/^项目类型$/})).toHaveAttribute('aria-expanded','false');
+  await u.click(screen.getByRole('button',{name:/^项目类型$/}));
+  expect(screen.getByRole('checkbox',{name:'采集'})).toBeVisible();
   await u.click(screen.getByRole('button',{name:/^项目类型$/}));
   expect(screen.queryByText('可查阅')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox',{name:'采集'})).not.toBeInTheDocument();
@@ -83,17 +86,20 @@ describe('Demo 菜单与本地登录',()=>{
  it('首次访问及直达成果先显示登录页，成功登录后才能打开工作区',async()=>{
   const u=userEvent.setup();sessionStorage.clear();window.history.replaceState(null,'','/#/results/1');render(<StrictMode><App/></StrictMode>);
   expect(screen.getByRole('heading',{name:'欢迎登录'})).toBeInTheDocument();
+  expect(document.body).toHaveClass('geobank-login-active');
   expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
   expect(window.location.hash).toBe('#/login');
   await u.type(screen.getByRole('textbox',{name:'用户名'}),'Demo');
   await u.type(screen.getByLabelText('密码',{exact:true}),'demo123{Enter}');
   expect(screen.getByRole('navigation',{name:'顶部导航'})).toBeInTheDocument();
+  expect(document.body).not.toHaveClass('geobank-login-active');
   expect(sessionStorage.getItem('geobank-demo-authenticated-v1')).toBe('true');
   await u.click(screen.getByRole('button',{name:'检索'}));
   expect(screen.getByRole('heading',{name:'数据检索'})).toBeInTheDocument();
   await u.click(screen.getByRole('button',{name:'Demo 用户菜单'}));
   await u.click(screen.getByRole('menuitem',{name:/退出登录/}));
   expect(screen.getByRole('heading',{name:'欢迎登录'})).toBeInTheDocument();
+  expect(document.body).toHaveClass('geobank-login-active');
   expect(sessionStorage.getItem('geobank-demo-authenticated-v1')).toBeNull();
  });
  it('管理返回恢复检索关键词与筛选',async()=>{
@@ -112,7 +118,7 @@ describe('Demo 菜单与本地登录',()=>{
   await u.click(screen.getByRole('menuitem',{name:/退出登录/}));
   await u.type(screen.getByRole('textbox',{name:'用户名'}),'Demo');
   await u.type(screen.getByLabelText('密码',{exact:true}),'wrong');
-  await u.click(screen.getByRole('button',{name:'登录'}));
+  await u.click(screen.getByRole('button',{name:'登录系统'}));
   expect(screen.getByRole('alert')).toHaveTextContent('用户名或密码错误');
   await u.click(screen.getByRole('button',{name:'显示密码'}));
   expect(screen.getByLabelText('密码',{exact:true})).toHaveAttribute('type','text');

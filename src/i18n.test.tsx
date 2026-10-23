@@ -15,6 +15,25 @@ async function chooseLanguage(user:ReturnType<typeof userEvent.setup>,language:'
 }
 
 describe('顶部中英文切换',()=>{
+  it('登录页沿用保存的英文设置，显示新文案和演示账号并支持密码显隐',async()=>{
+    const user=userEvent.setup();
+    sessionStorage.removeItem('geobank-demo-authenticated-v1');
+    sessionStorage.setItem('geobank-demo-locale','en');
+    render(<App/>);
+    expect(screen.getByRole('heading',{name:'Welcome back'})).toBeInTheDocument();
+    expect(screen.getByText('Enter your account details to access the system')).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Sign in'})).toBeInTheDocument();
+    expect(screen.getByText('Offline demo account: Demo / demo123')).toBeInTheDocument();
+    expect(screen.getByText('Interactive demo only; no live accounts are connected.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox',{name:'Username'})).toBeInTheDocument();
+    const password=screen.getByLabelText('Password',{exact:true});
+    expect(password).toHaveAttribute('type','password');
+    await user.click(screen.getByRole('button',{name:'Show password'}));
+    expect(password).toHaveAttribute('type','text');
+    await user.click(screen.getByRole('button',{name:'Hide password'}));
+    expect(password).toHaveAttribute('type','password');
+  });
+
   it('真正切换导航及概览，保留筛选关键词、图层勾选和业务项目名',async()=>{
     const user=userEvent.setup(); render(<App/>);
     await user.type(screen.getByRole('textbox',{name:'搜索项目'}),'2024');
