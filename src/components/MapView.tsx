@@ -70,7 +70,7 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
     const expandable = name === '采集' || kind === 'data' && name === '边界';
     const open = name === '边界' ? boundaryOpen : acquisitionOpen;
     return <div className={'layer-row' + (indent ? ' indent' : '')} key={name} style={indent ? { paddingLeft: 24 * depth } : undefined}>
-      {expandable ? <button className="layer-disclosure" aria-label={t((open ? '收起' : '展开') + name)} aria-expanded={open} onClick={() => name === '边界' ? setBoundaryOpen(v => !v) : setAcquisitionOpen(v => !v)}>{open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}</button> : <span className="layer-disclosure" aria-hidden="true"/>}
+      {expandable ? <button className="layer-disclosure" aria-label={t((open ? '收起' : '展开') + name)} aria-expanded={open} onClick={() => name === '边界' ? setBoundaryOpen(v => !v) : setAcquisitionOpen(v => !v)}>{kind === 'project' ? <svg className="layer-triangle" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 10.5 7 3.5 13 10.5Z" fill="currentColor"/></svg> : open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}</button> : <span className="layer-disclosure" aria-hidden="true"/>}
       <label><input type="checkbox" checked={checks[name] !== false} onChange={() => toggleCheck(name)}/><span className="layer-color" style={{ background: kind === 'project' ? projectTypeColor({ type: name }) : name === '处理' ? '#8874b0' : name === '解释' ? '#c68457' : name === '井筒' ? '#49a397' : '#249bb9' }}/><span className="layer-name" title={t(name)}>{t(name)}</span></label>
     </div>;
   };
@@ -86,7 +86,7 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
       })}
     </div>
     <div className="map-layer-controls"><div className="layer-toolbar"><button className="layer-pill" onClick={onToggle} aria-expanded={!collapsed} aria-controls={panelId} title={t((collapsed ? '展开' : '收起') + label)}><Layers size={25}/><span>{t(label)}</span>{collapsed ? <ChevronDown size={18}/> : <ChevronUp size={18}/>}</button></div>
-      {!collapsed && <div id={panelId} className="map-layer-panel"><header>
+      {!collapsed && <div id={panelId} className={'map-layer-panel' + (kind === 'project' ? ' project-layer-panel' : '')}><header>
         <button className={'layer-reset' + (refreshing ? ' rotating' : '')} onClick={reset} title={t('重置' + label)} aria-label={t('重置' + label)}><RotateCcw size={25} strokeWidth={2}/><span>{t('重置')}</span></button>
       </header><div>{row('采集')}{kind === 'project' ? <>{acquisitionOpen && ['三维陆上常规采集', '三维陆上混叠采集'].map(n => row(n, true))}{nodes.slice(1).map(n => row(n))}</> : acquisitionOpen && <>{row('边界', true)}{boundaryOpen && ['满覆盖边界', '激发点边界', '接收点边界'].map(n => row(n, true, 2))}{nodes.slice(2).map(n => row(n, true))}</>}</div></div>}
     </div>

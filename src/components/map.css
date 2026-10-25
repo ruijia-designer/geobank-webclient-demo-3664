@@ -31,6 +31,17 @@
 .layer-row input{width:16px;height:16px;accent-color:#0a6f9e;margin:0}
 .layer-color{width:4px;height:12px;border-radius:2px}
 .layer-disclosure{border:0;background:none;display:grid;place-items:center;padding:0;width:32px;height:32px;flex-shrink:0;margin-right:6px;border-radius:5px;color:#183a52}
+.project-layer-panel{background:#f5f7f8}
+.project-layer-panel .layer-row{color:#041e42;border-radius:4px;transition:background-color .15s ease}
+.project-layer-panel .layer-row:hover{background:#eaf2f6}
+.project-layer-panel .layer-row input[type=checkbox]{appearance:none;display:grid;place-content:center;padding:0;border:1px solid #bac6cc;border-radius:3px;background:#fff;color:var(--blue);cursor:pointer}
+.project-layer-panel .layer-row input[type=checkbox]::before{content:'';width:5px;height:9px;border:solid currentColor;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg);visibility:hidden}
+.project-layer-panel .layer-row input[type=checkbox]:checked::before{visibility:visible}
+.project-layer-panel .layer-row input[type=checkbox]:focus:not(:focus-visible){outline:none}
+.project-layer-panel .layer-row input[type=checkbox]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.project-layer-panel .layer-color{width:8px;height:24px;border-radius:4px}
+.project-layer-panel .layer-disclosure{color:#4b565e}
+.project-layer-panel .layer-disclosure[aria-expanded=false] .layer-triangle{transform:rotate(180deg)}
 button.layer-disclosure{cursor:pointer}
 button.layer-disclosure:hover{background:#eaf5fa;color:#0a6f9e}
 button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1px;background:#eaf5fa}
@@ -54,4 +65,4 @@ button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1
 .basemap-thumb.schematic{background-image:url('/assets/schematic-map.svg')}
 .map-demo-attribution{position:absolute;left:16px;bottom:60px;max-width:calc(100% - 90px);background:#fffffff0;border-radius:4px;padding:5px 8px;font-size:11px;color:#59717b;pointer-events:none}
 @media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.layer-pill,.map-layer-panel header .layer-reset{padding:0 16px}}
-@media(prefers-reduced-motion:reduce){.map-scene,.layer-pill,.map-zoom .map-round{transition:none}.rotating svg{animation:none}}
+@media(prefers-reduced-motion:reduce){.map-scene,.layer-pill,.map-zoom .map-round,.project-layer-panel .layer-row{transition:none}.rotating svg{animation:none}}
