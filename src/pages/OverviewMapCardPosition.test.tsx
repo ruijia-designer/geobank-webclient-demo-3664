@@ -30,6 +30,7 @@ describe('项目详情跟随地图项目位置', () => {
     const first = screen.getByRole('button', { name: '定位项目：' + PROJECTS[0].name });
     await user.click(first);
     let card = screen.getByRole('region', { name: '项目详情' });
+    expect(first.querySelector('.point-caption')).toBeNull();
     const firstLeft = parseFloat(card.style.left);
     expect(card.closest('.map-view')).not.toBeNull();
     expect(firstLeft + parseFloat(card.style.width)).toBeCloseTo(parseFloat(first.style.left) - 24);
@@ -37,12 +38,15 @@ describe('项目详情跟随地图项目位置', () => {
     const second = screen.getByRole('button', { name: '定位项目：' + PROJECTS[1].name });
     await user.click(second);
     card = screen.getByRole('region', { name: '项目详情' });
+    expect(second.querySelector('.point-caption')).toBeNull();
+    expect(first.querySelector('.point-caption')).toHaveTextContent(PROJECTS[0].name);
     expect(card.style.left).not.toBe(firstLeft + 'px');
     expect(card).toHaveAttribute('data-placement', 'right');
     expect(parseFloat(card.style.left)).toBeCloseTo(parseFloat(second.style.left) + 24);
     expect(scene.style.transform).toBe(original); expect(api.state.mapZoom).toBe(1);
     await user.click(screen.getByRole('button', { name: '关闭项目详情' }));
     expect(screen.queryByRole('region', { name: '项目详情' })).not.toBeInTheDocument();
+    expect(second.querySelector('.point-caption')).toHaveTextContent(PROJECTS[1].name);
     expect(scene.style.transform).toBe(original);
   });
 
@@ -50,6 +54,8 @@ describe('项目详情跟随地图项目位置', () => {
     const user = userEvent.setup(); const { container } = render(<Harness/>);
     const listItem = screen.getByRole('button', { name: '项目：' + PROJECTS[0].name });
     fireEvent.keyDown(listItem, { key: ' ' });
+    expect(screen.getByRole('region', { name: '项目详情' })).toBeVisible();
+    expect(screen.getByRole('button', { name: '定位项目：' + PROJECTS[0].name }).querySelector('.point-caption')).toBeNull();
     const scene = container.querySelector('.map-scene') as HTMLElement;
     const focusedTransform = scene.style.transform;
     expect(api.state.mapZoom).toBe(2.2);

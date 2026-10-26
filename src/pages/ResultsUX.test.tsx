@@ -164,26 +164,30 @@ describe('成果页草稿保护与项目选择器',()=>{
   expect(lastState.currentProjectId).toBe('current');
  });
 
- it('选择无权限项目只提示权限，保留原项目的编辑草稿',async()=>{
+ it('无权限项目不进入候选或搜索结果，筛选不影响原项目的编辑草稿',async()=>{
   const user=userEvent.setup();render(<Harness/>);
   await editNote(user);
   await user.click(screen.getByRole('button',{name:CURRENT_PROJECT.name}));
-  const option=within(screen.getByRole('listbox',{name:'项目'})).getByRole('option',{name:new RegExp(denied.name)});
-  expect(within(option).getByText('无浏览权限')).toBeVisible();
-  await user.click(option);
-  expect(deny).toHaveBeenCalledTimes(1);
+  const list=screen.getByRole('listbox',{name:'项目'});
+  expect(within(list).queryByRole('option',{name:new RegExp(denied.name)})).not.toBeInTheDocument();
+  await user.type(screen.getByRole('textbox',{name:'筛选项目'}),denied.name);
+  expect(within(list).queryByRole('option')).not.toBeInTheDocument();
+  expect(screen.getByText('未找到匹配项目')).toBeVisible();
+  expect(deny).not.toHaveBeenCalled();
   expect(navigation).not.toHaveBeenCalled();
   expect(screen.queryByRole('dialog',{name:'未保存的修改'})).not.toBeInTheDocument();
   expect(lastState.currentProjectId).toBe('current');
   expect(screen.getByLabelText('备注')).toHaveValue('尚未保存的项目说明');
  });
 
- it('选项明确展示权限，搜索无匹配时可清空恢复列表及当前选择',async()=>{
+ it('只展示可查阅项目且无权限标识，搜索无匹配时可清空恢复列表及当前选择',async()=>{
   const user=userEvent.setup();render(<Harness/>);
   await user.click(screen.getByRole('button',{name:CURRENT_PROJECT.name}));
   const list=screen.getByRole('listbox',{name:'项目'});
-  expect(within(within(list).getByRole('option',{name:new RegExp(readable.name)})).getByText('可查阅')).toBeVisible();
-  expect(within(within(list).getByRole('option',{name:new RegExp(denied.name)})).getByText('无浏览权限')).toBeVisible();
+  expect(within(list).getByRole('option',{name:new RegExp(readable.name)})).toBeVisible();
+  expect(within(list).queryByRole('option',{name:new RegExp(denied.name)})).not.toBeInTheDocument();
+  expect(within(list).queryByText('可查阅')).not.toBeInTheDocument();
+  expect(within(list).queryByText('无浏览权限')).not.toBeInTheDocument();
   const query=screen.getByRole('textbox',{name:'筛选项目'});
   await user.type(query,'不会命中任何项目的关键词');
   expect(screen.getByText('未找到匹配项目')).toBeVisible();
@@ -192,19 +196,21 @@ describe('成果页草稿保护与项目选择器',()=>{
   expect(query).toHaveValue('');
   expect(screen.queryByText('未找到匹配项目')).not.toBeInTheDocument();
   const restored=screen.getByRole('listbox',{name:'项目'});
-  expect(within(restored).getAllByRole('option')).toHaveLength(3);
+  expect(within(restored).getAllByRole('option')).toHaveLength(2);
   expect(within(restored).getByRole('option',{name:new RegExp(CURRENT_PROJECT.name)})).toHaveAttribute('aria-selected','true');
   expect(navigation).not.toHaveBeenCalled();
  });
 
- it('切换英文后权限、空结果和草稿保护操作均翻译，项目名及草稿保持原文',async()=>{
+ it('切换英文后候选仍不显示权限标识，空结果和草稿保护操作翻译且项目名及草稿保持原文',async()=>{
   const user=userEvent.setup();render(<Harness localeSwitcher/>);
   await editNote(user,'用户填写的中文备注');
   await user.click(screen.getByRole('button',{name:'切换英文'}));
   await user.click(screen.getByRole('button',{name:CURRENT_PROJECT.name}));
   const list=screen.getByRole('listbox',{name:'Project'});
-  expect(within(within(list).getByRole('option',{name:new RegExp(readable.name)})).getByText('Accessible')).toBeVisible();
-  expect(within(within(list).getByRole('option',{name:new RegExp(denied.name)})).getByText('No viewing permission')).toBeVisible();
+  expect(within(list).getByRole('option',{name:new RegExp(readable.name)})).toBeVisible();
+  expect(within(list).queryByRole('option',{name:new RegExp(denied.name)})).not.toBeInTheDocument();
+  expect(within(list).queryByText('Accessible')).not.toBeInTheDocument();
+  expect(within(list).queryByText('No viewing permission')).not.toBeInTheDocument();
   await user.type(screen.getByRole('textbox',{name:'Filter projects'}),'no match for ux test');
   expect(screen.getByText('No matching projects')).toBeVisible();
   await user.click(screen.getByRole('button',{name:'Clear search'}));

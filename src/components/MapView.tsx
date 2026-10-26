@@ -95,7 +95,7 @@ export function MapView({ projects, selectedId, focusId, zoom, collapsed, colorM
     <div className="map-marker-layer">
       {visibleProjects.map(p => {
         const { x, y } = projectViewportPoint(p, geometry, zoom, focused);
-        return <button key={p.id} className={'map-point' + (selectedId === p.id ? ' selected' : '')} style={{ left: x, top: y, color: pointColor(p) }} aria-label={t('定位项目：') + p.name} onClick={() => onLocate?.(p.id)}><span className="point-core"/><span className="point-caption">{selectedId === p.id ? p.basin + ' · ' + p.type : p.name}</span></button>;
+        return <button key={p.id} className={'map-point' + (selectedId === p.id ? ' selected' : '')} style={{ left: x, top: y, color: pointColor(p) }} aria-label={t('定位项目：') + p.name} onClick={() => onLocate?.(p.id)}><span className="point-core"/>{(selectedId !== p.id || !renderProjectDetails) && <span className="point-caption">{selectedId === p.id ? p.basin + ' · ' + p.type : p.name}</span>}</button>;
       })}
     </div>
     {selected && selectedAnchor && visibleProjects.some(project => project.id === selected.id) &&
