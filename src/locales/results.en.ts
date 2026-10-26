@@ -38,6 +38,7 @@ const resultsEnglish:Record<string,string>={
  "清空搜索":"Clear search",
  "可查阅":"Accessible",
  "无浏览权限":"No viewing permission",
+ "无权限":"No access",
  "演示关联":"Demo relations",
  "查看成果":"View results",
  "查看项目成果：{name}":"View results for: {name}",

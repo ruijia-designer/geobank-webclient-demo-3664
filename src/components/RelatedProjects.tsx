@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { ArrowUpRight, CheckCircle2, Folder, LockKeyhole } from 'lucide-react';
+import { ArrowUpRight, Folder } from 'lucide-react';
 import type { Project, Role } from '../types';
 import { useTranslation } from '../i18n';
 import { canRead, visibleProjects } from '../services/demo';
@@ -36,12 +36,11 @@ export function RelatedProjects({ project, projects, role, onOpen }: {
     {related.length ? <ul className="related-projects-list">{related.map(item => {
       const classification = projectCardClassification(item);
       const readable = canRead(item, role);
-      const AccessIcon = readable ? CheckCircle2 : LockKeyhole;
       return <li key={item.id} className="related-project-card">
         <div className="related-project-card-labels">
           <span className="related-project-category" style={{ backgroundColor: classification.primaryColor, color: classification.textColor }}>{t(classification.label)}</span>
-          <span className={'related-project-access' + (readable ? ' is-readable' : '')}>
-            <AccessIcon size={14} aria-hidden="true"/>{t(readable ? '可查阅' : '无浏览权限')}
+          <span className={'badge related-project-access' + (readable ? ' is-readable' : '')}>
+            {t(readable ? '可查阅' : '无权限')}
           </span>
         </div>
         <h2>{item.name}</h2>

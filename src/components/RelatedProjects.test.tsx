@@ -25,7 +25,7 @@ describe('成果页关联项目', () => {
     expect(items.map(item => within(item).getByRole('heading').textContent)).toEqual(
       ['1', '4', '2'].map(id => PROJECTS.find(item => item.id === id)!.name));
     expect(screen.getAllByText('可查阅')).toHaveLength(1);
-    expect(screen.getAllByText('无浏览权限')).toHaveLength(2);
+    expect(screen.getAllByText('无权限')).toHaveLength(2);
     expect(JSON.stringify([CURRENT_PROJECT, PROJECTS])).toBe(before);
   });
 
@@ -64,7 +64,7 @@ describe('成果页关联项目', () => {
     const item = project({ id: 'restricted', name: '无权限关联项目', readable: false });
     const selected = project({ mapDetails: { relatedProjectIds: [item.id] } });
     render(<RelatedProjects project={selected} projects={[item]} role="ordinary" onOpen={onOpen}/>);
-    expect(screen.getByText('无浏览权限')).toBeVisible();
+    expect(screen.getByText('无权限')).toBeVisible();
     const button = screen.getByRole('button', { name: '查看项目成果：' + item.name });
     expect(button).toBeEnabled();
     await user.tab();
