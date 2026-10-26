@@ -1,10 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { ChevronDown, ChevronRight, ClipboardList, FileText, Folder, FolderOpen, Import, Layers, Map as MapIcon, Maximize, Minimize, Download, Pencil, RefreshCw, Search, SquareSplitHorizontal, Upload, X } from 'lucide-react';
 import type { AppApi, Project } from '../types';
 import { canRead, projectOptions, resolveProject } from '../services/demo';
 import { Modal } from '../components/Modal';
 import { ProjectArchiveControl } from '../components/ProjectArchiveControl';
 import { ResultFileTable } from '../components/ResultFileTable';
+import { RelatedProjects } from '../components/RelatedProjects';
 import { MapView } from '../components/MapView';
 import { RESULT_DIRECTORIES, REMOTE_FILES, INITIAL_RESULT_FILES, getResultDirectories, getDirectoryStatus, getResultSummary, getDownloadSummary, resultFileBytes, bytesLabel, initialResultInfo, resultFilesCache, resultInfoCache, saveProjectInfo, saveDirectoryFiles, importProjectInformation, appendUploadedFiles, removeFiles } from '../services/results';
 import type { ResultFile, ResultInfo, ResultDirectory } from '../services/results';
@@ -57,10 +59,10 @@ function InfoTable({data,fields,editing=false,onChange,errors={},className='resu
         </>:['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(value(current)):value(current)}</dd></div>;
     })}</div>;
 }
-function Information({info,onEdit,onImport,editing,onChange,onSave,onCancel,errors}:{info:ResultInfo;onEdit:()=>void;onImport:()=>void;editing:boolean;onChange:(key:string,value:string)=>void;onSave:()=>void;onCancel:()=>void;errors:InfoErrors}){
+function Information({info,onEdit,onImport,editing,dirty,onChange,onSave,onCancel,errors}:{info:ResultInfo;onEdit:()=>void;onImport:()=>void;editing:boolean;dirty:boolean;onChange:(key:string,value:string)=>void;onSave:()=>void;onCancel:()=>void;errors:InfoErrors}){
     const {t}=useTranslation();
     const table=(fields:[string,string][],className?:string)=><InfoTable data={info} fields={fields} editing={editing} onChange={onChange} errors={errors} className={className}/>;
-    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1><div>{editing?<><button className="button small" onClick={onCancel}>{t("取消")}</button><button className="button primary small" onClick={onSave}>{t("保存")}</button></>:<><button className="button small" onClick={onImport}><Import size={16}/>{t("导入")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></>}</div></header><section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section></>;
+    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1><div>{!editing&&<><button className="button small" onClick={onImport}><Import size={16}/>{t("导入")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></>}</div></header><section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section>{editing&&<footer className="information-edit-actions"><span role="status">{t(dirty?"有未保存的修改":"尚未修改")}</span><div><button className="button" onClick={onCancel}>{t("取消")}</button><button className="button primary" onClick={onSave}>{t("保存")}</button></div></footer>}</>;
 }
 function OverviewContent({api,info,project,files,directories,onDirectory}:{api:AppApi;info:ResultInfo;project:Project;files:ResultFile[];directories:ResultDirectory[];onDirectory:(name:string)=>void}){
     const {t}=useTranslation();
@@ -83,7 +85,8 @@ export default function ResultsPage({ api }: {
     const blank = id.startsWith('created-');
     const directories=project?getResultDirectories(project):RESULT_DIRECTORIES;
     const [info, setInfo] = useState<ResultInfo>(project ? {...initialResultInfo(project),...resultInfoCache[id]} : initialResultInfo({ id: '', name: '', basin: '', area: '', year: '', type: '', readable: false, archived: false, point: [0, 0] }));
-    const [directory, setDirectory] = useState(state.route.section === 'wells' ? '测井数据' : '项目信息');
+    const requestedDirectory = state.route.section === 'wells' ? '测井数据' : state.route.section;
+    const [directory, setDirectory] = useState(requestedDirectory && directories.some(group => group.items.includes(requestedDirectory)) ? requestedDirectory : '项目信息');
     const layoutMode = state.rightMaximized ? 'right' : state.informationMaximized ? 'information' : 'split';
     const columns = useResultColumns(layoutMode, layoutMode !== 'right');
     const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
@@ -93,6 +96,23 @@ export default function ResultsPage({ api }: {
     const [dialog, setDialog] = useState<Dialog>(null);
     const [draft, setDraft] = useState(info);
     const [editing,setEditing]=useState(false);
+    const dirty = editing && [...new Set([...Object.keys(info), ...Object.keys(draft)])].some(key => (draft[key] || '') !== (info[key] || ''));
+    const dirtyRef = useRef(dirty);
+    dirtyRef.current = dirty;
+    const [pendingChange, setPendingChange] = useState<(() => void) | null>(null);
+    useEffect(() => {
+        if (!dirty) return;
+        const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+        window.addEventListener('beforeunload', beforeUnload);
+        return () => window.removeEventListener('beforeunload', beforeUnload);
+    }, [dirty]);
+    useEffect(() => {
+        if (!dirty || !api.registerNavigationGuard) return;
+        return api.registerNavigationGuard(proceed => {
+            if (dirtyRef.current) setPendingChange(() => proceed);
+            else proceed();
+        });
+    }, [dirty, api.registerNavigationGuard]);
     const visibleLayoutBeforeHide=useRef(false);
     const [formError, setFormError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<InfoErrors>({});
@@ -130,6 +150,7 @@ export default function ResultsPage({ api }: {
         setSelectedFiles([]);
         setDialog(null);
         setEditing(false);
+        setPendingChange(null);
         setFormError('');
         setFieldErrors({});
         errorFocus.current = null;
@@ -147,11 +168,11 @@ export default function ResultsPage({ api }: {
     // Restore synchronously after a layout change: a delayed animation frame could
     // overwrite a scroll the user makes before the next unrelated render (e.g. locale).
     useLayoutEffect(() => {
-        if (infoRef.current && !state.rightMaximized)
-            infoRef.current.scrollTop = (state.informationMaximized ? maximizedScrollPositions.current.info : null) ?? scrollPositions.current.info;
-        if (rightRef.current && !state.informationMaximized)
-            rightRef.current.scrollTop = (state.rightMaximized ? maximizedScrollPositions.current.right : null) ?? scrollPositions.current.right;
-    }, [state.rightMaximized, state.informationMaximized]);
+        if (infoRef.current && layoutMode !== 'right')
+            infoRef.current.scrollTop = (layoutMode === 'information' ? maximizedScrollPositions.current.info : null) ?? scrollPositions.current.info;
+        if (rightRef.current && layoutMode !== 'information')
+            rightRef.current.scrollTop = (layoutMode === 'right' ? maximizedScrollPositions.current.right : null) ?? scrollPositions.current.right;
+    }, [layoutMode]);
     if (!project || !canRead(project, state.role))
         return <div className="results-denied empty-state"><Folder size={44}/><h2>{t("您无浏览此项目数据的权限")}</h2><button className="button primary" onClick={() => api.navigate({ page: 'overview' })}>{t("返回概览")}</button></div>;
     const selectDirectory = (n: string) => { setDirectory(n); setMenuOpen(false); setState(s => ({ ...s, rightMaximized: false, route: { ...s.route, section: n === '测井数据' ? 'wells' : n === '项目信息' ? undefined : n } })); api.navigate({ page: 'results', projectId: id, section: n === '测井数据' ? 'wells' : n === '项目信息' ? undefined : n }); };
@@ -170,14 +191,48 @@ export default function ResultsPage({ api }: {
         const errors = validateInfo(next);
         setFieldErrors(previous => Object.fromEntries(Object.keys(previous).filter(field => errors[field]).map(field => [field, errors[field]])));
     };
-    const editSave = () => {
+    const editSave = (beforeNavigation = false) => {
         const errors = validateInfo(draft);
         setFieldErrors(errors);
         if (Object.keys(errors).length) {
             errorFocus.current = infoFieldOrder.find(key => errors[key]) || null;
+            return false;
+        }
+        const commit = () => {
+            dirtyRef.current = false;
+            saveInfo({ ...draft, name: draft.name.trim() });
+            api.notify(t('项目信息已保存'));
+        };
+        // Navigation/logout may immediately snapshot app state; commit this edit first.
+        if (beforeNavigation) flushSync(commit);
+        else commit();
+        return true;
+    };
+    const requestChange = (proceed: () => void) => {
+        if (dirtyRef.current) setPendingChange(() => proceed);
+        else proceed();
+    };
+    const chooseProject = (next: Project) => {
+        setSelectorOpen(false);
+        if (!canRead(next, state.role)) { api.deny(); return; }
+        if (next.id === id) return;
+        requestChange(() => {
+            setState(s => ({ ...s, rightMaximized: false, informationMaximized: false }));
+            api.navigate({ page: 'results', projectId: next.id });
+        });
+    };
+    const continueChange = (save: boolean) => {
+        const proceed = pendingChange;
+        setPendingChange(null);
+        if (save && !editSave(true)) {
+            setDirectory('项目信息');
+            setState(s => ({ ...s, rightMaximized: false }));
+            if (state.route.section) api.navigate({ page: 'results', projectId: id });
             return;
         }
-        saveInfo({ ...draft, name: draft.name.trim() }); api.notify(t('项目信息已保存'));
+        if (!save) { setEditing(false); setDraft({ ...info }); setFieldErrors({}); }
+        dirtyRef.current = false;
+        proceed?.();
     };
     const importFile = (file?: File) => { if (!file)
         return; if (!/\.xlsx?$/i.test(file.name)) {
@@ -193,10 +248,10 @@ export default function ResultsPage({ api }: {
         addFiles([{ id: '', name: localFile.name, format: localFile.name.split('.').at(-1) || '', size: bytesLabel(localFile.size), bytes:localFile.size, uploaded: '', user: '', directory }]); };
     const deleteFiles = () => { setFiles(removeFiles(fileRows,deleteIds)); setSelectedFiles(x => x.filter(id => !deleteIds.includes(id))); setDialog(null); api.notify(t('已删除所选文件')); };
     const rememberScroll = () => {
-        if (!state.rightMaximized && infoRef.current)
-            (state.informationMaximized ? maximizedScrollPositions : scrollPositions).current.info = infoRef.current.scrollTop;
-        if (!state.informationMaximized && rightRef.current)
-            (state.rightMaximized ? maximizedScrollPositions : scrollPositions).current.right = rightRef.current.scrollTop;
+        if (layoutMode !== 'right' && infoRef.current)
+            (layoutMode === 'information' ? maximizedScrollPositions : scrollPositions).current.info = infoRef.current.scrollTop;
+        if (layoutMode !== 'information' && rightRef.current)
+            (layoutMode === 'right' ? maximizedScrollPositions : scrollPositions).current.right = rightRef.current.scrollTop;
     };
     const maximize = () => {
         rememberScroll();
@@ -205,27 +260,25 @@ export default function ResultsPage({ api }: {
     };
     const toggleRight = () => {
         rememberScroll();
-        if(state.informationMaximized){
+        if(layoutMode === 'information'){
             setState(s=>({...s,informationMaximized:false,rightMaximized:visibleLayoutBeforeHide.current}));
         }else{
             visibleLayoutBeforeHide.current=state.rightMaximized;
             setState(s=>({...s,informationMaximized:true,rightMaximized:false}));
         }
     };
-    const nextLayout=state.informationMaximized?'显示成果视图':'隐藏成果视图';
+    const nextLayout=layoutMode === 'information'?'显示成果视图':'隐藏成果视图';
+    const matchingProjects = projectOptions(state).filter(p => [p.name, p.basin, p.year].join(' ').toLowerCase().includes(projectQuery.trim().toLowerCase()));
     const translateTab=t;
     const tab = state.resultTab;
     const activeTabs = tabs.filter(t => !closedTabs.includes(t.id));
     const directoryPath = t(directories.find(g => g.items.includes(directory))?.name||'') + ' / ' + t(directory);
     const visibleRemote = remoteSource && remoteDirectory ? REMOTE_FILES.filter(f => f.name.toLowerCase().includes(remoteQuery.toLowerCase())) : [];
     return <div ref={columns.containerRef} style={columns.style} className={'results-layout layout-' + layoutMode + (columns.resizing ? ' is-resizing' : '')}>
-        <div className={'results-toolbar' + (state.informationMaximized ? ' information-maximized' : state.rightMaximized ? ' right-maximized' : '')}>
-            <div className="result-project-tools" style={{display: layoutMode === 'right' ? 'none' : undefined}}><div className="result-project-selector"><button className="project-trigger" title={project.name} aria-haspopup="listbox" aria-expanded={selectorOpen} onClick={() => setSelectorOpen(!selectorOpen)}><Search size={19}/><span>{project.name}</span><ChevronDown size={16}/></button>{selectorOpen && <div className="result-project-options"><label><Search size={17}/><input autoFocus aria-label={t("筛选项目")} value={projectQuery} onChange={e => setProjectQuery(e.target.value)} placeholder={t("搜索项目名称、盆地或年度…")}/></label><div role="listbox" aria-label={t("项目")}>{projectOptions(state).filter(p => [p.name, p.basin, p.year].join(' ').toLowerCase().includes(projectQuery.toLowerCase())).map(p => <button role="option" aria-selected={p.id === id} key={p.id} onClick={() => { setSelectorOpen(false); if (!canRead(p, state.role)) {
-        api.deny();
-        return;
-    } setState(s => ({ ...s, currentProjectId: p.id, rightMaximized: false, informationMaximized: false })); api.navigate({ page: 'results', projectId: p.id }); }}><strong>{p.name}</strong><small><span className="project-type-label" style={{background:projectTypeColor(p)}}>{t(projectTypeLabel(p))}</span><span>{p.year}　{p.basin}</span><span>{p.area||'—'} km²</span></small></button>)}</div></div>}</div>{!state.rightMaximized && <button className="button primary result-upload-primary" onClick={() => api.notify(t('已选择上传成果入口'))}><Upload size={18}/>{t("上传成果")}</button>}</div>
-            <div className="result-tabbar"><div className="result-tabs" style={{ display: state.informationMaximized ? 'none' : undefined }}>{activeTabs.map(t => <div className={'result-tab' + (tab === t.id ? ' active' : '')} key={t.id}><button onClick={() => setState(s => ({ ...s, resultTab: t.id }))}><t.Icon size={18}/>{['overview','gis'].includes(t.id)?translateTab(t.label):t.label}</button>{!['overview', 'gis'].includes(t.id) && <button className="tab-close" aria-label={translateTab('关闭{file}',{file:t.label})} onClick={() => { setClosedTabs(x => [...x, t.id]); if (tab === t.id)
-        setState(s => ({ ...s, resultTab: 'overview' })); }}><X size={13}/></button>}</div>)}</div><div className="result-view-actions">{!state.informationMaximized&&<button className="icon-button" title={t(state.rightMaximized ? '还原' : '最大化当前右侧栏目')} aria-label={t(state.rightMaximized ? '还原' : '最大化当前右侧栏目')} onClick={maximize}>{state.rightMaximized?<Minimize size={19}/>:<Maximize size={19}/>}</button>}<button className="icon-button result-layout-toggle" title={t(nextLayout)} aria-label={t(nextLayout)} onClick={toggleRight}><SquareSplitHorizontal size={19}/>{state.informationMaximized && <span className="result-tab-count" aria-label={t('已打开{count}个页签',{count:activeTabs.length})}>{activeTabs.length}</span>}</button></div></div>
+        <div className={'results-toolbar' + (layoutMode === 'information' ? ' information-maximized' : layoutMode === 'right' ? ' right-maximized' : '')}>
+            <div className="result-project-tools" style={{display: layoutMode === 'right' ? 'none' : undefined}}><div className="result-project-selector"><button className="project-trigger" title={project.name} aria-haspopup="listbox" aria-expanded={selectorOpen} onClick={() => setSelectorOpen(!selectorOpen)}><Search size={19}/><span>{project.name}</span><ChevronDown size={16}/></button>{selectorOpen && <div className="result-project-options"><label><Search size={17}/><input autoFocus aria-label={t("筛选项目")} value={projectQuery} onChange={e => setProjectQuery(e.target.value)} placeholder={t("搜索项目名称、盆地或年度…")}/></label><div role="listbox" aria-label={t("项目")}>{matchingProjects.map(p => <button role="option" aria-selected={p.id === id} key={p.id} onClick={() => chooseProject(p)}><strong>{p.name}</strong><small><span className="project-type-label" style={{background:projectTypeColor(p)}}>{t(projectTypeLabel(p))}</span><span>{p.year}　{p.basin}</span><span>{p.area||'—'} km²</span><span className={'project-access ' + (canRead(p,state.role)?'readable':'restricted')}>{t(canRead(p,state.role)?'可查阅':'无浏览权限')}</span></small></button>)}</div>{!matchingProjects.length&&<div className="project-picker-empty" role="status"><p>{t('未找到匹配项目')}</p><button className="button small" onClick={e=>{e.stopPropagation();setProjectQuery('');}}>{t('清空搜索')}</button></div>}</div>}</div>{!state.rightMaximized && <button className="button primary result-upload-primary" onClick={() => api.notify(t('已选择上传成果入口'))}><Upload size={18}/>{t("上传成果")}</button>}</div>
+            <div className="result-tabbar"><div className="result-tabs" style={{ display: layoutMode === 'information' ? 'none' : undefined }}>{activeTabs.map(t => <div className={'result-tab' + (tab === t.id ? ' active' : '')} key={t.id}><button onClick={() => setState(s => ({ ...s, resultTab: t.id }))}><t.Icon size={18}/>{['overview','gis'].includes(t.id)?translateTab(t.label):t.label}</button>{!['overview', 'gis'].includes(t.id) && <button className="tab-close" aria-label={translateTab('关闭{file}',{file:t.label})} onClick={() => { setClosedTabs(x => [...x, t.id]); if (tab === t.id)
+        setState(s => ({ ...s, resultTab: 'overview' })); }}><X size={13}/></button>}</div>)}</div><div className="result-view-actions">{layoutMode !== 'information'&&<button className="icon-button" title={t(state.rightMaximized ? '还原' : '最大化当前右侧栏目')} aria-label={t(state.rightMaximized ? '还原' : '最大化当前右侧栏目')} onClick={maximize}>{state.rightMaximized?<Minimize size={19}/>:<Maximize size={19}/>}</button>}<button className="icon-button result-layout-toggle" title={t(nextLayout)} aria-label={t(nextLayout)} onClick={toggleRight}><SquareSplitHorizontal size={19}/>{layoutMode === 'information' && <span className="result-tab-count" aria-label={t('已打开{count}个页签',{count:activeTabs.length})}>{activeTabs.length}</span>}</button></div></div>
         </div><div className="results-body"><aside className="results-directory" style={{display: layoutMode === 'right' ? 'none' : undefined}}><h2>{t("成果目录")}</h2><nav aria-label={t("成果目录")}>{directories.map(g => { const collapse = collapsedGroups.includes(g.name), Icon = g.icon === 'map' ? MapIcon : g.icon === 'layers' ? Layers : g.icon === 'file' ? FileText : g.icon === 'well' ? ClipboardList : Folder; return <section key={g.name}><button className="directory-group" onClick={() => setCollapsedGroups(s => collapse ? s.filter(x => x !== g.name) : [...s, g.name])} aria-expanded={!collapse}>{collapse ? <ChevronRight size={13}/> : <ChevronDown size={13}/>}<Icon size={17}/><strong>{t(g.name)}</strong>{g.name!=='基本信息'&&<small>{g.items.filter(n=>getDirectoryStatus(n,fileRows,blank)==='ready').length}/{g.items.length}</small>}</button>{!collapse && g.items.map(n => {
                 const hasData = g.name !== '基本信息';
                 const count = directoryCounts.get(n) || 0;
@@ -235,14 +288,15 @@ export default function ResultsPage({ api }: {
                     {hasData && count > 0 && <small className="directory-leaf-count" title={t('{count} 条数据', {count})}>{count}</small>}
                 </button>;
             })}</section>; })}</nav><footer><span><i className="status-dot ready"/>{t('已录入')} {getResultSummary(directories,fileRows,blank).ready}</span><span><i className="status-dot pending"/>{t('未录入')} {getResultSummary(directories,fileRows,blank).pending}</span><span><i className="status-dot neutral"/>{t('无需录入')} {getResultSummary(directories,fileRows,blank).neutral}</span></footer></aside>
- <div className={'results-workspace' + (state.rightMaximized ? ' right-maximized' : state.informationMaximized ? ' information-maximized' : '')}>
-     <section ref={infoRef} className={'results-information' + (directory === '项目信息' ? '' : ' directory-details')} style={{ display: state.rightMaximized ? 'none' : undefined }}>
-         {directory === '项目信息' ? <Information info={editing?draft:info} editing={editing} onEdit={()=>{setDraft({...info});setEditing(true);setFormError('');setFieldErrors({});}} onImport={()=>openDialog('import')} onChange={changeInfoField} onSave={editSave} onCancel={()=>{setEditing(false);setDraft({...info});setFormError('');setFieldErrors({});errorFocus.current=null;}} errors={fieldErrors}/> : directory === '关联项目' ? <section className="results-related"><h1>{t("关联项目")}</h1><div className="empty-state"><Folder size={42}/><h3>{t("暂无关联项目")}</h3></div></section> : <section className="results-file-content"><header className="files-heading"><h1>{t(directory)}</h1><span className="badge">{currentFiles.length}{t('个文件')}</span>{selectedFiles.length > 0 && <span className="file-selection-count" aria-live="polite">{t('已选 {count} 个文件',{count:selectedFiles.length})}</span>}<div className="files-actions"><button className="button danger-primary" disabled={!selectedFiles.length} onClick={() => { setDeleteIds(selectedFiles); openDialog('delete'); }}>{t("删除")}</button><button className="button" onClick={() => setSelectedFiles([])}>{t("取消")}</button><div className="file-upload-dropdown"><button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Upload size={17}/>{t("上传文件")}<ChevronDown size={15}/></button>{menuOpen && <div className="file-upload-menu"><button onClick={() => openDialog('local')}><Upload size={17}/>{t("本地上传")}</button><button onClick={() => openDialog('remote')}><Folder size={17}/>{t("远程上传")}</button></div>}</div></div></header><ResultFileTable key={id+':'+directory} files={currentFiles} selected={selectedFiles} onSelect={setSelectedFiles} onView={file=>{setActiveFile(file);openDialog('file');}} onFields={file=>{setActiveFile(file);openDialog('fields');}} onDelete={file=>{setDeleteIds([file.id]);openDialog('delete');}} onUpload={()=>openDialog('local')}/></section>}
+ <div className={'results-workspace' + (layoutMode === 'right' ? ' right-maximized' : layoutMode === 'information' ? ' information-maximized' : '')}>
+     <section ref={infoRef} className={'results-information' + (directory === '项目信息' ? (editing?' is-editing':'') : ' directory-details')} style={{ display: state.rightMaximized ? 'none' : undefined }}>
+         {directory === '项目信息' ? <Information info={editing?draft:info} editing={editing} dirty={dirty} onEdit={()=>{setDraft({...info});setEditing(true);setFormError('');setFieldErrors({});}} onImport={()=>openDialog('import')} onChange={changeInfoField} onSave={()=>editSave()} onCancel={()=>{setEditing(false);setDraft({...info});setFormError('');setFieldErrors({});errorFocus.current=null;}} errors={fieldErrors}/> : directory === '关联项目' ? <RelatedProjects project={project} projects={projectOptions(state)} role={state.role} onOpen={chooseProject}/> : <section className="results-file-content"><header className="files-heading"><h1>{t(directory)}</h1><span className="badge">{currentFiles.length}{t('个文件')}</span>{selectedFiles.length > 0 && <span className="file-selection-count" aria-live="polite">{t('已选 {count} 个文件',{count:selectedFiles.length})}</span>}<div className="files-actions"><button className="button danger-primary" disabled={!selectedFiles.length} onClick={() => { setDeleteIds(selectedFiles); openDialog('delete'); }}>{t("删除")}</button><button className="button" onClick={() => setSelectedFiles([])}>{t("取消")}</button><div className="file-upload-dropdown"><button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Upload size={17}/>{t("上传文件")}<ChevronDown size={15}/></button>{menuOpen && <div className="file-upload-menu"><button onClick={() => openDialog('local')}><Upload size={17}/>{t("本地上传")}</button><button onClick={() => openDialog('remote')}><Folder size={17}/>{t("远程上传")}</button></div>}</div></div></header><ResultFileTable key={id+':'+directory} files={currentFiles} selected={selectedFiles} onSelect={setSelectedFiles} onView={file=>{setActiveFile(file);openDialog('file');}} onFields={file=>{setActiveFile(file);openDialog('fields');}} onDelete={file=>{setDeleteIds([file.id]);openDialog('delete');}} onUpload={()=>openDialog('local')}/></section>}
      </section>
      <section className="results-right"><div ref={rightRef} className="result-right-content">{tab === 'overview' ? <OverviewContent api={api} info={info} project={project} files={fileRows} directories={directories} onDirectory={selectDirectory}/> : tab === 'gis' ? <div className="result-gis"><MapView projects={[project]} selectedId={project.id} zoom={mapZoom} collapsed={dataPanelCollapsed} kind="data" onToggle={() => setDataPanelCollapsed(!dataPanelCollapsed)} onRefresh={() => setMapZoom(1)} onZoom={setMapZoom}/></div> : tab === 'las' ? <div className="result-document"><h2>B1-1.las</h2><h3>{t("测井数据")}</h3><pre>{'~Version Information\nVERS.  2.0\nWRAP.  NO\n\n~Well Information\nWELL.  B1-1\n\n~Curve Information\nDEPT.M\nGR.API\nRHOB.G/C3'}</pre></div> : <div className="result-document"><FileText size={42}/><h2>设计文档.doc</h2><p>{t('项目')}：{project.name}</p><p className="muted">{t("文档预览")}</p><section className="card"><h3>{t("项目基本信息")}</h3><InfoTable data={info} fields={infoLabels.slice(0, 7)}/></section></div>}</div></section>
  </div>
  </div>
  {layoutMode !== 'right' && <><div {...columns.separatorProps('directory')}/>{layoutMode === 'split' && <div {...columns.separatorProps('information')}/>}</>}
+ {pendingChange && <Modal title={t('未保存的修改')} onClose={() => setPendingChange(null)} footer={<><button className="button" onClick={() => setPendingChange(null)}>{t('继续编辑')}</button><button className="button" onClick={() => continueChange(false)}>{t('放弃修改')}</button><button className="button primary" onClick={() => continueChange(true)}>{t('保存并继续')}</button></>}><p>{t('当前项目有未保存的修改，请选择如何继续。')}</p><p className="unsaved-project-name">{project.name}</p></Modal>}
  {dialog === 'import' && <Modal title={t("导入项目信息")} onClose={() => setDialog(null)} footer={<button className="button" onClick={() => setDialog(null)}>{t("取消")}</button>}><p>{t("选择 Excel 文件，自动导入当前项目的基本信息。")}</p><label className="result-file-picker"><Import size={30}/><strong>{t("选择 Excel 文件")}</strong><input type="file" accept=".xls,.xlsx" aria-label={t("选择Excel文件")} onChange={e => importFile(e.target.files?.[0])}/></label><p className="muted">{t("文件选择后自动回填预设演示信息。")}</p>{formError && <p className="form-error" role="alert">{t(formError)}</p>}</Modal>}
  {dialog === 'local' && <Modal title={t("本地上传")} onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button primary" disabled={!localFile} onClick={uploadLocal}>{t("上传")}</button></>}><div className="upload-context"><p>{t("当前项目")}　<strong>{project.name}</strong></p><p>{t("成果目录")}　<strong>{directoryPath}</strong></p></div><label className="result-file-picker"><Upload size={30}/><strong>{t("选择本地文件上传至当前成果目录")}</strong><input type="file" aria-label={t("选择本地文件")} onChange={e => setLocalFile(e.target.files?.[0] || null)}/></label><h3>{t("待上传文件")}</h3><table className="upload-files"><thead><tr><th>{t("文件名")}</th><th>{t("大小")}</th><th>{t("状态")}</th></tr></thead><tbody>{localFile ? <tr><td>{localFile.name}</td><td>{bytesLabel(localFile.size)}</td><td>{t("待上传")}</td></tr> : <tr><td colSpan={3} className="muted">{t("尚未选择文件")}</td></tr>}</tbody></table></Modal>}
  {dialog === 'remote' && <Modal title={t("远程上传")} wide onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button primary" disabled={!remoteChosen.length} onClick={() => addFiles(REMOTE_FILES.filter(f => remoteChosen.includes(f.id)))}>{t("上传")}</button></>}><div className="upload-context"><p>{t("当前项目")}　<strong>{project.name}</strong></p><p>{t("成果目录")}　<strong>{directoryPath}</strong></p></div><div className="remote-source"><label className="field">{t("数据来源")}<select value={remoteSource} onChange={e => { setRemoteSource(e.target.value); setRemoteDirectory(''); setRemoteChosen([]); }}><option value="">{t("请选择远程挂载数据")}</option><option>57服务器-华北-解释项目</option><option>57服务器-处理中心-处理项目</option></select></label><button className="button" onClick={() => { setDialog(null); api.navigate({ page: 'baseline', section: 'disks' }); }}>{t("管理")}</button></div><div className="remote-panels"><section className="remote-directories"><header><h3>{t("目录")}</h3><small>{remoteSource ? 1 : 0} {t('个')}</small></header><input aria-label={t("搜索目录")} placeholder={t("搜索目录…")} value={directoryQuery} onChange={e => setDirectoryQuery(e.target.value)}/>{remoteSource && (!directoryQuery || ['测井数据',t('测井数据')].some(name=>name.toLowerCase().includes(directoryQuery.toLowerCase()))) ? <div className="remote-tree"><button onClick={() => setRemoteExpanded(!remoteExpanded)}>{remoteExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}<Folder size={17}/>{remoteSource.includes('华北') ? 'diyan_huabei' : 'chulizhongxin'}</button>{remoteExpanded && <button className={remoteDirectory ? 'active' : ''} onClick={() => { setRemoteDirectory('测井数据'); setRemoteChosen([]); }}><FolderOpen size={17}/>{t("测井数据")}</button>}</div> : <p className="remote-empty">{t("暂无目录")}</p>}</section><section className="remote-file-list"><header><h3>{t("文件列表")}</h3><small>{visibleRemote.length} {t('项')}</small><button className="icon-button" title={t("刷新文件列表")} aria-label={t("刷新文件列表")} onClick={() => api.notify(t('远程演示文件列表已刷新'))}><RefreshCw size={18}/></button></header><div className="remote-file-search"><input aria-label={t("搜索文件名")} placeholder={t("搜索文件名…")} value={remoteQuery} onChange={e => setRemoteQuery(e.target.value)}/><button className="button small" onClick={() => setRemoteChosen([])}>{t("取消选择")}</button></div><table className="upload-files"><thead><tr><th></th><th>{t("文件名")}</th><th>{t("大小")}</th><th>{t("修改时间")}</th></tr></thead><tbody>{visibleRemote.map(f => <tr key={f.id}><td><input type="checkbox" aria-label={t('选择远程{file}',{file:f.name})} checked={remoteChosen.includes(f.id)} onChange={e => setRemoteChosen(s => e.target.checked ? [...s, f.id] : s.filter(id => id !== f.id))}/></td><td>{f.name}</td><td>{f.size}</td><td>{f.uploaded}</td></tr>)}</tbody></table>{!visibleRemote.length && <p className="remote-empty">{t("暂无文件")}</p>}</section></div><section className="remote-selected"><header><h3>{t("已选文件")} <span>{remoteChosen.length}</span></h3><button className="link-button" onClick={() => setRemoteChosen([])}>{t("清空")}</button></header>{remoteChosen.length ? REMOTE_FILES.filter(f => remoteChosen.includes(f.id)).map(f => <span key={f.id}>{f.name}<button aria-label={t('取消{file}',{file:f.name})} onClick={() => setRemoteChosen(x => x.filter(id => id !== f.id))}><X size={14}/></button></span>) : <p className="muted">{t("尚未选择文件")}</p>}</section></Modal>}

@@ -1,3 +1,9 @@
+.overview-filter-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}
+.overview-filter-header h2{min-width:0;margin:0;font-size:16px;font-weight:600;line-height:1.5;color:var(--ink)}
+.overview-filter-header .filter-close{width:auto;flex-shrink:0;height:36px;margin:0;padding:0 10px;gap:7px;border-color:#8fb6ca;background:#edf6fb;color:#145f83;font-weight:600;font-size:14px}
+.overview-filter-header .filter-close svg{flex-shrink:0}
+.overview-filter-header .filter-close:hover{background:#deedf6;border-color:#4c8faf;color:#104d6c}
+.overview-filter-header .filter-close:focus-visible{outline:3px solid #248fb7;outline-offset:2px}
 .overview-year-range{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
 .overview-year-range input{width:100%;min-width:0;height:40px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);font-size:14px}
 .overview-year-range>span{color:var(--muted);font-size:13px}

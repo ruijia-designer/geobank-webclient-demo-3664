@@ -33,7 +33,10 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
     onApply(draft);
   };
   return <form className="overview-filters" onSubmit={apply} noValidate aria-label={t('项目筛选条件')}>
-    <button type="button" className="button primary filter-close" onClick={onClose}>{t('关闭筛选')}<X size={16}/></button>
+    <header className="overview-filter-header">
+      <h2>{t('项目筛选条件')}</h2>
+      <button type="button" className="button filter-close" onClick={onClose}>{t('关闭筛选')}<X size={16} aria-hidden="true"/></button>
+    </header>
     <label className="field">{t('归档类型')}<select value={draft.archived?.[0] || ''} onChange={event => set('archived', event.target.value ? [event.target.value] : [])}>
       <option value="">{t('全部')}</option><option value="true">{t('已归档')}</option>{role === 'admin' && <option value="false">{t('未归档')}</option>}
     </select></label>

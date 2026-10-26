@@ -162,6 +162,7 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(sizes(container)).toEqual(resized);
     expect(screen.queryByRole('button', { name: 'B1-1.las' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '测井数据' }));
+    expect(layout(container)).toHaveClass('layout-split');
     expect(screen.getAllByRole('separator')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: '项目信息' }));
     expect(sizes(container)).toEqual(resized);
@@ -178,9 +179,10 @@ describe('成果页三栏真实拖拽流程', () => {
     const directory = within(screen.getByRole('navigation', { name: '成果目录' }));
     right.scrollTop = 237;
 
-    for (const name of ['测井数据', '关联项目', '偏移叠加纯波数据', '层位', '叠后反演结果', '地层厚度图', '项目成果文档', '项目信息']) {
+    for (const name of ['井位坐标、轨迹', '测井数据', '关联项目', '偏移叠加纯波数据', '层位', '叠后反演结果', '地层厚度图', '项目成果文档', '项目信息']) {
       await user.click(directory.getByRole('button', { name }));
       expect(within(information).getByRole('heading', { name, level: 1 })).toBeVisible();
+      expect(layout(container)).toHaveClass('layout-split');
       expect(within(right).getByRole('heading', { name: '成果概览', level: 2 })).toBeVisible();
       expect(container.querySelector('.result-right-content')).toBe(right);
       expect(right.scrollTop).toBe(237);
@@ -199,32 +201,69 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(sizes(container).information).toBeCloseTo(split.information + 10);
   });
 
-  it('文件目录直接进入双栏，隐藏、显示和最大化后仍保留当前详情', async () => {
+  it.each([
+    ['井位坐标、轨迹', '井位坐标、轨迹'],
+    ['wells', '测井数据'],
+    ['偏移叠加纯波数据', '偏移叠加纯波数据'],
+  ])('直接进入文件路由 %s 默认分屏，手动显示和隐藏保留目录、滚动位置及尺寸偏好', async (section, name) => {
     const user = userEvent.setup();
-    const { container } = render(<Harness section="wells"/>);
+    const { container } = render(<Harness section={section}/>);
     const information = container.querySelector('.results-information') as HTMLElement;
     const right = container.querySelector('.result-right-content') as HTMLElement;
-    const split = sizes(container);
-    expect(within(information).getByRole('heading', { name: '测井数据' })).toBeVisible();
+    expect(layout(container)).toHaveClass('layout-split');
+    expect(within(information).getByRole('heading', { name })).toBeVisible();
     expect(right).toBeVisible();
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+
+    drag(divider('directory'), 20);
+    drag(divider('information'), 25);
+    const split = sizes(container);
+    const ratio = split.information / (1280 - split.directory);
+    expect(right).toBeVisible();
+    information.scrollTop = 114;
+    right.scrollTop = 237;
 
     await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
     expect(right).not.toBeVisible();
-    await user.click(within(screen.getByRole('navigation', { name: '成果目录' })).getByRole('button', { name: '关联项目' }));
-    expect(within(information).getByRole('heading', { name: '关联项目' })).toBeVisible();
-    expect(right).not.toBeVisible();
+    information.scrollTop = 308;
+    drag(divider('directory'), -10);
     await user.click(screen.getByRole('button', { name: '显示成果视图' }));
+    expect(layout(container)).toHaveClass('layout-split');
+    expect(within(information).getByRole('heading', { name })).toBeVisible();
+    expect(lastApi.state.route.section).toBe(section);
     expect(right).toBeVisible();
-    expect(sizes(container)).toEqual(split);
+    expect(information.scrollTop).toBe(114);
+    expect(right.scrollTop).toBe(237);
+    expect(sizes(container).directory).toBe(split.directory - 10);
+    expect(sizes(container).information / (1280 - sizes(container).directory)).toBeCloseTo(ratio);
 
-    await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
-    expect(information).not.toBeVisible();
-    await user.click(screen.getByRole('button', { name: '还原' }));
-    expect(within(information).getByRole('heading', { name: '关联项目' })).toBeVisible();
-    expect(sizes(container)).toEqual(split);
+    await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
+    expect(within(information).getByRole('heading', { name })).toBeVisible();
+    expect(information.scrollTop).toBe(308);
+    expect(right).not.toBeVisible();
+    expect(lastApi.state.route.section).toBe(section);
   });
 
-  it('成果概览的目录入口显示中间详情，从右侧全屏进入时恢复双栏', async () => {
+  it('用户显式隐藏预览后，切换文件及基本信息目录仍维持隐藏，显示时保留当前目录', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Harness/>);
+    const information = container.querySelector('.results-information') as HTMLElement;
+    const right = container.querySelector('.result-right-content') as HTMLElement;
+    const directory = within(screen.getByRole('navigation', { name: '成果目录' }));
+    await user.click(screen.getByRole('button', { name: '隐藏成果视图' }));
+    for (const name of ['测井数据', '项目信息', '关联项目']) {
+      await user.click(directory.getByRole('button', { name }));
+      expect(within(information).getByRole('heading', { name, level: 1 })).toBeVisible();
+      expect(right).not.toBeVisible();
+      expect(layout(container)).toHaveClass('layout-information');
+    }
+    await user.click(screen.getByRole('button', { name: '显示成果视图' }));
+    expect(within(information).getByRole('heading', { name: '关联项目' })).toBeVisible();
+    expect(right).toBeVisible();
+    expect(layout(container)).toHaveClass('layout-split');
+  });
+
+  it('成果概览的目录入口显示中间详情，从右侧全屏进入时恢复分屏', async () => {
     const user = userEvent.setup();
     const { container } = render(<Harness/>);
     const information = container.querySelector('.results-information') as HTMLElement;
@@ -232,12 +271,14 @@ describe('成果页三栏真实拖拽流程', () => {
     await user.click(within(right).getByRole('button', { name: '测井数据' }));
     expect(within(information).getByRole('heading', { name: '测井数据' })).toBeVisible();
     expect(right).toBeVisible();
+    expect(layout(container)).toHaveClass('layout-split');
     expect(lastApi.state.route.section).toBe('wells');
 
     await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
     await user.click(within(right).getByRole('button', { name: '地层厚度图' }));
     expect(within(information).getByRole('heading', { name: '地层厚度图' })).toBeVisible();
     expect(right).toBeVisible();
+    expect(layout(container)).toHaveClass('layout-split');
     expect(lastApi.state.rightMaximized).toBe(false);
     expect(screen.getAllByRole('separator')).toHaveLength(2);
   });
