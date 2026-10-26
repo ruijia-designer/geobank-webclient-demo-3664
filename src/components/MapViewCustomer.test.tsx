@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { MapView } from './MapView';
 import type { MapViewProps } from './MapView';
 import { PROJECTS } from '../services/demo';
-import { mapWorldTransform, projectLayer, projectMapPoint, resolveMapGeometry } from '../services/mapView';
+import { mapWorldTransform, projectLayer, projectMapPoint, projectViewportPoint, resolveMapGeometry } from '../services/mapView';
 import { demoRows } from '../services/baseline';
 import { projectTypeColor } from '../services/projectClassification';
 import { LanguageProvider, useTranslation } from '../i18n';
@@ -90,17 +90,42 @@ describe('客户确认的地图控件', () => {
     expect(coordinates.querySelector('.coordinates-divider')).toHaveAttribute('aria-hidden', 'true');
     expect(coordinates.querySelector('.coordinates-value')).toHaveTextContent('136.23° E, 39.89° N, 10.81');
   });
-  it('容器拖宽重新测量同一世界层，底图与项目点共用几何', () => {
+  it('容器调宽后范围跟随底图，独立标记仍投影到同一地理位置', () => {
     let width = 1200;
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ x: 0, y: 0, left: 0, top: 0, right: width, bottom: 800, width, height: 800, toJSON: () => ({}) }));
     const { container } = render(<MapView {...props()}/>);
     const scene = container.querySelector('.map-scene') as HTMLElement, image = screen.getByAltText('项目区域卫星影像');
-    const point = screen.getByRole('button', { name: '定位项目：' + PROJECTS[0].name }), expected = projectMapPoint(PROJECTS[0]);
-    expect(image.parentElement).toBe(scene); expect(point.parentElement).toBe(scene);
-    expect(parseFloat(point.style.left)).toBeCloseTo(expected.x * 100); expect(scene.style.width).toBe(resolveMapGeometry(1200, 800).width + 'px');
-    width = 1700; fireEvent(window, new Event('resize'));
-    expect(scene.style.width).toBe(resolveMapGeometry(1700, 800).width + 'px'); expect(parseFloat(point.style.left)).toBeCloseTo(expected.x * 100);
-    expect(scene.style.transform).toBe(mapWorldTransform(resolveMapGeometry(1700, 800), 2.2, PROJECTS[0]));
+    const point = screen.getByRole('button', { name: '定位项目：' + PROJECTS[0].name });
+    const region = scene.querySelector('.region-polygon') as HTMLElement;
+    expect(image.parentElement).toBe(scene);
+    expect(point.closest('.map-scene')).toBeNull();
+    expect(point.parentElement).toHaveClass('map-marker-layer');
+    expect(parseFloat(region.style.left)).toBeCloseTo(projectMapPoint(PROJECTS[0]).x * 100);
+    for (const viewportWidth of [1200, 1700]) {
+      width = viewportWidth; fireEvent(window, new Event('resize'));
+      const geometry = resolveMapGeometry(width, 800);
+      const expected = projectViewportPoint(PROJECTS[0], geometry, 2.2, PROJECTS[0]);
+      expect(parseFloat(point.style.left)).toBeCloseTo(expected.x);
+      expect(parseFloat(point.style.top)).toBeCloseTo(expected.y);
+      expect(scene.style.width).toBe(geometry.width + 'px');
+      expect(scene.style.transform).toBe(mapWorldTransform(geometry, 2.2, PROJECTS[0]));
+    }
+  });
+  it('缩放仅作用于底图和范围，标签与圆点保持在不缩放的显示层', () => {
+    const p = props(), { container, rerender } = render(<MapView {...p} zoom={1}/>);
+    const point = screen.getByRole('button', { name: '定位项目：' + PROJECTS[1].name });
+    const geometry = resolveMapGeometry(1200, 800);
+    for (const zoom of [1, 2.2, 4, 9]) {
+      rerender(<MapView {...p} zoom={zoom}/>);
+      const expected = projectViewportPoint(PROJECTS[1], geometry, zoom, PROJECTS[0]);
+      expect(parseFloat(point.style.left)).toBeCloseTo(expected.x);
+      expect(parseFloat(point.style.top)).toBeCloseTo(expected.y);
+      expect(point.querySelector('.point-caption')?.closest('.map-scene')).toBeNull();
+      expect(point.querySelector('.point-core')?.closest('.map-scene')).toBeNull();
+      expect(container.querySelectorAll('.map-scene .region-polygon')).toHaveLength(PROJECTS.length);
+      expect(point.querySelector('.region-polygon')).toBeNull();
+      expect(container.querySelector('.map-marker-layer')).not.toHaveAttribute('style');
+    }
   });
   it('按钮缩放仍使用原props回调，重置不改变外层收起状态', async () => {
     const user = userEvent.setup(), refresh = vi.fn();
@@ -146,7 +171,10 @@ describe('客户确认的地图控件', () => {
     await user.click(screen.getByRole('button', { name: 'Test language' }));
     expect(screen.getByRole('button', { name: 'Project type' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('checkbox', { name: 'Processing' })).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Locate project: ' + PROJECTS[0].name })).toHaveAttribute('title', PROJECTS[0].name);
+    expect(screen.getByRole('button', { name: 'Locate project: ' + PROJECTS[0].name })).not.toHaveAttribute('title');
+    const otherPoint = screen.getByRole('button', { name: 'Locate project: ' + PROJECTS[1].name });
+    expect(otherPoint).not.toHaveAttribute('title');
+    expect(otherPoint.querySelector('.point-caption')).toHaveTextContent(PROJECTS[1].name);
     const reset = screen.getByRole('button', { name: 'Reset project types' });
     expect(reset).toHaveTextContent(/^Reset$/);
     await user.click(reset);

@@ -19,6 +19,13 @@ export function querySearch(search:SearchState,role:Role):SearchRecord[]{
  return search.sort==='year'?rows.sort((a,b)=>b.year.localeCompare(a.year)):rows;
 }
 export function facets(rows:SearchRecord[],key:keyof SearchRecord){const counts=new Map<string,number>();rows.forEach(r=>{const value=String(r[key]);counts.set(value,(counts.get(value)||0)+1)});return [...counts].sort(([a],[b])=>a.localeCompare(b,'zh-CN'))}
+export function searchFacets(search:SearchState,role:Role,key:keyof SearchRecord){
+ const rows=querySearch({...search,filters:{...search.filters,[key]:[]}},role);
+ const counts=new Map(facets(rows,key));
+ // Keep selected values available for removal even when other conditions exclude them.
+ for(const value of search.filters[key]||[])if(!counts.has(value))counts.set(value,0);
+ return [...counts].sort(([a],[b])=>a.localeCompare(b,'zh-CN'));
+}
 export function toggleValue(values:string[],value:string){return values.includes(value)?values.filter(v=>v!==value):[...values,value]}
 export function authenticateDemo(username:string,password:string){return username.trim()==='Demo'&&password==='demo123'}
 export function createProject(name:string,type:string,classification:Pick<Partial<Project>,'basin'|'typeId'|'typePath'>={}):Project{return {id:'created-'+Date.now(),name:name.trim(),year:'',basin:'',type,area:'',point:[1128,413],readable:true,archived:false,...classification}}

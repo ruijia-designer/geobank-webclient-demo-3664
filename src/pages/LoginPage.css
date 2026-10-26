@@ -94,7 +94,7 @@ body.geobank-login-active {
 .geobank-login .login-content { width: 100%; max-width: 364px; margin: auto; padding: 76px 0 50px; }
 .geobank-login .heading-rule { display: block; width: 28px; height: 3px; background: #347bec; margin-bottom: 24px; }
 .geobank-login .login-heading h2 { font-size: 30px; font-weight: 500; letter-spacing: 3px; line-height: 1.4; margin: 0 0 12px; }
-.geobank-login .login-heading p { font-size: 14px; color: #7a8ea9; line-height: 1.7; margin: 0 0 38px; }
+.geobank-login .login-heading p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0 0 38px; }
 .geobank-login .field-group { margin-bottom: 24px; }
 .geobank-login .field-group label { display: block; font-size: 14px; color: #385575; margin-bottom: 10px; }
 .geobank-login .input-wrap { display: flex; align-items: center; position: relative; }
@@ -111,7 +111,7 @@ body.geobank-login-active {
   outline: none;
   transition: border-color 150ms, box-shadow 150ms;
 }
-.geobank-login .input-wrap input::placeholder { color: #94a5bc; }
+.geobank-login .input-wrap input::placeholder { color: var(--muted); }
 .geobank-login .input-wrap input:hover { border-color: #9bb5da; }
 .geobank-login .input-wrap input:focus { border-color: #347bec; box-shadow: 0 0 0 3px #347bec13; }
 .geobank-login .input-wrap input[aria-invalid='true'] { border-color: #b85f53; }
@@ -143,8 +143,8 @@ body.geobank-login-active {
 .geobank-login .form-notice { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: #89624d; line-height: 1.6; margin: 0; }
 .geobank-login .form-notice svg { flex: none; margin-top: 2px; }
 .geobank-login .demo-hint { padding: 12px 14px; border: 1px solid var(--login-border); border-radius: 4px; background: #e8f0fc; color: #385575; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.geobank-login .demo-hint small { display: block; margin-top: 4px; color: #7a8ea9; font-size: 12px; }
-.geobank-login .company-signature { margin: 14px 0 0; padding-top: 24px; border-top: 1px solid var(--login-border); color: #7a8ea9; font-size: 13px; line-height: 1.9; text-align: center; text-wrap: balance; }
+.geobank-login .demo-hint small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.geobank-login .company-signature { margin: 14px 0 0; padding-top: 24px; border-top: 1px solid var(--login-border); color: var(--muted); font-size: 13px; line-height: 1.9; text-align: center; text-wrap: balance; }
 
 @media (min-width: 1600px) {
   .geobank-login .brand-content { padding: 84px 0 78px; }

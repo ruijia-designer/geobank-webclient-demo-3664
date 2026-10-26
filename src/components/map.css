@@ -1,10 +1,12 @@
 .map-view{position:relative;overflow:hidden;background:#344d40;height:100%;min-height:450px}
-/* The background and project points share one measured world rectangle. */
+/* Regions scale with the world; markers use its projected viewport coordinates. */
 .map-scene{position:absolute;inset:auto;transform-origin:50% 50%;transition:transform .65s cubic-bezier(.2,.7,.15,1)}
 .map-scene>img{display:block;height:100%;width:100%;object-fit:fill;pointer-events:none;user-select:none}
-.map-point{position:absolute;transform:translate(-50%,-50%);border:0;background:none;padding:0;width:24px;height:24px;z-index:1}
+.map-marker-layer{position:absolute;inset:0;pointer-events:none;z-index:1}
+.map-point{position:absolute;pointer-events:auto;transition:left .65s cubic-bezier(.2,.7,.15,1),top .65s cubic-bezier(.2,.7,.15,1);transform:translate(-50%,-50%);border:0;background:none;padding:0;width:24px;height:24px;z-index:1}
+.map-point:hover,.map-point.selected{z-index:2}
 .point-core{display:block;position:absolute;inset:3px;border:5px solid white;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px #ffffff66}
-.region-polygon{position:absolute;left:-28px;top:-28px;width:80px;height:80px;background:currentColor;opacity:.25;clip-path:polygon(10% 0,90% 10%,100% 75%,50% 100%,0 60%)}
+.region-polygon{position:absolute;transform:translate(-50%,-50%);pointer-events:none;width:80px;height:80px;background:currentColor;opacity:.25;clip-path:polygon(10% 0,90% 10%,100% 75%,50% 100%,0 60%)}
 .point-caption{display:none;position:absolute;bottom:35px;left:50%;transform:translateX(-50%);padding:8px 18px;min-width:150px;max-width:330px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-radius:22px;background:white;color:#0a6f9e;box-shadow:0 2px 10px #0002;font-size:12px}
 .map-point:hover .point-caption,.map-point.selected .point-caption{display:block}
 .map-layer-controls{position:absolute;right:24px;top:22px;width:345px;z-index:5}
@@ -24,7 +26,7 @@
 .map-layer-panel>div{padding:5px 18px}
 .layer-row{height:36px;border-bottom:1px solid #edf2f4;display:flex;align-items:center}
 .layer-row:last-child{border-bottom:0}
-.layer-row.indent{padding-left:24px;color:#7d919f}
+.layer-row.indent{padding-left:24px;color:var(--muted)}
 .layer-row label{display:flex;flex:1;align-items:center;gap:11px;font-size:14px;min-width:0;cursor:pointer}
 .layer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer-row input,.layer-color{flex-shrink:0}
@@ -45,8 +47,8 @@
 button.layer-disclosure{cursor:pointer}
 button.layer-disclosure:hover{background:#eaf5fa;color:#0a6f9e}
 button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1px;background:#eaf5fa}
-.map-zoom{position:absolute;right:24px;bottom:24px;display:grid;gap:12px}
-.coordinates{position:absolute;left:16px;bottom:12px;min-height:40px;background:#f5f7f9;border:1px solid #d3dfe5;padding:8px 12px;display:flex;align-items:center;gap:12px;border-radius:6px;box-shadow:0 1px 8px #0002}
+.map-zoom{position:absolute;z-index:5;right:24px;bottom:24px;display:grid;gap:12px}
+.coordinates{position:absolute;z-index:2;left:16px;bottom:12px;min-height:40px;background:#f5f7f9;border:1px solid #d3dfe5;padding:8px 12px;display:flex;align-items:center;gap:12px;border-radius:6px;box-shadow:0 1px 8px #0002}
 .coordinates svg{color:#0a6f9e;flex-shrink:0}
 .coordinates-divider{height:22px;width:1px;background:#c9d6de;flex-shrink:0}
 .coordinates-value{color:#304f65;font-size:14px;font-weight:600;line-height:22px;white-space:nowrap}
@@ -54,15 +56,15 @@ button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1
 @keyframes refresh{to{transform:rotate(360deg)}}
 .basemap-control{position:relative}
 .basemap-options{position:absolute;right:56px;bottom:0;min-width:210px;background:white;border:1px solid #d8e3e9;border-radius:8px;box-shadow:0 5px 22px #183a5233;overflow:hidden;padding:8px;z-index:8}
-.basemap-options>strong{display:block;color:#7d919f;font-size:12px;font-weight:500;padding:5px 8px 9px}
+.basemap-options>strong{display:block;color:var(--muted);font-size:12px;font-weight:500;padding:5px 8px 9px}
 .basemap-options>button{display:flex;align-items:center;gap:10px;width:100%;min-height:57px;padding:7px;border:0;border-radius:5px;background:white;color:#435e70;text-align:left;font-size:14px}
 .basemap-options>button:hover,.basemap-options>button[aria-checked=true]{background:#eaf5f9}
 .basemap-label{flex:1;white-space:nowrap}
 .basemap-label>span{display:block}
-.basemap-options small{display:block;color:#7d919f;font-size:10px;margin-top:4px}
+.basemap-options small{display:block;color:var(--muted);font-size:var(--font-caption);margin-top:4px}
 .basemap-thumb{width:47px;height:37px;background-position:center;background-size:cover;border:1px solid #d8e3e9;border-radius:4px;flex-shrink:0}
 .basemap-thumb.imagery{background-image:url('/assets/satellite-map.webp')}
 .basemap-thumb.schematic{background-image:url('/assets/schematic-map.svg')}
-.map-demo-attribution{position:absolute;left:16px;bottom:60px;max-width:calc(100% - 90px);background:#fffffff0;border-radius:4px;padding:5px 8px;font-size:11px;color:#59717b;pointer-events:none}
+.map-demo-attribution{position:absolute;left:16px;bottom:60px;max-width:calc(100% - 90px);background:#fffffff0;border-radius:4px;padding:5px 8px;font-size:var(--font-caption);color:#59717b;pointer-events:none}
 @media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.layer-pill,.map-layer-panel header .layer-reset{padding:0 16px}}
-@media(prefers-reduced-motion:reduce){.map-scene,.layer-pill,.map-zoom .map-round,.project-layer-panel .layer-row{transition:none}.rotating svg{animation:none}}
+@media(prefers-reduced-motion:reduce){.map-scene,.map-point,.layer-pill,.map-zoom .map-round,.project-layer-panel .layer-row{transition:none}.rotating svg{animation:none}}

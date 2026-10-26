@@ -17,6 +17,17 @@ function Harness({section,projectId='current'}:{section?:string;projectId?:strin
 }
 beforeEach(()=>{sessionStorage.removeItem('geobank-demo-locale');vi.clearAllMocks();[resultFilesCache,resultInfoCache,resultDownloadsCache].forEach(cache=>Object.keys(cache).forEach(key=>delete cache[key]));vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>{callback(0);return 1;});});
 describe('成果页本轮客户流程',()=>{
+ it('目录叶子隐藏零数量标签，保留非零数量、状态点和分组完成率',()=>{
+  render(<Harness/>);
+  const directory=within(screen.getByRole('navigation',{name:'成果目录'}));
+  for(const name of ['井位坐标、轨迹','时深关系','岩芯','偏移叠加纯波数据','层位']){
+   const leaf=directory.getByRole('button',{name});
+   expect(leaf.querySelector('.directory-leaf-count')).not.toBeInTheDocument();
+   expect(leaf.querySelector('.status-dot')).toBeInTheDocument();
+  }
+  expect(directory.getByRole('button',{name:'测井数据'}).querySelector('.directory-leaf-count')).toHaveTextContent('18');
+  expect(directory.getByRole('button',{name:'处理数据0/2'})).toBeVisible();
+ });
  it('盆地以只读输入展示，其他下拉可编辑，保存和导入均保留原盆地',async()=>{
   const project=PROJECTS.find(project=>project.basin==='四川盆地')!;
   const user=userEvent.setup();render(<Harness projectId={project.id}/>);

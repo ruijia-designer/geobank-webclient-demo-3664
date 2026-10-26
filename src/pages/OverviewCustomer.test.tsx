@@ -99,9 +99,9 @@ describe('概览及客户联动要求',()=>{
   it('检索排除已定位项目后，浮动详情与地图选择同时清除',async()=>{
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'定位项目：2024年山西省左权西乡处理项目'}));
-    expect(screen.getByRole('region',{name:'项目基本信息'})).toBeVisible();
+    expect(screen.getByRole('region',{name:'项目详情'})).toBeVisible();
     await user.type(screen.getByRole('textbox',{name:'搜索项目'}),'2023年C');
-    expect(screen.queryByRole('region',{name:'项目基本信息'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('region',{name:'项目详情'})).not.toBeInTheDocument();
     expect(api.state.selectedProjectId).toBeNull();expect(api.state.mapZoom).toBe(1);
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, ClipboardList, FileText, Folder, FolderOpen, Import, Layers, Map as MapIcon, Maximize, Minimize, Download, Pencil, RefreshCw, Search, SquareSplitHorizontal, Upload, X } from 'lucide-react';
 import type { AppApi, Project } from '../types';
 import { canRead, projectOptions, resolveProject } from '../services/demo';
@@ -27,18 +27,40 @@ const selectFields:Record<string,string[]>={areaName:['大安区块','川南低�
 const numericFields=new Set(['area','seismicSize','seismicSample','layerCount','faultCount','wellCount','curveCount',...sgyFields.map(([key])=>key)]);
 const integerFields=new Set(['layerCount','faultCount','wellCount','curveCount']);
 function value(v?:string) { return v || '—'; }
-function InfoTable({data,fields,editing=false,onChange,className='result-facts'}:{data:Record<string,string>;fields:[string,string][];editing?:boolean;onChange?:(key:string,value:string)=>void;className?:string}){
+type InfoErrors = Record<string, string>;
+const infoFieldOrder = [...infoLabels, ...seismicFields, ...sgyFields, ...geologyFields, ...structureFields, ...wellFields].map(([key]) => key);
+function validateInfo(data: ResultInfo): InfoErrors {
+    const errors: InfoErrors = {};
+    if (!data.name.trim()) errors.name = '请输入项目名称';
+    if (data.start && data.end && data.start > data.end) errors.end = '结束日期不能早于起始日期';
+    for (const key of numericFields) {
+        if (data[key] === '' || data[key] === undefined) continue;
+        const number = Number(data[key]);
+        if (!Number.isFinite(number) || number < 0) errors[key] = '请输入非负数';
+        else if (integerFields.has(key) && !Number.isInteger(number)) errors[key] = '请输入非负整数';
+    }
+    if (data.year && !/^\d{4}$/.test(data.year)) errors.year = '年度须为四位数字';
+    return errors;
+}
+function InfoTable({data,fields,editing=false,onChange,errors={},className='result-facts'}:{data:Record<string,string>;fields:[string,string][];editing?:boolean;onChange?:(key:string,value:string)=>void;errors?:InfoErrors;className?:string}){
     const {t}=useTranslation();
+    const tableId = useId();
     return <div className={className}>{fields.map(([key,label])=>{
         const choices=selectFields[key]||(geologyFields.some(([name])=>name===key)||key==='hasTimeDepth'?['有','无']:null);
-        const current=data[key]||'';
-        return <div key={key} className={key==='name'||key==='year'||key==='seismicName'?'span-two':''}><dt>{t(label)}</dt><dd>{editing?(key==='basin'?<input className="read-only-field" aria-label={t(label)} title={t("只读")} readOnly value={value(current)}/>:choices?<select aria-label={t(label)} value={current} onChange={e=>onChange?.(key,e.target.value)}><option value="">{t("请选择")}</option>{[...new Set([...choices,...(current?[current]:[])])].map(option=><option key={option} value={option}>{['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(option):option}</option>)}</select>:<input aria-label={t(label)} value={current} placeholder={t("请输入")} type={key==='start'||key==='end'?'date':numericFields.has(key)||key==='year'?'number':'text'} min={numericFields.has(key)?0:undefined} step={integerFields.has(key)?1:'any'} onChange={e=>onChange?.(key,e.target.value)}/>):['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(value(current)):value(current)}</dd></div>;
+        const current=data[key]||'', error=errors[key], errorId=`${tableId}-${key}-error`;
+        const attributes = { 'aria-label': t(label), 'data-info-field': key, 'aria-invalid': error ? true : undefined, 'aria-describedby': error ? errorId : undefined };
+        return <div key={key} className={key==='name'||key==='year'||key==='seismicName'?'span-two':''}><dt>{t(label)}</dt><dd>{editing?<>
+            {key==='basin'?<input className="read-only-field" aria-label={t(label)} title={t("只读")} readOnly value={value(current)}/>
+            :choices?<select {...attributes} value={current} onChange={e=>onChange?.(key,e.target.value)}><option value="">{t("请选择")}</option>{[...new Set([...choices,...(current?[current]:[])])].map(option=><option key={option} value={option}>{['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(option):option}</option>)}</select>
+            :<input {...attributes} value={current} placeholder={t("请输入")} type={key==='start'||key==='end'?'date':numericFields.has(key)||key==='year'?'number':'text'} min={numericFields.has(key)?0:undefined} step={integerFields.has(key)?1:'any'} onChange={e=>onChange?.(key,e.target.value)}/>}
+            {error&&<span id={errorId} className="field-error" role="alert">{t(error)}</span>}
+        </>:['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(value(current)):value(current)}</dd></div>;
     })}</div>;
 }
-function Information({info,onEdit,onImport,editing,onChange,onSave,onCancel,error}:{info:ResultInfo;onEdit:()=>void;onImport:()=>void;editing:boolean;onChange:(key:string,value:string)=>void;onSave:()=>void;onCancel:()=>void;error:string}){
+function Information({info,onEdit,onImport,editing,onChange,onSave,onCancel,errors}:{info:ResultInfo;onEdit:()=>void;onImport:()=>void;editing:boolean;onChange:(key:string,value:string)=>void;onSave:()=>void;onCancel:()=>void;errors:InfoErrors}){
     const {t}=useTranslation();
-    const table=(fields:[string,string][],className?:string)=><InfoTable data={info} fields={fields} editing={editing} onChange={onChange} className={className}/>;
-    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1><div>{editing?<><button className="button small" onClick={onCancel}>{t("取消")}</button><button className="button primary small" onClick={onSave}>{t("保存")}</button></>:<><button className="button small" onClick={onImport}><Import size={16}/>{t("导入")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></>}</div></header>{error&&<p className="form-error" role="alert">{t(error)}</p>}<section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section></>;
+    const table=(fields:[string,string][],className?:string)=><InfoTable data={info} fields={fields} editing={editing} onChange={onChange} errors={errors} className={className}/>;
+    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1><div>{editing?<><button className="button small" onClick={onCancel}>{t("取消")}</button><button className="button primary small" onClick={onSave}>{t("保存")}</button></>:<><button className="button small" onClick={onImport}><Import size={16}/>{t("导入")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></>}</div></header><section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section></>;
 }
 function OverviewContent({api,info,project,files,directories,onDirectory}:{api:AppApi;info:ResultInfo;project:Project;files:ResultFile[];directories:ResultDirectory[];onDirectory:(name:string)=>void}){
     const {t}=useTranslation();
@@ -73,6 +95,8 @@ export default function ResultsPage({ api }: {
     const [editing,setEditing]=useState(false);
     const visibleLayoutBeforeHide=useRef(false);
     const [formError, setFormError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<InfoErrors>({});
+    const errorFocus = useRef<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [localFile, setLocalFile] = useState<File | null>(null);
     const [remoteSource, setRemoteSource] = useState('');
@@ -89,6 +113,14 @@ export default function ResultsPage({ api }: {
     const [dataPanelCollapsed, setDataPanelCollapsed] = useState(false);
     const [mapZoom, setMapZoom] = useState(1);
     const infoRef = useRef<HTMLElement>(null), rightRef = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        const key = errorFocus.current;
+        if (!key) return;
+        errorFocus.current = null;
+        const field = infoRef.current?.querySelector<HTMLElement>(`[data-info-field="${key}"]`);
+        field?.focus({ preventScroll: true });
+        field?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }, [fieldErrors]);
     const scrollPositions = useRef({ info: 0, right: 0 });
     const maximizedScrollPositions = useRef<{ info: number | null; right: number | null }>({ info: null, right: null });
     const section = state.route.section;
@@ -99,6 +131,8 @@ export default function ResultsPage({ api }: {
         setDialog(null);
         setEditing(false);
         setFormError('');
+        setFieldErrors({});
+        errorFocus.current = null;
     } }, [id]);
     useEffect(() => {
         const requested=section==='wells'?'测井数据':section;
@@ -130,17 +164,21 @@ export default function ResultsPage({ api }: {
         setRemoteChosen([]);
     } };
     const saveInfo = (data: ResultInfo) => { const next = {...data, basin: project.basin}; setInfo(saveProjectInfo(id,next)); setState(s => ({ ...s, projects: [...s.projects.filter(p => p.id !== id), { ...project, name: next.name, basin: next.basin, year: next.year, area: next.area }] })); setDialog(null); setEditing(false); };
-    const editSave = () => { if (!draft.name.trim()) {
-        setFormError('请输入项目名称');
-        return;
-    } if (draft.start && draft.end && draft.start > draft.end) {
-        setFormError('结束日期不能早于起始日期');
-        return;
-    }
-    const badNumeric=[...numericFields].find(key=>draft[key]!==''&&draft[key]!==undefined&&(!Number.isFinite(Number(draft[key]))||Number(draft[key])<0||(integerFields.has(key)&&!Number.isInteger(Number(draft[key])))));
-    if(badNumeric){setFormError('面积、数据大小和数量须为非负数，数量须为整数');return;}
-    if(draft.year&&!/^\d{4}$/.test(draft.year)){setFormError('年度须为四位数字');return;}
-    saveInfo({ ...draft, name: draft.name.trim() }); api.notify(t('项目信息已保存')); };
+    const changeInfoField = (key: string, value: string) => {
+        const next = { ...draft, [key]: value };
+        setDraft(next);
+        const errors = validateInfo(next);
+        setFieldErrors(previous => Object.fromEntries(Object.keys(previous).filter(field => errors[field]).map(field => [field, errors[field]])));
+    };
+    const editSave = () => {
+        const errors = validateInfo(draft);
+        setFieldErrors(errors);
+        if (Object.keys(errors).length) {
+            errorFocus.current = infoFieldOrder.find(key => errors[key]) || null;
+            return;
+        }
+        saveInfo({ ...draft, name: draft.name.trim() }); api.notify(t('项目信息已保存'));
+    };
     const importFile = (file?: File) => { if (!file)
         return; if (!/\.xlsx?$/i.test(file.name)) {
         setFormError('请选择 Excel 文件（.xls 或 .xlsx）');
@@ -194,12 +232,12 @@ export default function ResultsPage({ api }: {
                 return <button className={'directory-leaf' + (directory === n ? ' active' : '')} key={n} onClick={() => selectDirectory(n)} aria-label={t(n)} aria-description={hasData ? t('{count} 条数据', {count}) : undefined}>
                     {hasData && <i className={'status-dot ' + getDirectoryStatus(n,fileRows,blank)}/>}
                     <span className="directory-leaf-label">{t(n)}</span>
-                    {hasData && <small className={'directory-leaf-count' + (count === 0 ? ' empty' : '')} title={t('{count} 条数据', {count})}>{count}</small>}
+                    {hasData && count > 0 && <small className="directory-leaf-count" title={t('{count} 条数据', {count})}>{count}</small>}
                 </button>;
             })}</section>; })}</nav><footer><span><i className="status-dot ready"/>{t('已录入')} {getResultSummary(directories,fileRows,blank).ready}</span><span><i className="status-dot pending"/>{t('未录入')} {getResultSummary(directories,fileRows,blank).pending}</span><span><i className="status-dot neutral"/>{t('无需录入')} {getResultSummary(directories,fileRows,blank).neutral}</span></footer></aside>
  <div className={'results-workspace' + (state.rightMaximized ? ' right-maximized' : state.informationMaximized ? ' information-maximized' : '')}>
      <section ref={infoRef} className={'results-information' + (directory === '项目信息' ? '' : ' directory-details')} style={{ display: state.rightMaximized ? 'none' : undefined }}>
-         {directory === '项目信息' ? <Information info={editing?draft:info} editing={editing} onEdit={()=>{setDraft({...info});setEditing(true);setFormError('');}} onImport={()=>openDialog('import')} onChange={(key,value)=>setDraft(current=>({...current,[key]:value}))} onSave={editSave} onCancel={()=>{setEditing(false);setDraft({...info});setFormError('');}} error={editing?formError:''}/> : directory === '关联项目' ? <section className="results-related"><h1>{t("关联项目")}</h1><div className="empty-state"><Folder size={42}/><h3>{t("暂无关联项目")}</h3></div></section> : <section className="results-file-content"><header className="files-heading"><h1>{t(directory)}</h1><span className="badge">{currentFiles.length}{t('个文件')}</span>{selectedFiles.length > 0 && <span className="file-selection-count" aria-live="polite">{t('已选 {count} 个文件',{count:selectedFiles.length})}</span>}<div className="files-actions"><button className="button danger-primary" disabled={!selectedFiles.length} onClick={() => { setDeleteIds(selectedFiles); openDialog('delete'); }}>{t("删除")}</button><button className="button" onClick={() => setSelectedFiles([])}>{t("取消")}</button><div className="file-upload-dropdown"><button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Upload size={17}/>{t("上传文件")}<ChevronDown size={15}/></button>{menuOpen && <div className="file-upload-menu"><button onClick={() => openDialog('local')}><Upload size={17}/>{t("本地上传")}</button><button onClick={() => openDialog('remote')}><Folder size={17}/>{t("远程上传")}</button></div>}</div></div></header><ResultFileTable key={id+':'+directory} files={currentFiles} selected={selectedFiles} onSelect={setSelectedFiles} onView={file=>{setActiveFile(file);openDialog('file');}} onFields={file=>{setActiveFile(file);openDialog('fields');}} onDelete={file=>{setDeleteIds([file.id]);openDialog('delete');}} onUpload={()=>openDialog('local')}/></section>}
+         {directory === '项目信息' ? <Information info={editing?draft:info} editing={editing} onEdit={()=>{setDraft({...info});setEditing(true);setFormError('');setFieldErrors({});}} onImport={()=>openDialog('import')} onChange={changeInfoField} onSave={editSave} onCancel={()=>{setEditing(false);setDraft({...info});setFormError('');setFieldErrors({});errorFocus.current=null;}} errors={fieldErrors}/> : directory === '关联项目' ? <section className="results-related"><h1>{t("关联项目")}</h1><div className="empty-state"><Folder size={42}/><h3>{t("暂无关联项目")}</h3></div></section> : <section className="results-file-content"><header className="files-heading"><h1>{t(directory)}</h1><span className="badge">{currentFiles.length}{t('个文件')}</span>{selectedFiles.length > 0 && <span className="file-selection-count" aria-live="polite">{t('已选 {count} 个文件',{count:selectedFiles.length})}</span>}<div className="files-actions"><button className="button danger-primary" disabled={!selectedFiles.length} onClick={() => { setDeleteIds(selectedFiles); openDialog('delete'); }}>{t("删除")}</button><button className="button" onClick={() => setSelectedFiles([])}>{t("取消")}</button><div className="file-upload-dropdown"><button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Upload size={17}/>{t("上传文件")}<ChevronDown size={15}/></button>{menuOpen && <div className="file-upload-menu"><button onClick={() => openDialog('local')}><Upload size={17}/>{t("本地上传")}</button><button onClick={() => openDialog('remote')}><Folder size={17}/>{t("远程上传")}</button></div>}</div></div></header><ResultFileTable key={id+':'+directory} files={currentFiles} selected={selectedFiles} onSelect={setSelectedFiles} onView={file=>{setActiveFile(file);openDialog('file');}} onFields={file=>{setActiveFile(file);openDialog('fields');}} onDelete={file=>{setDeleteIds([file.id]);openDialog('delete');}} onUpload={()=>openDialog('local')}/></section>}
      </section>
      <section className="results-right"><div ref={rightRef} className="result-right-content">{tab === 'overview' ? <OverviewContent api={api} info={info} project={project} files={fileRows} directories={directories} onDirectory={selectDirectory}/> : tab === 'gis' ? <div className="result-gis"><MapView projects={[project]} selectedId={project.id} zoom={mapZoom} collapsed={dataPanelCollapsed} kind="data" onToggle={() => setDataPanelCollapsed(!dataPanelCollapsed)} onRefresh={() => setMapZoom(1)} onZoom={setMapZoom}/></div> : tab === 'las' ? <div className="result-document"><h2>B1-1.las</h2><h3>{t("测井数据")}</h3><pre>{'~Version Information\nVERS.  2.0\nWRAP.  NO\n\n~Well Information\nWELL.  B1-1\n\n~Curve Information\nDEPT.M\nGR.API\nRHOB.G/C3'}</pre></div> : <div className="result-document"><FileText size={42}/><h2>设计文档.doc</h2><p>{t('项目')}：{project.name}</p><p className="muted">{t("文档预览")}</p><section className="card"><h3>{t("项目基本信息")}</h3><InfoTable data={info} fields={infoLabels.slice(0, 7)}/></section></div>}</div></section>
  </div>

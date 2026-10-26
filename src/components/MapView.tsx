@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Layers, RotateCcw, ChevronUp, ChevronDown, Plus, Minus, Globe, Check, LocateFixed } from 'lucide-react';
 import type { Project } from '../types';
-import { isProjectInViewport, mapWorldTransform, projectLayer, projectMapPoint, resolveMapGeometry } from '../services/mapView';
+import { isProjectInViewport, mapWorldTransform, projectLayer, projectMapPoint, projectViewportPoint, resolveMapGeometry } from '../services/mapView';
 import type { Basemap } from '../services/mapView';
+import type { MapProjectAnchor } from '../services/mapCardPosition';
 import { projectTypeColor } from '../services/projectClassification';
 import { useTranslation } from '../i18n';
 import './map.css';
@@ -12,8 +14,10 @@ export interface MapViewProps {
   colorMode?: 'type' | 'year'; kind?: 'project' | 'data'; onToggle: () => void;
   onRefresh: () => void; onZoom: (n: number) => void; onLocate?: (id: string) => void;
   onVisibleProjectsChange?: (ids: string[]) => void;
+  focusId?: string | null;
+  renderProjectDetails?: (project: Project, anchor: MapProjectAnchor) => ReactNode;
 }
-export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'type', kind = 'project', onToggle, onRefresh, onZoom, onLocate, onVisibleProjectsChange }: MapViewProps) {
+export function MapView({ projects, selectedId, focusId, zoom, collapsed, colorMode = 'type', kind = 'project', onToggle, onRefresh, onZoom, onLocate, onVisibleProjectsChange, renderProjectDetails }: MapViewProps) {
   const { t } = useTranslation();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [acquisitionOpen, setAcquisitionOpen] = useState(true), [boundaryOpen, setBoundaryOpen] = useState(true);
@@ -24,6 +28,7 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
   const [geometry, setGeometry] = useState(() => resolveMapGeometry(1200, 800));
   const panelId = useId(), menuId = useId();
   const selected = projects.find(p => p.id === selectedId), label = kind === 'project' ? '项目类型' : '数据类型';
+  const focused = projects.find(p => p.id === (focusId === undefined ? selectedId : focusId));
 
   useEffect(() => {
     const container = containerRef.current;
@@ -41,12 +46,12 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
   }, []);
   useEffect(() => {
     if (!onVisibleProjectsChange) { reportedVisibleIds.current = null; return; }
-    const ids = projects.filter(project => isProjectInViewport(project, geometry, zoom, selected)).map(project => project.id);
+    const ids = projects.filter(project => isProjectInViewport(project, geometry, zoom, focused)).map(project => project.id);
     const previous = reportedVisibleIds.current;
     if (previous && previous.length === ids.length && previous.every((id, index) => id === ids[index])) return;
     reportedVisibleIds.current = ids;
     onVisibleProjectsChange(ids);
-  }, [projects, geometry, zoom, selected, onVisibleProjectsChange]);
+  }, [projects, geometry, zoom, focused, onVisibleProjectsChange]);
   useEffect(() => () => { if (refreshTimer.current) clearTimeout(refreshTimer.current); }, []);
   useEffect(() => {
     if (!basemapOpen) return;
@@ -74,17 +79,27 @@ export function MapView({ projects, selectedId, zoom, collapsed, colorMode = 'ty
       <label><input type="checkbox" checked={checks[name] !== false} onChange={() => toggleCheck(name)}/><span className="layer-color" style={{ background: kind === 'project' ? projectTypeColor({ type: name }) : name === '处理' ? '#8874b0' : name === '解释' ? '#c68457' : name === '井筒' ? '#49a397' : '#249bb9' }}/><span className="layer-name" title={t(name)}>{t(name)}</span></label>
     </div>;
   };
+  const visibleProjects = projects.filter(p => checks[projectLayer(p.type, p.typePath)] !== false && checks[p.type] !== false);
+  const selectedAnchor = selected ? { ...projectViewportPoint(selected, geometry, zoom, focused), viewportWidth: geometry.viewportWidth, viewportHeight: geometry.viewportHeight } : null;
+  const pointColor = (p: Project) => colorMode === 'year' ? (p.year === '2024' ? '#249bb9' : '#c68457') : projectTypeColor(p);
   const chooseBasemap = (next: Basemap) => { setBasemap(next); setBasemapOpen(false); basemapButton.current?.focus(); };
 
   return <section ref={containerRef} className="map-view" aria-label={t('项目地图')} data-basemap={basemap}>
-    <div className="map-scene" style={{ width: geometry.width, height: geometry.height, left: geometry.left, top: geometry.top, transform: mapWorldTransform(geometry, zoom, selected) }}>
+    <div className="map-scene" style={{ width: geometry.width, height: geometry.height, left: geometry.left, top: geometry.top, transform: mapWorldTransform(geometry, zoom, focused) }}>
       <img src={basemap === 'imagery' ? './assets/satellite-map.webp' : './assets/schematic-map.svg'} alt={t(basemap === 'imagery' ? '项目区域卫星影像' : '地理示意地图（非测绘数据）')} draggable={false}/>
-      {projects.filter(p => checks[projectLayer(p.type, p.typePath)] !== false && checks[p.type] !== false).map(p => {
+      {visibleProjects.map(p => {
         const { x, y } = projectMapPoint(p);
-        const c = colorMode === 'year' ? (p.year === '2024' ? '#249bb9' : '#c68457') : projectTypeColor(p);
-        return <button key={p.id} className={'map-point' + (selectedId === p.id ? ' selected' : '')} style={{ left: x * 100 + '%', top: y * 100 + '%', color: c }} title={p.name} aria-label={t('定位项目：') + p.name} onClick={() => onLocate?.(p.id)}><span className="region-polygon"/><span className="point-core"/><span className="point-caption">{selectedId === p.id ? p.basin + ' · ' + p.type : p.name}</span></button>;
+        return <span key={p.id} className="region-polygon" aria-hidden="true" style={{ left: x * 100 + '%', top: y * 100 + '%', color: pointColor(p) }}/>;
       })}
     </div>
+    <div className="map-marker-layer">
+      {visibleProjects.map(p => {
+        const { x, y } = projectViewportPoint(p, geometry, zoom, focused);
+        return <button key={p.id} className={'map-point' + (selectedId === p.id ? ' selected' : '')} style={{ left: x, top: y, color: pointColor(p) }} aria-label={t('定位项目：') + p.name} onClick={() => onLocate?.(p.id)}><span className="point-core"/><span className="point-caption">{selectedId === p.id ? p.basin + ' · ' + p.type : p.name}</span></button>;
+      })}
+    </div>
+    {selected && selectedAnchor && visibleProjects.some(project => project.id === selected.id) &&
+      isProjectInViewport(selected, geometry, zoom, focused) && renderProjectDetails?.(selected, selectedAnchor)}
     <div className="map-layer-controls"><div className="layer-toolbar"><button className="layer-pill" onClick={onToggle} aria-expanded={!collapsed} aria-controls={panelId} title={t((collapsed ? '展开' : '收起') + label)}><Layers size={25}/><span>{t(label)}</span>{collapsed ? <ChevronDown size={18}/> : <ChevronUp size={18}/>}</button></div>
       {!collapsed && <div id={panelId} className={'map-layer-panel' + (kind === 'project' ? ' project-layer-panel' : '')}><header>
         <button className={'layer-reset' + (refreshing ? ' rotating' : '')} onClick={reset} title={t('重置' + label)} aria-label={t('重置' + label)}><RotateCcw size={25} strokeWidth={2}/><span>{t('重置')}</span></button>

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, FolderTree, Grid2X2, HardDrive, Image, Layers, MapPinned, Pencil, Plus, ScanLine, Server, Trash2, Users } from 'lucide-react';
 import type { AppApi } from '../types';
 import { Modal } from '../components/Modal';
@@ -36,7 +36,46 @@ export default function BaselinePage({ api }: {
     const [expanded, setExpanded] = useState<string[]>(['1', '2', '5', '7', '10', '11', '15', '18']);
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [form, setForm] = useState<BaselineRow>({ id: '', name: '' });
-    const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const formRef = useRef<HTMLDivElement>(null);
+    const errorFocus = useRef<string | null>(null);
+    const formId = useId();
+    useEffect(() => {
+        const key = errorFocus.current;
+        if (!key) return;
+        errorFocus.current = null;
+        const field = formRef.current?.querySelector<HTMLElement>(`[data-field-key="${key}"]`);
+        field?.focus({ preventScroll: true });
+        field?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }, [fieldErrors]);
+    const validateForm = (values: BaselineRow) => {
+        const errors: Record<string, string> = {};
+        if (!values.name.trim()) errors.name = '请输入名称';
+        if (config.id === 'types') {
+            if (!/^#[0-9a-f]{6}$/i.test(String(values.color || ''))) errors.color = '请输入有效的六位颜色值';
+            const parentError = projectTypeParentError(rows, values);
+            if (parentError) errors.parent = parentError;
+        }
+        return errors;
+    };
+    const updateField = (key: string, value: string) => {
+        const next = { ...form, [key]: value };
+        setForm(next);
+        if (fieldErrors[key]) {
+            const message = validateForm(next)[key];
+            setFieldErrors(previous => {
+                const nextErrors = { ...previous };
+                if (message) nextErrors[key] = message;
+                else delete nextErrors[key];
+                return nextErrors;
+            });
+        }
+    };
+    const fieldAttributes = (key: string) => ({
+        'data-field-key': key,
+        'aria-invalid': fieldErrors[key] ? true : undefined,
+        'aria-describedby': fieldErrors[key] ? `${formId}-${key}-error` : undefined,
+    });
     const [rangeCount, setRangeCount] = useState(1);
     const [names, setNames] = useState({ ...namingCache });
     useEffect(() => { setRows(demoRows[config.id]); setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); setDialog(null); setExpanded(config.id === 'types' ? ['1'] : ['1', '2', '5', '7', '10', '11', '15', '18']); }, [config.id]);
@@ -49,18 +88,16 @@ export default function BaselinePage({ api }: {
             return false;
         parent = rows.find(x => x.id === parent)?.parent;
     } return true; });
-    const open = (mode: Dialog['mode'], row?: BaselineRow, parent?: BaselineRow) => { const initial = row ? { ...row } : { id: 'new-' + Date.now(), name: '', ...(config.id === 'types' ? { color: '#277DA8' } : {}), ...(parent ? { parent: parent.id, level: (parent.level || 1) + 1, ...(config.id === 'structure' ? { type: parent.level === 1 ? '坳陷' : '凹陷' } : {}) } : config.tree ? { level: 1, ...(config.id === 'structure' ? { type: '盆地' } : {}) } : {}) }; setForm(initial); setDialog({ mode, row: initial }); setError(''); setRangeCount(1); };
-    const close = () => setDialog(null);
-    const save = () => { if (!form.name.trim()) {
-        setError('请输入名称');
+    const open = (mode: Dialog['mode'], row?: BaselineRow, parent?: BaselineRow) => { const initial = row ? { ...row } : { id: 'new-' + Date.now(), name: '', ...(config.id === 'types' ? { color: '#277DA8' } : {}), ...(parent ? { parent: parent.id, level: (parent.level || 1) + 1, ...(config.id === 'structure' ? { type: parent.level === 1 ? '坳陷' : '凹陷' } : {}) } : config.tree ? { level: 1, ...(config.id === 'structure' ? { type: '盆地' } : {}) } : {}) }; setForm(initial); setDialog({ mode, row: initial }); setFieldErrors({}); errorFocus.current = null; setRangeCount(1); };
+    const close = () => { setDialog(null); setFieldErrors({}); errorFocus.current = null; };
+    const save = () => {
+    const errors = validateForm(form);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+        errorFocus.current = config.fields.find(field => errors[field.key])?.key || null;
         return;
-    } if (config.id === 'types' && !/^#[0-9a-f]{6}$/i.test(String(form.color || ''))) {
-        setError('请输入有效的六位颜色值');
-        return;
-    } if (config.id === 'types') {
-        const parentError = projectTypeParentError(rows, form);
-        if (parentError) { setError(parentError); return; }
-    } const saved = { ...form, name: form.name.trim() };
+    }
+    const saved = { ...form, name: form.name.trim() };
     const hasSortField = config.fields.some(field => field.key === 'sort');
     const position = hasSortField && form.sort !== undefined && String(form.sort).trim() !== '' ? Number(form.sort) : undefined;
     update(placeBaselineRow(config.id, rows, saved, position));
@@ -98,7 +135,7 @@ export default function BaselinePage({ api }: {
  </div></td></tr>; })}</tbody></table>{!bodyRows.length && <div className="empty-state"><FileText size={42}/><h3>{t(query || extraQuery ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(query ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p>{!query && <button className="button primary" onClick={() => open('new')}>{t('新增' + config.title)}</button>}</div>}</div>}
  <footer>{config.id === 'naming' ? <span>{t('固定成果目录，仅编辑编号及文件后缀')}</span> : <><span>{bodyRows.length ? t('共 {count} 条', { count: bodyRows.length }) : '—'}</span><span>{t('10 条 / 页')} <button className="button" disabled>{t('上一页')}</button><button className="button primary">1</button><button className="button" disabled>{t('下一页')}</button></span></>}</footer></section></main>
  {dialog && <Modal title={t(dialog.mode === 'delete' ? '删除' + config.title : dialog.mode === 'scan' ? '扫描磁盘' : (dialog.mode === 'detail' ? '查看' : dialog.mode === 'edit' ? '编辑' : '新增') + config.title)} onClose={close} wide={config.id === 'mining' || config.id === 'closure'} footer={<><button className="button" onClick={close}>{t(dialog.mode === 'detail' ? '关闭' : '取消')}</button>{dialog.mode === 'delete' ? <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button> : dialog.mode === 'scan' ? <button className="button primary" onClick={() => { update(rows.map(r => r.id === form.id ? { ...r, scanned: new Date().toLocaleString('sv-SE') } : r)); close(); api.notify(t('本地演示扫描完成')); }}>{t('开始扫描')}</button> : dialog.mode !== 'detail' && <button className="button primary" onClick={save}>{t('保存')}</button>}</>}>
- {dialog.mode === 'delete' ? <p>{t('确定删除“{name}”吗？', { name: form.name })}{rows.some(r => r.parent === form.id) && t('其下级记录也将删除。')}</p> : dialog.mode === 'scan' ? <div><p>{t('磁盘：')}{form.name}</p><p>{t('挂载路径：')}{form.path}</p><p className="muted">{t('扫描演示将更新扫描时间。')}</p></div> : <><div className={'form-grid baseline-form' + (config.id === 'types' ? ' baseline-type-form' : '')}>{config.id === 'structure' && <div className="baseline-tree-note">{t('上级单元：')}{rows.find(r => r.id === form.parent)?.name || t('无（顶级盆地）')}　{t('单元类型：')}{t(String(form.type || '盆地'))}　{t('等级：')}{form.level || 1}</div>}{config.fields.filter(f => { if (config.id === 'datum') {
+ {dialog.mode === 'delete' ? <p>{t('确定删除“{name}”吗？', { name: form.name })}{rows.some(r => r.parent === form.id) && t('其下级记录也将删除。')}</p> : dialog.mode === 'scan' ? <div><p>{t('磁盘：')}{form.name}</p><p>{t('挂载路径：')}{form.path}</p><p className="muted">{t('扫描演示将更新扫描时间。')}</p></div> : <><div ref={formRef} className={'form-grid baseline-form' + (config.id === 'types' ? ' baseline-type-form' : '')}>{config.id === 'structure' && <div className="baseline-tree-note">{t('上级单元：')}{rows.find(r => r.id === form.parent)?.name || t('无（顶级盆地）')}　{t('单元类型：')}{t(String(form.type || '盆地'))}　{t('等级：')}{form.level || 1}</div>}{config.fields.filter(f => { if (config.id === 'datum') {
             if (f.key === 'value')
                 return form.type !== '浮动基准面';
             if (f.kind === 'file')
@@ -108,6 +145,21 @@ export default function BaselinePage({ api }: {
                 return form.type !== '空变替换速度';
             if (f.kind === 'file')
                 return form.type === '空变替换速度';
-        } return true; }).map(f => { const options = f.key === 'parent' ? projectTypeParentOptions(rows, form.id) : (f.options || []).map(x => ({ value: x, label: x })); return <label key={f.key} className={'field' + (f.kind === 'textarea' || (config.id === 'types' && f.kind === 'color') ? ' full' : '')}><span className="field-label">{t(f.label)}{f.required && <span className="required"> *</span>}</span>{dialog.mode === 'detail' ? <div className="detail-value">{f.key === 'parent' ? baselinePath(rows, form.parent || '') || '—' : displayFieldValue(f.key, form[f.key])}</div> : f.kind === 'select' ? <select value={String(form[f.key] || '')} onChange={e => setForm({ ...form, [f.key]: e.target.value })}><option value="">{t('请选择')}</option>{options.map(o => <option key={o.value} value={o.value}>{f.key === 'parent' ? o.label : t(o.label)}</option>)}</select> : f.kind === 'textarea' ? <textarea value={String(form[f.key] || '')} placeholder={t('请输入')} onChange={e => setForm({ ...form, [f.key]: e.target.value })}/> : f.kind === 'file' ? <input type="file" accept=".json,.geojson,.grd,.txt" onChange={e => setForm({ ...form, [f.key]: e.target.files?.[0]?.name || '' })}/> : f.kind === 'color' ? <div className="color-input"><input type="color" aria-label={t('选择颜色')} value={/^#[0-9a-f]{6}$/i.test(String(form.color)) ? String(form.color) : '#277DA8'} onChange={e => setForm({ ...form, color: e.target.value.toUpperCase() })}/><input aria-label={t('颜色值')} value={String(form.color || '')} onChange={e => setForm({ ...form, color: e.target.value })}/></div> : <input type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'} min={f.key === 'sort' ? 1 : undefined} step={f.key === 'sort' ? 1 : undefined} placeholder={t('请输入')} value={String(form[f.key] ?? '')} onChange={e => setForm({ ...form, [f.key]: e.target.value })}/>}</label>; })}</div>{config.id === 'mining' && <section className="baseline-ranges"><header><h3>{t('矿权范围记录')}</h3>{dialog.mode !== 'detail' && <button className="button" onClick={() => setRangeCount(n => n + 1)}><Plus size={14}/>{t('添加行')}</button>}</header>{Array.from({ length: rangeCount }, (_, i) => <div className="form-grid" key={i}><label className="field">{t('日期')}<input type="date" disabled={dialog.mode === 'detail'} value={String(form['rangeDate' + i] || '')} onChange={e => setForm({ ...form, ['rangeDate' + i]: e.target.value })}/></label><label className="field">{t('登记面积（km²）')}<input type="number" disabled={dialog.mode === 'detail'} value={String(form[i === 0 ? 'area' : 'area' + i] || '')} onChange={e => setForm({ ...form, [i === 0 ? 'area' : 'area' + i]: e.target.value })}/></label><label className="field full">{t('范围（GeoJSON）')}<input type="file" disabled={dialog.mode === 'detail'} accept=".json,.geojson" onChange={e => setForm({ ...form, ['rangeFile' + i]: e.target.files?.[0]?.name || '' })}/></label></div>)}</section>}{error && <p role="alert" className="form-error">{t(error)}</p>}</>}
+        } return true;  }).map(f => {
+        const options = f.key === 'parent' ? projectTypeParentOptions(rows, form.id) : (f.options || []).map(x => ({ value: x, label: x }));
+        const fieldId = `${formId}-${f.key}`;
+        const attributes = { id: fieldId, 'aria-label': t(f.label), ...fieldAttributes(f.key) };
+        const change = (value: string) => updateField(f.key, value);
+        return <label key={f.key} htmlFor={fieldId} className={'field' + (f.kind === 'textarea' || (config.id === 'types' && f.kind === 'color') ? ' full' : '')}>
+            <span className="field-label">{t(f.label)}{f.required && <span className="required"> *</span>}</span>
+            {dialog.mode === 'detail' ? <div className="detail-value">{f.key === 'parent' ? baselinePath(rows, form.parent || '') || '—' : displayFieldValue(f.key, form[f.key])}</div>
+            : f.kind === 'select' ? <select {...attributes} value={String(form[f.key] || '')} onChange={e => change(e.target.value)}><option value="">{t('请选择')}</option>{options.map(o => <option key={o.value} value={o.value}>{f.key === 'parent' ? o.label : t(o.label)}</option>)}</select>
+            : f.kind === 'textarea' ? <textarea {...attributes} value={String(form[f.key] || '')} placeholder={t('请输入')} onChange={e => change(e.target.value)}/>
+            : f.kind === 'file' ? <input {...attributes} type="file" accept=".json,.geojson,.grd,.txt" onChange={e => change(e.target.files?.[0]?.name || '')}/>
+            : f.kind === 'color' ? <div className="color-input"><input type="color" aria-label={t('选择颜色')} value={/^#[0-9a-f]{6}$/i.test(String(form.color)) ? String(form.color) : '#277DA8'} onChange={e => change(e.target.value.toUpperCase())}/><input {...attributes} aria-label={t('颜色值')} value={String(form.color || '')} onChange={e => change(e.target.value)}/></div>
+            : <input {...attributes} type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'} min={f.key === 'sort' ? 1 : undefined} step={f.key === 'sort' ? 1 : undefined} placeholder={t('请输入')} value={String(form[f.key] ?? '')} onChange={e => change(e.target.value)}/>}
+            {dialog.mode !== 'detail' && fieldErrors[f.key] && <span id={`${formId}-${f.key}-error`} className="field-error" role="alert">{t(fieldErrors[f.key])}</span>}
+        </label>;
+    })}</div>{config.id === 'mining' && <section className="baseline-ranges"><header><h3>{t('矿权范围记录')}</h3>{dialog.mode !== 'detail' && <button className="button" onClick={() => setRangeCount(n => n + 1)}><Plus size={14}/>{t('添加行')}</button>}</header>{Array.from({ length: rangeCount }, (_, i) => <div className="form-grid" key={i}><label className="field">{t('日期')}<input type="date" disabled={dialog.mode === 'detail'} value={String(form['rangeDate' + i] || '')} onChange={e => setForm({ ...form, ['rangeDate' + i]: e.target.value })}/></label><label className="field">{t('登记面积（km²）')}<input type="number" disabled={dialog.mode === 'detail'} value={String(form[i === 0 ? 'area' : 'area' + i] || '')} onChange={e => setForm({ ...form, [i === 0 ? 'area' : 'area' + i]: e.target.value })}/></label><label className="field full">{t('范围（GeoJSON）')}<input type="file" disabled={dialog.mode === 'detail'} accept=".json,.geojson" onChange={e => setForm({ ...form, ['rangeFile' + i]: e.target.files?.[0]?.name || '' })}/></label></div>)}</section>}</>}
  </Modal>}</div>;
 }

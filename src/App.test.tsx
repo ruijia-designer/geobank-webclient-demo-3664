@@ -39,7 +39,7 @@ describe('概览与跨页面流程',()=>{
   const u=userEvent.setup();render(<App/>);
   const card=screen.getByRole('button',{name:'项目：2024年山西省左权西乡处理项目'});
   vi.useFakeTimers();fireEvent.click(card,{detail:1});act(()=>vi.advanceTimersByTime(330));vi.useRealTimers();
-  expect(screen.getByRole('region',{name:'项目基本信息'})).toBeInTheDocument();
+  expect(screen.getByRole('region',{name:'项目详情'})).toBeInTheDocument();
   await u.dblClick(card);
   expect(window.location.hash).toBe('#/results/0');
   expect(screen.getByRole('button',{name:'上传成果'})).toBeInTheDocument();

@@ -2,7 +2,7 @@ import { useTranslation } from '../i18n';
 import { useState } from 'react';
 import { Search, Sparkles, RefreshCw, Copy, ChevronUp, ChevronDown, X, List, FileSearch } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import { facets, querySearch, toggleValue } from '../services/demo';
+import { searchFacets, querySearch, toggleValue } from '../services/demo';
 import type { AppApi, SearchRecord, SearchState } from '../types';
 import './SearchPage.css';
 
@@ -31,7 +31,7 @@ export default function SearchPage({api}:{api:AppApi}) {
    <div className="search-tabs" role="tablist" aria-label={t("检索结果栏目")}>{['项目','数据','文档'].map(v=><button role="tab" aria-selected={tab===v} className={tab===v?'active':''} key={v} onClick={()=>setTab(v)}>{t(v)}</button>)}</div>
   </section>
   <div className="search-body"><aside className="search-filters card"><header><strong>{t("筛选条件")}</strong><button className="text-button" onClick={()=>change({filters:{}})}>{t("清空")}</button></header><small>{t("未选择时检索全部")}</small>
-   {groups.map(([key,label])=>{const values=facets(rows,key);return <section className="facet-group" key={key}><button className="facet-title" aria-expanded={!closed.includes(key)} onClick={()=>setClosed(v=>toggleValue(v,key))}><strong>{t(label)}</strong>{closed.includes(key)?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>{!closed.includes(key)&&(values.length?values.map(([value,count])=><label className="facet-option" key={value}><input type="checkbox" checked={(search.filters[key]||[]).includes(value)} onChange={()=>toggle(key,value)}/><span>{t(value)}</span><span className="facet-count" aria-label={t('{value}检索结果数量',{value:t(value)})}>{count}</span></label>):<p className="facet-none">{t("暂无匹配选项")}</p>)}</section>})}
+   {groups.map(([key,label])=>{const values=searchFacets(search,state.role,key);return <section className="facet-group" key={key}><button className="facet-title" aria-expanded={!closed.includes(key)} onClick={()=>setClosed(v=>toggleValue(v,key))}><strong>{t(label)}</strong>{closed.includes(key)?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>{!closed.includes(key)&&(values.length?values.map(([value,count])=><label className="facet-option" key={value}><input type="checkbox" checked={(search.filters[key]||[]).includes(value)} onChange={()=>toggle(key,value)}/><span>{t(value)}</span><span className="facet-count" aria-label={t('{value}检索结果数量',{value:t(value)})}>{count}</span></label>):<p className="facet-none">{t("暂无匹配选项")}</p>)}</section>})}
   </aside><section className="search-results">
    {!!Object.values(search.filters).flat().length&&<div className="search-chips" aria-label={t("已选筛选条件")}>{Object.entries(search.filters).flatMap(([key,values])=>values.map(value=><button key={key+value} onClick={()=>toggle(key,value)} aria-label={t('取消筛选 {value}',{value:t(value)})}>{t(value)}<X size={14}/></button>))}</div>}
    {tab==='项目'?<>

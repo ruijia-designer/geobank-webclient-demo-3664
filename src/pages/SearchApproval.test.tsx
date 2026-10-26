@@ -36,7 +36,8 @@ describe('搜索的最终结果计数与交互',()=>{
   const user=userEvent.setup();render(<Harness/>);
   await user.click(screen.getByRole('checkbox',{name:/2024/}));
   expect(screen.getByLabelText('项目结果数量')).toHaveTextContent('1');
-  expect(screen.queryByRole('checkbox',{name:/2023/})).not.toBeInTheDocument();
+  expect(screen.getByRole('checkbox',{name:/2023/})).toBeVisible();
+  expect(screen.getByRole('checkbox',{name:/2023/})).not.toBeChecked();
   await user.click(screen.getByRole('checkbox',{name:/沁水盆地/}));
   expect(screen.getByLabelText('已选筛选条件')).toHaveTextContent('2024');
   await user.type(screen.getByLabelText('检索关键词'),'安13{Enter}');
