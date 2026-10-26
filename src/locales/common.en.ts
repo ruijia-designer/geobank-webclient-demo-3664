@@ -43,6 +43,7 @@ const commonEnglish: Record<string, string> = {
   '新建项目': 'New project', '展开项目列表': 'Expand project list', '收起项目列表': 'Collapse project list',
   '关闭项目基本信息': 'Close project details', '查阅成果': 'View results', '当前项目无查阅权限': 'This project is not accessible.',
   '项目详情': 'Project details', '关闭项目详情': 'Close project details', '项目概况': 'Project overview',
+  '地区': 'Region', '查询成果': 'View results',
   '满覆盖面积': 'Full-fold area', '处理参数': 'Processing parameters', '总炮数': 'Total shots',
   '面元': 'Bin size', '纵横比': 'Aspect ratio', '最大炮检距': 'Maximum offset',
   '查阅关联项目：{name}': 'View related project: {name}',

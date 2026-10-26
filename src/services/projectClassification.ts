@@ -52,3 +52,49 @@ export function projectTypeLabel(project: Pick<Project, 'type'|'typeId'|'typePat
     || roots.find(name => project.type.includes(name))
     || path[0] || project.type;
 }
+
+/** Map-card identity uses the top-level label and the second-level accent. */
+export function projectCardClassification(project: Pick<Project, 'type'|'typeId'|'typePath'>): {
+  label: string;
+  primaryColor: string;
+  secondaryColor: string;
+  textColor: '#ffffff';
+} {
+  const types = getProjectTypeOptions(), rows = demoRows.types;
+  const path = project.typePath || [];
+  const matchesPath = (type: ProjectTypeOption, candidate: string[]) =>
+    type.path.length === candidate.length && type.path.every((name, index) => name === candidate[index]);
+  let selected = types.find(type => type.id === project.typeId)
+    || types.find(type => matchesPath(type, path))
+    || types.find(type => type.name === project.type);
+
+  // A saved project can outlive a deleted leaf; retain its nearest known ancestor.
+  for (let length = path.length - 1; !selected && length > 0; length--) {
+    selected = types.find(type => matchesPath(type, path.slice(0, length)));
+  }
+  if (!selected) {
+    const roots = ['非地震', '采集', '处理', '解释', '井筒'];
+    const root = roots.find(name => path[0]?.includes(name))
+      || roots.find(name => project.type.includes(name));
+    selected = types.find(type => type.level === 1 && type.name === root);
+  }
+
+  // Follow IDs instead of looking up names, which can repeat in different branches.
+  const ancestors: typeof rows = [], visited = new Set<string>();
+  let current = rows.find(row => row.id === selected?.id);
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    ancestors.unshift(current);
+    current = rows.find(row => row.id === current!.parent);
+  }
+  const root = ancestors[0], secondary = ancestors[1] || root;
+  const color = (value: unknown) => typeof value === 'string' && /^#[\da-f]{3}(?:[\da-f]{3})?$/i.test(value)
+    ? value : '#647C97';
+  const primaryColor = color(root?.color), secondaryColor = color(secondary?.color);
+  return {
+    label: root?.name || path[0] || project.type || '—',
+    primaryColor,
+    secondaryColor,
+    textColor: '#ffffff',
+  };
+}

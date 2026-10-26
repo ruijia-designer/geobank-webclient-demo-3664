@@ -25,7 +25,7 @@ beforeEach(() => { vi.clearAllMocks(); sessionStorage.removeItem('geobank-demo-l
 afterEach(() => { sessionStorage.removeItem('geobank-demo-locale'); });
 
 describe('地图项目详情卡片', () => {
-  it('分组呈现项目概况和处理参数，格式化数值并保留完整项目名称', () => {
+  it('按客户截图呈现字段和处理参数，格式化数值并保留完整项目名称', () => {
     const item = project({
       name: '2024年山西省左权西乡煤层气区块三维地震处理项目',
       mapDetails: { fullFoldAreaKm2: 596, processing: { shotCount: 550000, binSizeMeters: [25, 25], aspectRatio: 0.8, maxOffsetKm: 8 } },
@@ -33,11 +33,16 @@ describe('地图项目详情卡片', () => {
     render(<ProjectMapCard project={item} projects={[item]} role="admin" onClose={onClose} onOpen={onOpen}/>);
     const card = screen.getByRole('region', { name: '项目详情' });
     expect(within(card).getByText(item.name)).toBeVisible();
-    for (const name of ['项目概况', '处理参数', '关联项目']) {
+    for (const name of ['处理参数', '关联项目']) {
       expect(within(card).getByRole('heading', { name })).toBeVisible();
     }
+    expect(within(card).queryByText('项目概况')).not.toBeInTheDocument();
+    expect(within(card).queryByText('工区面积（km²）')).not.toBeInTheDocument();
+    expect(within(card).getAllByRole('term').map(term => term.textContent)).toEqual([
+      '年度', '地区', '项目类型', '满覆盖面积', '总炮数', '面元', '纵横比', '最大炮检距',
+    ]);
     expect(fieldValue(card, '年度')).toHaveTextContent('2024');
-    expect(fieldValue(card, '所属盆地')).toHaveTextContent('沁水盆地');
+    expect(fieldValue(card, '地区')).toHaveTextContent('沁水盆地');
     expect(fieldValue(card, '项目类型')).toHaveTextContent('三维陆上常规采集');
     expect(fieldValue(card, '满覆盖面积')).toHaveTextContent('596 km²');
     expect(fieldValue(card, '总炮数')).toHaveTextContent('550,000');
@@ -45,13 +50,14 @@ describe('地图项目详情卡片', () => {
     expect(fieldValue(card, '纵横比')).toHaveTextContent('0.8');
     expect(fieldValue(card, '最大炮检距')).toHaveTextContent('8 km');
     expect(within(card).getByText('暂无关联项目')).toBeVisible();
+    expect(within(card).getByRole('button', { name: '查询成果' })).toBeVisible();
   });
 
   it('未提供的参数显示缺省值，不把零值当作缺失数据', () => {
     const missing = project({ year: '', basin: '' });
     const { rerender } = render(<ProjectMapCard project={missing} projects={[missing]} role="admin" onClose={onClose} onOpen={onOpen}/>);
     let card = screen.getByRole('region', { name: '项目详情' });
-    for (const label of ['年度', '所属盆地', '满覆盖面积', '总炮数', '面元', '纵横比', '最大炮检距']) {
+    for (const label of ['年度', '地区', '满覆盖面积', '总炮数', '面元', '纵横比', '最大炮检距']) {
       expect(fieldValue(card, label)).toHaveTextContent(/^—$/);
     }
     const zero = project({ mapDetails: { fullFoldAreaKm2: 0, processing: { shotCount: 0, binSizeMeters: [0, 0], aspectRatio: 0, maxOffsetKm: 0 } } });
@@ -64,16 +70,18 @@ describe('地图项目详情卡片', () => {
     expect(fieldValue(card, '最大炮检距')).toHaveTextContent('0 km');
   });
 
-  it('显示未归档、审批中、已归档状态，已归档优先于遗留申请', () => {
-    const item = project();
+  it('标题分类取自类型而非项目名称，一级标签与二级色条不受归档状态影响', () => {
+    const item = project({ name: '2024年三维地震处理项目' });
     const { rerender } = render(<ProjectMapCard project={item} projects={[item]} role="admin" onClose={onClose} onOpen={onOpen}/>);
-    expect(screen.getByText('未归档')).toBeVisible();
-    rerender(<ProjectMapCard project={item} projects={[item]} role="admin" archivePending onClose={onClose} onOpen={onOpen}/>);
-    expect(screen.getByText('归档审批中')).toBeVisible();
+    const card = screen.getByRole('region', { name: '项目详情' });
+    const badge = within(card).getByText('采集', { exact: true });
+    expect(badge).toHaveStyle({ backgroundColor: '#277DA8', color: '#ffffff' });
+    expect(card.querySelector('.map-project-stripe')).toHaveStyle({ backgroundColor: '#4C92B5' });
     expect(screen.queryByText('未归档')).not.toBeInTheDocument();
     const archived = { ...item, archived: true };
-    rerender(<ProjectMapCard project={archived} projects={[archived]} role="admin" archivePending onClose={onClose} onOpen={onOpen}/>);
-    expect(screen.getByText('已归档')).toBeVisible();
+    rerender(<ProjectMapCard project={archived} projects={[archived]} role="admin" onClose={onClose} onOpen={onOpen}/>);
+    expect(badge).toHaveTextContent('采集');
+    expect(screen.queryByText('已归档')).not.toBeInTheDocument();
     expect(screen.queryByText('归档审批中')).not.toBeInTheDocument();
   });
 
@@ -99,14 +107,16 @@ describe('地图项目详情卡片', () => {
     expect(screen.getAllByRole('button', { name: /^查阅关联项目：/ })).toHaveLength(3);
   });
 
-  it('关闭、查阅成果及关联项目入口将原始项目交给外层回调', async () => {
+  it('关闭、查询成果及关联项目入口将原始项目交给外层回调，关联名称提供完整提示', async () => {
     const user = userEvent.setup();
     const related = project({ id: 'related-action', name: '关联项目完整名称', archived: true });
     const selected = project({ mapDetails: { relatedProjectIds: [related.id] } });
     render(<ProjectMapCard project={selected} projects={[selected, related]} role="admin" onClose={onClose} onOpen={onOpen}/>);
-    await user.click(screen.getByRole('button', { name: '查阅成果' }));
+    await user.click(screen.getByRole('button', { name: '查询成果' }));
     expect(onOpen).toHaveBeenLastCalledWith(selected);
-    await user.click(screen.getByRole('button', { name: '查阅关联项目：' + related.name }));
+    const relatedButton = screen.getByRole('button', { name: '查阅关联项目：' + related.name });
+    expect(relatedButton).toHaveAttribute('title', related.name);
+    await user.click(relatedButton);
     expect(onOpen).toHaveBeenLastCalledWith(related);
     await user.click(screen.getByRole('button', { name: '关闭项目详情' }));
     expect(onClose).toHaveBeenCalledOnce();
@@ -124,9 +134,12 @@ describe('地图项目详情卡片', () => {
     await user.click(screen.getByRole('button', { name: 'Switch language' }));
     const card = screen.getByRole('region', { name: 'Project details' });
     expect(within(card).getByText(selected.name)).toBeVisible();
-    for (const name of ['Project overview', 'Processing parameters', 'Related projects']) {
+    for (const name of ['Processing parameters', 'Related projects']) {
       expect(within(card).getByRole('heading', { name })).toBeVisible();
     }
+    expect(within(card).getByText('Acquisition', { exact: true })).toBeVisible();
+    expect(fieldValue(card, 'Region')).toHaveTextContent('沁水盆地');
+    expect(within(card).getByRole('button', { name: 'View results' })).toBeVisible();
     expect(fieldValue(card, 'Full-fold area')).toHaveTextContent('596 km²');
     expect(fieldValue(card, 'Total shots')).toHaveTextContent('550,000');
     await user.click(within(card).getByRole('button', { name: 'View related project: ' + related.name }));

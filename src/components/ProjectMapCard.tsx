@@ -3,7 +3,7 @@ import { ArrowUpRight, ChevronRight, X } from 'lucide-react';
 import type { Project, Role } from '../types';
 import { useTranslation } from '../i18n';
 import { canRead, visibleProjects } from '../services/demo';
-import { projectTypeColor } from '../services/projectClassification';
+import { projectCardClassification } from '../services/projectClassification';
 import { projectMapDetailSamples } from '../data/projectMapDetails';
 import { positionMapCard } from '../services/mapCardPosition';
 import type { MapProjectAnchor } from '../services/mapCardPosition';
@@ -13,12 +13,11 @@ function numberLabel(value: number | undefined, unit = '') {
   return value === undefined || !Number.isFinite(value) ? '—' : `${value.toLocaleString('en-US', { maximumFractionDigits: 6 })}${unit}`;
 }
 
-export function ProjectMapCard({ project, projects, role, anchor, archivePending = false, onClose, onOpen }: {
+export function ProjectMapCard({ project, projects, role, anchor, onClose, onOpen }: {
   project: Project;
   projects: Project[];
   role: Role;
   anchor?: MapProjectAnchor;
-  archivePending?: boolean;
   onClose: () => void;
   onOpen: (project: Project) => void;
 }) {
@@ -55,7 +54,7 @@ export function ProjectMapCard({ project, projects, role, anchor, archivePending
   const details = { ...projectMapDetailSamples[project.id], ...project.mapDetails };
   const parameters = details.processing;
   const binSize = parameters?.binSizeMeters;
-  const status = project.archived ? '已归档' : archivePending ? '归档审批中' : '未归档';
+  const classification = projectCardClassification(project);
   const availableProjects = new Map(visibleProjects(projects, role).map(item => [item.id, item]));
   const relatedProjects = [...new Set(details.relatedProjectIds || [])]
     .filter(id => id !== project.id)
@@ -63,9 +62,8 @@ export function ProjectMapCard({ project, projects, role, anchor, archivePending
     .filter((item): item is Project => !!item);
   const overview = [
     ['年度', project.year || '—'],
-    ['所属盆地', project.basin || '—'],
+    ['地区', project.basin || '—'],
     ['项目类型', project.type ? t(project.type) : '—'],
-    ['工区面积（km²）', project.area || '—'],
     ['满覆盖面积', numberLabel(details.fullFoldAreaKm2, ' km²')],
   ];
   const processing = [
@@ -85,22 +83,22 @@ export function ProjectMapCard({ project, projects, role, anchor, archivePending
     </header>
     <div className="map-project-body">
       <div className="map-project-identity">
-        <span className="map-project-stripe" style={{ background: projectTypeColor(project) }} aria-hidden="true"/>
+        <span className="map-project-stripe" style={{ backgroundColor: classification.secondaryColor }} aria-hidden="true"/>
         <h3>{project.name}</h3>
-        <span className={'badge map-project-status' + (project.archived ? ' archived' : '')}>{t(status)}</span>
+        <span className="map-project-category" style={{ backgroundColor: classification.primaryColor, color: classification.textColor }}>{t(classification.label)}</span>
       </div>
-      <section className="map-project-section"><h4>{t('项目概况')}</h4>{facts(overview)}</section>
+      <div className="map-project-section">{facts(overview)}</div>
       <section className="map-project-section"><h4>{t('处理参数')}</h4>{facts(processing)}</section>
       <section className="map-project-section map-project-related"><h4>{t('关联项目')}</h4>
         {relatedProjects.length ? <ul>{relatedProjects.map(item => <li key={item.id}>
-          <button type="button" aria-label={t('查阅关联项目：{name}', { name: item.name })} onClick={() => onOpen(item)}>
+          <button type="button" title={item.name} aria-label={t('查阅关联项目：{name}', { name: item.name })} onClick={() => onOpen(item)}>
             <span>{item.name}</span><ChevronRight size={16} aria-hidden="true"/>
           </button>
         </li>)}</ul> : <p className="map-project-empty">{t('暂无关联项目')}</p>}
       </section>
     </div>
     <footer className="map-project-footer"><button className="button primary" onClick={() => onOpen(project)}>
-      {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>
+      {t('查询成果')}<ArrowUpRight size={16} aria-hidden="true"/>
     </button>{!canRead(project, role) && <span className="sr-only">{t('当前项目无查阅权限')}</span>}</footer>
   </section>;
 }
