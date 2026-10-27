@@ -31,11 +31,10 @@ const basin: BaselineField = { key: 'basin', label: '所属盆地', kind: 'selec
 const code: BaselineField = { key: 'code', label: '编码' };
 const simple = (names: string[], extra: Partial<BaselineRow> = {}): BaselineRow[] => names.map((n, i) => ({ id: String(i + 1), name: n, ...extra }));
 const contact = [name, { key: 'address', label: '地址' }, { key: 'phone', label: '联系电话' }, { key: 'email', label: '邮箱' }, note];
-export const NAMING_GROUPS = [{ name: '处理成果', items: ['水平叠加纯波数据', '水平叠加成果数据', '叠后偏移纯波数据', '叠后偏移成果数据', '叠前时间偏移纯波数据', '叠前时间偏移成果数据', '叠前深度偏移纯波数据', '叠前深度偏移成果数据'] }, { name: '道集成果', items: ['原始炮集数据', '最终CMP道集数据', '叠前时间偏移后CRP道集数据', '叠前深度偏移后CIP道集数据'] }, { name: '速度成果', items: ['表层速度模型数据体', '最终叠加速度场'] }];
 const structure: BaselineRow[] = [['百色盆地', '4501', '盆地', 1, ''], ['东部坳陷', '450101', '坳陷', 2, '1'], ['田东凹陷', '', '凹陷', 3, '2'], ['田阳凹陷', '', '凹陷', 3, '2'], ['南部隆起', '450103', '坳陷', 2, '1'], ['靖西凸起', '', '凹陷', 3, '5'], ['西部坳陷', '450102', '坳陷', 2, '1'], ['百色凹陷', '', '凹陷', 3, '7'], ['那坡凹陷', '', '凹陷', 3, '7'], ['北部湾盆地', '8403', '盆地', 1, ''], ['北部坳陷', '840301', '坳陷', 2, '10'], ['福山凹陷', '', '凹陷', 3, '11'], ['海中凹陷', '', '凹陷', 3, '11'], ['涠西南凹陷', '', '凹陷', 3, '11'], ['东部隆起', '840304', '坳陷', 2, '10'], ['涠洲凸起', '', '凹陷', 3, '15'], ['斜阳凸起', '', '凹陷', 3, '15'], ['南部坳陷', '840303', '坳陷', 2, '10'], ['昌化凹陷', '', '凹陷', 3, '18']].map(([n, c, t, l, p], i) => ({ id: String(i + 1), name: String(n), code: String(c), type: String(t), level: Number(l), parent: String(p) }));
 export const BASELINE_CONFIGS: BaselineConfig[] = [
     { id: 'types', title: '项目类型', description: '维护最多三级项目分类，分别设置各级类型的显示颜色', tree: true, columns: [['name', '名称'], ['color', '颜色']], fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }], rows: [{ id: '1', name: '采集', color: '#277DA8', level: 1 }, { id: '2', name: '三维陆上常规采集', color: '#4C92B5', level: 2, parent: '1' }, { id: '3', name: '三维陆上混叠采集', color: '#4B9A88', level: 2, parent: '1' }, { id: '4', name: '二维陆上采集', color: '#8D7BAA', level: 2, parent: '1' }, ...['处理', '解释', '井筒', '非地震'].map((n, i) => ({ id: String(i + 5), name: n, color: ['#2B8C82', '#7B6FA6', '#B38439', '#647C97'][i], level: 1 }))] },
-    { id: 'naming', title: '命名规则', description: '统一成果数据的编号、目录名称与文件命名规则', columns: [], fields: [], rows: [] },
+    { id: 'naming', title: '成果类型', description: '维护各类项目成果的分类、目录与命名规则', columns: [], fields: [], rows: [] },
     { id: 'structure', title: '构造单元', description: '维护盆地、坳陷、凹陷与凸起的层级关系', tree: true, columns: [['name', '名称'], ['code', '编码'], ['type', '类型'], ['level', '等级'], ['note', '备注']], fields: [name, code, { key: 'sort', label: '排序值', kind: 'number' }, note], rows: structure },
     { id: 'areas', title: '工区', description: '维护工区名称、空间归属与地表信息', columns: [['name', '名称'], ['code', '代码'], ['basin', '所属盆地'], ['surface', '地表类型'], ['note', '备注']], fields: [name, { key: 'code', label: '工区代码' }, basin, { key: 'surface', label: '地表类型', kind: 'select', options: ['草原', '水域', '河流', '山地', '平原'] }, { key: 'range', label: '范围（GeoJSON）', kind: 'file' }, note], rows: simple(['东台坳陷海安凹陷孙家洼次凹', '东台坳陷白驹凹陷大丰次凹', '东台坳陷白驹凹陷大丰次凹海丰构造', '大丰次凹', '大安区块', '川南低陡褶带南缘YS112井区', '川南低陡褶带南缘云山坝区块', '川南低陡褶带南缘太阳工区', '川南低陡褶带南缘太阳背斜构造', '川南低陡褶带南缘建武向斜西南斜坡']).map((r, i) => ({ ...r, basin: i === 4 ? '四川盆地' : '', surface: i === 3 ? '草原, 水域, 河流' : '' })) },
     { id: 'mining', title: '矿权管理', description: '管理矿权信息、有效期与区块范围记录', columns: [['name', '名称'], ['basin', '盆地'], ['type', '矿权类型'], ['area', '登记面积（km²）']], fields: [name, basin, { key: 'type', label: '矿权类型', kind: 'select', options: ['采矿权', '探矿权'] }, { key: 'code', label: '矿权编号' }, { key: 'owner', label: '权属单位' }, { key: 'start', label: '有效期开始', kind: 'date' }, { key: 'end', label: '有效期结束', kind: 'date' }, note], rows: simple(['白驹油田开采', '海安油田开采', '黄204井区开采', '宜昌地区勘查', '镇雄-毕节勘查', '泰州-姜堰勘查', '筠连-威信勘查', '大安区块']).map((r, i) => ({ ...r, type: i < 3 ? '采矿权' : '探矿权', area: ['16.554', '39.0504', '36.2668', '2502.6312', '3332.801', '837.8994', '4310.2662', '1403.1353'][i] })) },
@@ -171,11 +170,6 @@ export function placeBaselineRow(id: string, rows: BaselineRow[], record: Baseli
 }
 
 export const demoRows: Record<string, BaselineRow[]> = Object.fromEntries(BASELINE_CONFIGS.map(c => [c.id, normalizeBaselineOrder(c.id, c.rows)]));
-export const namingCache: Record<string, {
-    number: string;
-    suffix: string;
-}> = {};
-
 // This demo cache intentionally lives only for the current browser session.
 export function saveBaselineRows(id: string, rows: BaselineRow[]) {
     demoRows[id] = normalizeBaselineOrder(id, rows);

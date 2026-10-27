@@ -9,3 +9,26 @@
 .field-error,.field>.field-error{display:block;margin:5px 0 0;color:var(--danger);font-size:13px;line-height:1.5;font-weight:400}
 .field [aria-invalid=true],.information-card [aria-invalid=true]{border-color:var(--danger);background:#fff8f7;outline-color:var(--danger)}
 .field-error:empty{display:none}
+
+/* Shared inset for dropdown arrows; tree and disclosure buttons keep their layout. */
+:root{--dropdown-arrow-inset:16px}
+:root select:not([multiple]):not([size]),
+:root select[size="1"]:not([multiple]){
+  appearance:none;
+  -webkit-appearance:none;
+  padding-right:calc(var(--dropdown-arrow-inset) + 24px);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3 6 5 5 5-5' stroke='%23435e70' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right var(--dropdown-arrow-inset) center;
+  background-size:16px 16px;
+}
+:root .select-trigger,
+:root .basin-trigger,
+:root .project-trigger,
+:root button.result-archive-status,
+:root .site-header nav .tools{padding-right:var(--dropdown-arrow-inset)}
+
+@media (forced-colors:active){
+  :root select:not([multiple]):not([size]),
+  :root select[size="1"]:not([multiple]){appearance:auto;-webkit-appearance:auto;background-image:none}
+}
