@@ -1,7 +1,10 @@
 .baseline-list[data-baseline="naming"]>header select{min-width:116px;padding:9px 30px 9px 12px;border:1px solid #dce6ec;border-radius:4px;background:#fff;color:#435e70;font:inherit}
-.baseline-list[data-baseline="naming"] .result-types-scroll{overflow-x:auto}
-.baseline-list[data-baseline="naming"] .result-types-table{table-layout:fixed;min-width:1670px}
+.baseline-list[data-baseline="naming"] .result-types-scroll{overflow-x:auto;scroll-padding-left:340px;scroll-padding-right:224px}
+.baseline-list[data-baseline="naming"] .result-types-table{table-layout:fixed;min-width:1894px}
 .baseline-list[data-baseline="naming"] .result-types-table th{width:auto;white-space:nowrap}
+.baseline-list[data-baseline="naming"] .result-types-table tr>:first-child{position:sticky;left:0;z-index:1}
+.baseline-list[data-baseline="naming"] .result-types-table tr>:first-child::after{content:"";position:absolute;top:0;bottom:-1px;right:-15px;width:15px;border-left:1px solid #c5d7e2;background:linear-gradient(to right,#183a5229,transparent);pointer-events:none;opacity:0;transition:opacity .15s ease}
+.baseline-list[data-baseline="naming"] .result-types-scroll[data-scrolled-left="true"] .result-types-table tr>:first-child::after{opacity:1}
 .result-types-column-name{width:340px}
 .result-types-column-chineseDirectory{width:250px}
 .result-types-column-applicableProjects{width:220px}
@@ -9,15 +12,36 @@
 .result-types-column-englishDirectory{width:230px}
 .result-types-column-namingRule{width:210px}
 .result-types-column-notes{width:300px}
-.baseline-list[data-baseline="naming"] .result-types-table td{vertical-align:top;padding:12px 14px}
-.baseline-list[data-baseline="naming"] .result-types-table textarea{display:block;width:100%;min-width:0;height:50px;min-height:50px;padding:0 10px;border:1px solid #dce6ec;border-radius:4px;background:#fff;color:#435e70;font:inherit;font-weight:400;line-height:24px;box-sizing:border-box;resize:vertical;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
-.baseline-list[data-baseline="naming"] .result-types-table textarea::placeholder{color:#8497a4}
-.baseline-list[data-baseline="naming"] .result-types-table textarea:focus{outline:2px solid #0a6f9e;outline-offset:1px}
+.result-types-column-actions{width:224px}
+.baseline-list[data-baseline="naming"] .result-types-table td{vertical-align:middle;padding:12px 14px}
+.result-types-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:48px;min-width:0;line-height:24px;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
+.result-types-empty{color:#8497a4}
 .baseline-list[data-baseline="naming"] .result-types-group td{background:#eff7fb;padding-top:8px;padding-bottom:8px}
-.result-types-group-name{display:flex;align-items:flex-start;gap:2px}
+.result-types-group-name{display:flex;align-items:center;gap:2px}
 .result-types-group-name>.icon-button{width:28px;height:24px;flex:0 0 28px;color:#0a6f9e}
-.baseline-list[data-baseline="naming"] .result-types-group-name textarea{border-color:transparent;background:transparent;font-weight:600}
-.baseline-list[data-baseline="naming"] .result-types-group-name textarea:hover{border-color:#dce6ec}
-.baseline-list[data-baseline="naming"] .result-types-group-name textarea:focus{background:#fff}
+.result-types-group-name .result-types-text{flex:1;font-weight:600}
 .baseline-list[data-baseline="naming"] td.result-types-name-cell{padding-left:76px}
 .baseline-list[data-baseline="naming"] .result-types-scroll>.empty-state{position:sticky;left:0}
+.baseline-list[data-baseline="naming"] .result-types-actions{position:sticky;right:0;z-index:1;box-shadow:-4px 0 6px #183a520a}
+.baseline-list[data-baseline="naming"] td:is(:first-child,.result-types-actions){background:#fff;vertical-align:middle}
+.baseline-list[data-baseline="naming"] tr:nth-child(even)>td:is(:first-child,.result-types-actions){background:#f9fcfd}
+.baseline-list[data-baseline="naming"] tr:hover>td:is(:first-child,.result-types-actions){background:#f0f8fb}
+.baseline-list[data-baseline="naming"] tr.result-types-group>td:is(:first-child,.result-types-actions){background:#eff7fb}
+.result-types-dialog .field textarea{height:50px;min-height:50px;padding:0 10px;line-height:24px;overflow-wrap:anywhere}
+.result-types-dialog .field:last-child{margin-bottom:0}
+.applicable-project-picker{position:relative;min-width:0}
+.applicable-project-trigger{width:100%;height:50px;padding:0 16px 0 10px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--border);border-radius:4px;background:#fff;color:#435e70}
+.applicable-project-trigger>span{flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:24px;overflow-wrap:anywhere}
+.applicable-project-trigger>svg{flex:none;color:#607481}
+.applicable-project-placeholder{color:var(--muted)}
+.applicable-project-options{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;display:flex;flex-direction:column;padding:10px;background:#fff;border:1px solid var(--border);border-radius:5px;box-shadow:0 5px 18px #183a5226}
+.result-types-dialog .applicable-project-options>input{flex:none;height:34px;padding:0 10px}
+.applicable-project-choices{flex:1;min-height:0;max-height:230px;overflow:auto;margin:8px 0}
+.applicable-project-option-group>strong{display:block;padding:6px 8px;color:var(--muted);font-size:12px;font-weight:500}
+.applicable-project-option-group>label{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:3px;cursor:pointer;line-height:20px;color:#435e70}
+.applicable-project-option-group>label:hover{background:#eff7fb}
+.result-types-dialog .applicable-project-option-group input[type=checkbox]{flex:none;width:16px;height:16px;margin:2px 0 0;accent-color:var(--blue)}
+.applicable-project-option-group>label>span{min-width:0;overflow-wrap:anywhere}
+.applicable-project-choices>p{margin:16px 8px;color:var(--muted)}
+.applicable-project-options>footer{flex:none;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e7eef2;padding-top:8px;font-size:12px;color:var(--muted)}
+.applicable-project-options>footer>button{border:0;background:transparent;color:var(--blue);padding:4px}

@@ -131,7 +131,8 @@ describe('概览及客户联动要求',()=>{
     const list=within(modal).getByRole('listbox',{name:'项目类型选项'});
     expect(list.style.left).toBe('100px');expect(list.style.width).toBe('600px');
     expect(Number.parseFloat(list.style.top)).toBeLessThan(500);
-    expect(within(list).getByRole('option',{name:'处理'})).toBeEnabled();
+    expect(within(list).getByRole('option',{name:'处理'})).toBeDisabled();
+    expect(within(list).getByRole('option',{name:'处理 / 二维处理'})).toBeEnabled();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();expect(modal).toBeVisible();expect(trigger).toHaveFocus();
     await user.click(trigger);await user.click(within(modal).getByLabelText('项目名称'));

@@ -5,10 +5,16 @@ export type ResultTypeCategoryId =
     | 'wellbore'
     | 'nonseismic';
 
+export interface ApplicableProjectType {
+    id?: string;
+    name: string;
+}
+
 export interface ResultTypeItem {
     id: string;
     name: string;
     applicableProjects: string;
+    applicableProjectTypes?: ApplicableProjectType[];
     number: string;
     chineseDirectory: string;
     englishDirectory: string;

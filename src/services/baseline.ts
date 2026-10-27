@@ -33,7 +33,27 @@ const simple = (names: string[], extra: Partial<BaselineRow> = {}): BaselineRow[
 const contact = [name, { key: 'address', label: '地址' }, { key: 'phone', label: '联系电话' }, { key: 'email', label: '邮箱' }, note];
 const structure: BaselineRow[] = [['百色盆地', '4501', '盆地', 1, ''], ['东部坳陷', '450101', '坳陷', 2, '1'], ['田东凹陷', '', '凹陷', 3, '2'], ['田阳凹陷', '', '凹陷', 3, '2'], ['南部隆起', '450103', '坳陷', 2, '1'], ['靖西凸起', '', '凹陷', 3, '5'], ['西部坳陷', '450102', '坳陷', 2, '1'], ['百色凹陷', '', '凹陷', 3, '7'], ['那坡凹陷', '', '凹陷', 3, '7'], ['北部湾盆地', '8403', '盆地', 1, ''], ['北部坳陷', '840301', '坳陷', 2, '10'], ['福山凹陷', '', '凹陷', 3, '11'], ['海中凹陷', '', '凹陷', 3, '11'], ['涠西南凹陷', '', '凹陷', 3, '11'], ['东部隆起', '840304', '坳陷', 2, '10'], ['涠洲凸起', '', '凹陷', 3, '15'], ['斜阳凸起', '', '凹陷', 3, '15'], ['南部坳陷', '840303', '坳陷', 2, '10'], ['昌化凹陷', '', '凹陷', 3, '18']].map(([n, c, t, l, p], i) => ({ id: String(i + 1), name: String(n), code: String(c), type: String(t), level: Number(l), parent: String(p) }));
 export const BASELINE_CONFIGS: BaselineConfig[] = [
-    { id: 'types', title: '项目类型', description: '维护最多三级项目分类，分别设置各级类型的显示颜色', tree: true, columns: [['name', '名称'], ['color', '颜色']], fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }], rows: [{ id: '1', name: '采集', color: '#277DA8', level: 1 }, { id: '2', name: '三维陆上常规采集', color: '#4C92B5', level: 2, parent: '1' }, { id: '3', name: '三维陆上混叠采集', color: '#4B9A88', level: 2, parent: '1' }, { id: '4', name: '二维陆上采集', color: '#8D7BAA', level: 2, parent: '1' }, ...['处理', '解释', '井筒', '非地震'].map((n, i) => ({ id: String(i + 5), name: n, color: ['#2B8C82', '#7B6FA6', '#B38439', '#647C97'][i], level: 1 }))] },
+    {
+        id: 'types', title: '项目类型', description: '维护最多三级项目分类，分别设置各级类型的显示颜色', tree: true,
+        columns: [['name', '名称'], ['color', '颜色']],
+        fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }],
+        rows: [
+            { id: '1', name: '采集', color: '#277DA8', level: 1 },
+            { id: '2', name: '三维陆上常规采集', color: '#4C92B5', level: 2, parent: '1' },
+            { id: '3', name: '三维陆上混叠采集', color: '#4B9A88', level: 2, parent: '1' },
+            { id: '4', name: '二维陆上采集', color: '#8D7BAA', level: 2, parent: '1' },
+            { id: '5', name: '处理', color: '#2B8C82', level: 1 },
+            { id: '9', name: '二维处理', color: '#3D9187', level: 2, parent: '5' },
+            { id: '10', name: '三维处理', color: '#4B9A88', level: 2, parent: '5' },
+            { id: '6', name: '解释', color: '#7B6FA6', level: 1 },
+            { id: '7', name: '井筒', color: '#B38439', level: 1 },
+            { id: '11', name: '井中地震', color: '#AD8649', level: 2, parent: '7' },
+            { id: '12', name: '常规测井', color: '#B4935D', level: 2, parent: '7' },
+            { id: '8', name: '非地震', color: '#647C97', level: 1 },
+            { id: '13', name: '重力', color: '#71869E', level: 2, parent: '8' },
+            { id: '14', name: '磁法', color: '#7E8FA5', level: 2, parent: '8' },
+        ],
+    },
     { id: 'naming', title: '成果类型', description: '维护各类项目成果的分类、目录与命名规则', columns: [], fields: [], rows: [] },
     { id: 'structure', title: '构造单元', description: '维护盆地、坳陷、凹陷与凸起的层级关系', tree: true, columns: [['name', '名称'], ['code', '编码'], ['type', '类型'], ['level', '等级'], ['note', '备注']], fields: [name, code, { key: 'sort', label: '排序值', kind: 'number' }, note], rows: structure },
     { id: 'areas', title: '工区', description: '维护工区名称、空间归属与地表信息', columns: [['name', '名称'], ['code', '代码'], ['basin', '所属盆地'], ['surface', '地表类型'], ['note', '备注']], fields: [name, { key: 'code', label: '工区代码' }, basin, { key: 'surface', label: '地表类型', kind: 'select', options: ['草原', '水域', '河流', '山地', '平原'] }, { key: 'range', label: '范围（GeoJSON）', kind: 'file' }, note], rows: simple(['东台坳陷海安凹陷孙家洼次凹', '东台坳陷白驹凹陷大丰次凹', '东台坳陷白驹凹陷大丰次凹海丰构造', '大丰次凹', '大安区块', '川南低陡褶带南缘YS112井区', '川南低陡褶带南缘云山坝区块', '川南低陡褶带南缘太阳工区', '川南低陡褶带南缘太阳背斜构造', '川南低陡褶带南缘建武向斜西南斜坡']).map((r, i) => ({ ...r, basin: i === 4 ? '四川盆地' : '', surface: i === 3 ? '草原, 水域, 河流' : '' })) },

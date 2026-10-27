@@ -1,8 +1,13 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { Modal } from './Modal';
+import { ApplicableProjectsPicker } from './ApplicableProjectsPicker';
+import { getProjectTypeOptions } from '../services/projectClassification';
+import type { ProjectTypeOption } from '../services/projectClassification';
+import { applicableProjectSelections, applicableProjectsLabel } from '../services/resultTypeProjects';
 import { loadResultTypes, saveResultTypes } from '../services/resultTypes';
-import type { ResultTypeCategoryId, ResultTypeItem } from '../services/resultTypes';
+import type { ResultTypeCategoryId, ResultTypeGroup, ResultTypeItem } from '../services/resultTypes';
 import './ResultTypesPanel.css';
 
 const fields = [
@@ -15,8 +20,74 @@ const fields = [
     ['notes', '备注'],
 ] as const;
 type ItemField = typeof fields[number][0];
+type ItemValues = Omit<ResultTypeItem, 'id'>;
+type EditorTarget = { kind: 'group'; group?: ResultTypeGroup }
+    | { kind: 'item'; groupId: string; item?: ResultTypeItem };
+type DialogTarget = EditorTarget | { kind: 'delete'; group: ResultTypeGroup; item?: ResultTypeItem };
 
-const defaultEditorHeight = 50;
+const emptyItem: ItemValues = { name: '', applicableProjects: '', number: '', chineseDirectory: '', englishDirectory: '', namingRule: '', notes: '' };
+
+function moveSibling<T extends { id: string }>(siblings: T[], id: string, direction: -1 | 1): T[] {
+    const index = siblings.findIndex(entry => entry.id === id);
+    const destination = index + direction;
+    if (index < 0 || destination < 0 || destination >= siblings.length) return siblings;
+    const next = [...siblings];
+    [next[index], next[destination]] = [next[destination], next[index]];
+    return next;
+}
+
+function ResultTypeEditor({ target, projectTypes, onClose, onSubmit }: {
+    target: EditorTarget;
+    projectTypes: ProjectTypeOption[];
+    onClose: () => void;
+    onSubmit: (values: ItemValues) => void;
+}) {
+    const { t } = useTranslation();
+    const formId = useId();
+    const formRef = useRef<HTMLFormElement>(null);
+    const [values, setValues] = useState<ItemValues>(() => target.kind === 'group'
+        ? { ...emptyItem, name: target.group?.name ?? '' } : { ...emptyItem, ...target.item });
+    const [nameError, setNameError] = useState(false);
+    const isEdit = target.kind === 'group' ? !!target.group : !!target.item;
+    const nameRequired = target.kind === 'group' || !isEdit;
+    const title = target.kind === 'group' ? (isEdit ? '编辑分类' : '新增分类') : (isEdit ? '编辑成果项' : '新增成果项');
+    const editorFields = target.kind === 'group' ? fields.slice(0, 1) : fields;
+    return <Modal title={t(title)} onClose={onClose} className="result-types-dialog" footer={<>
+        <button className="button" onClick={onClose}>{t('取消')}</button>
+        <button className="button primary" type="submit" form={formId}>{t('保存')}</button>
+    </>}>
+        <form id={formId} ref={formRef} className="form-grid" noValidate onSubmit={event => {
+            event.preventDefault();
+            if (nameRequired && !values.name.trim()) {
+                setNameError(true);
+                formRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+                return;
+            }
+            onSubmit(values.applicableProjectTypes ? {
+                ...values,
+                applicableProjectTypes: applicableProjectSelections(values, projectTypes),
+                applicableProjects: applicableProjectsLabel(values, projectTypes),
+            } : values);
+        }}>
+            {editorFields.map(([field, label]) => field === 'applicableProjects' ? <div className="field" key={field}>
+                <span>{t(label)}</span>
+                <ApplicableProjectsPicker options={projectTypes} value={applicableProjectSelections(values, projectTypes)} onChange={selected => setValues(previous => ({
+                    ...previous, applicableProjectTypes: selected, applicableProjects: selected.map(value => value.name).join('\n'),
+                }))}/>
+            </div> : <label key={field} className={`field${field === 'name' || field === 'notes' ? ' full' : ''}`} htmlFor={`${formId}-${field}`}>
+                <span>{t(field === 'name' ? '名称' : label)}{field === 'name' && nameRequired && <span className="required"> *</span>}</span>
+                <textarea id={`${formId}-${field}`} aria-label={t(field === 'name' ? '名称' : label)} rows={2}
+                    required={field === 'name' && nameRequired} aria-invalid={field === 'name' && nameError || undefined}
+                    aria-describedby={field === 'name' && nameError ? `${formId}-name-error` : undefined}
+                    value={values[field]} onChange={event => {
+                        setValues(previous => ({ ...previous, [field]: event.target.value }));
+                        if (field === 'name') setNameError(false);
+                    }}/>
+                {field === 'name' && nameError && <span id={`${formId}-name-error`} className="field-error" role="alert">{t('请输入名称')}</span>}
+            </label>)}
+        </form>
+    </Modal>;
+}
 
 export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave }: {
     query: string;
@@ -30,78 +101,115 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
     const [searchCollapsed, setSearchCollapsed] = useState<Record<string, boolean>>({});
     const [matchedIds, setMatchedIds] = useState<Set<string>>(() => new Set());
-    const [editorHeights, setEditorHeights] = useState<Record<string, number>>({});
+    const [matchedGroupIds, setMatchedGroupIds] = useState<Set<string>>(() => new Set());
+    const [dialog, setDialog] = useState<DialogTarget | null>(null);
+    const [focusRowId, setFocusRowId] = useState<string | null>(null);
+    const [scrolledLeft, setScrolledLeft] = useState(false);
     const tableRef = useRef<HTMLTableElement>(null);
     const term = query.trim().toLocaleLowerCase();
     const category = categories.find(entry => entry.id === categoryId)!;
+    const projectTypes = getProjectTypeOptions();
+    const fieldValue = (item: ResultTypeItem, field: ItemField) => field === 'applicableProjects' ? applicableProjectsLabel(item, projectTypes) : item[field];
 
     // Keep the submitted result set stable while its fields are edited. A new
     // submission (including the same keyword) searches the latest draft values.
     useEffect(() => {
         setSearchCollapsed({});
+        setMatchedGroupIds(new Set(category.groups.filter(group => group.name.toLocaleLowerCase().includes(term)).map(group => group.id)));
         setMatchedIds(new Set(category.groups.flatMap(group =>
             !term || group.name.toLocaleLowerCase().includes(term) ? group.items.map(item => item.id)
-                : group.items.filter(item => fields.some(([field]) => item[field].toLocaleLowerCase().includes(term))).map(item => item.id))));
+                : group.items.filter(item => fields.some(([field]) => fieldValue(item, field).toLocaleLowerCase().includes(term))).map(item => item.id))));
     }, [query, queryVersion, categoryId]);
 
     const groups = category.groups.map(group => ({
         ...group,
         items: !term ? group.items : group.items.filter(item => matchedIds.has(item.id)),
-    })).filter(group => group.items.length > 0);
+    })).filter(group => !term || group.items.length > 0 || matchedGroupIds.has(group.id));
     const count = groups.reduce((total, group) => total + group.items.length, 0);
-    const visibleEditorRows = groups.flatMap(group => [group.id,
+    const visibleRows = groups.flatMap(group => [group.id,
         ...(!(term ? searchCollapsed[group.id] : collapsed[group.id]) ? group.items.map(item => item.id) : []),
     ]).join('|');
 
-    // Native textarea resizing changes one control. Apply that height to its
-    // whole row and retain it when the category or collapsed state changes.
     useEffect(() => {
-        if (typeof ResizeObserver === 'undefined') return;
-        const observer = new ResizeObserver(entries => {
-            setEditorHeights(previous => {
-                let next = previous;
-                for (const entry of entries) {
-                    const editor = entry.target as HTMLTextAreaElement;
-                    const rowId = editor.dataset.editorRow!;
-                    const height = Math.max(defaultEditorHeight, Math.round(editor.getBoundingClientRect().height));
-                    if (height !== (previous[rowId] ?? defaultEditorHeight)) {
-                        if (next === previous) next = { ...previous };
-                        next[rowId] = height;
-                    }
-                }
-                return next;
-            });
-        });
-        tableRef.current?.querySelectorAll('textarea').forEach(editor => observer.observe(editor));
-        return () => observer.disconnect();
-    }, [visibleEditorRows]);
+        if (!focusRowId || term) return;
+        const row = Array.from(tableRef.current?.querySelectorAll<HTMLTableRowElement>('tbody tr') ?? [])
+            .find(element => (element.dataset.itemId ?? element.dataset.groupId) === focusRowId);
+        if (!row) return;
+        row.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        row.querySelector<HTMLButtonElement>('.action-edit')?.focus({ preventScroll: true });
+        if (tableRef.current?.parentElement) tableRef.current.parentElement.scrollLeft = 0;
+        setFocusRowId(null);
+    }, [focusRowId, term, visibleRows]);
 
     const updateGroup = (groupId: string, name: string) => setCategories(previous => previous.map(entry =>
         entry.id !== categoryId ? entry : {
             ...entry, groups: entry.groups.map(group => group.id === groupId ? { ...group, name } : group),
         }));
-    const updateItem = (groupId: string, itemId: string, field: ItemField, value: string) => setCategories(previous => previous.map(entry =>
-        entry.id !== categoryId ? entry : {
-            ...entry, groups: entry.groups.map(group => group.id !== groupId ? group : {
-                ...group, items: group.items.map(item => item.id === itemId ? { ...item, [field]: value } : item),
-            }),
-        }));
     const toggleGroup = (groupId: string) => {
         const update = term ? setSearchCollapsed : setCollapsed;
         update(previous => ({ ...previous, [groupId]: !previous[groupId] }));
     };
-    const inputPlaceholder = (field: ItemField) => field === 'name' ? t('二级分类名称')
-        : field === 'number' ? t('请输入序号') : field === 'namingRule' ? t('请输入命名规则') : '';
-    const renderField = (groupId: string, groupName: string, item: ResultTypeItem, field: ItemField, label: string) => {
-        const attributes = {
-            'aria-label': `${category.name} / ${groupName} / ${item.name || t('二级分类名称')} / ${t(label)}`,
-            'data-field': field,
-            value: item[field],
-            placeholder: inputPlaceholder(field),
-        };
-        return <textarea {...attributes} rows={2} wrap="soft" data-editor-row={item.id}
-            style={{ height: editorHeights[item.id] ?? defaultEditorHeight }}
-            onChange={event => updateItem(groupId, item.id, field, event.target.value)}/>;
+    const updateGroups = (update: (groups: ResultTypeGroup[]) => ResultTypeGroup[]) => setCategories(previous => previous.map(entry =>
+        entry.id === categoryId ? { ...entry, groups: update(entry.groups) } : entry));
+    const saveEditor = (values: ItemValues) => {
+        if (!dialog || dialog.kind === 'delete') return;
+        if (dialog.kind === 'group') {
+            if (dialog.group) updateGroup(dialog.group.id, values.name);
+            else {
+                const id = `${categoryId}-group-${crypto.randomUUID()}`;
+                updateGroups(previous => [...previous, { id, name: values.name, items: [] }]);
+                onCategoryChange();
+                setFocusRowId(id);
+            }
+        } else {
+            const item = { ...values, id: dialog.item?.id ?? `${categoryId}-item-${crypto.randomUUID()}` };
+            updateGroups(previous => previous.map(group => {
+                if (group.id !== dialog.groupId) return group;
+                if (dialog.item) return { ...group, items: group.items.map(entry => entry.id === item.id ? item : entry) };
+                return { ...group, items: [...group.items, item] };
+            }));
+            if (!dialog.item) {
+                setCollapsed(previous => ({ ...previous, [dialog.groupId]: false }));
+                onCategoryChange();
+                setFocusRowId(item.id);
+            }
+        }
+        setDialog(null);
+    };
+    const move = (groupId: string, direction: -1 | 1, itemId?: string) => updateGroups(previous => itemId
+        ? previous.map(group => group.id === groupId ? { ...group, items: moveSibling(group.items, itemId, direction) } : group)
+        : moveSibling(previous, groupId, direction));
+    const remove = () => {
+        if (!dialog || dialog.kind !== 'delete') return;
+        updateGroups(previous => dialog.item
+            ? previous.map(group => group.id === dialog.group.id ? { ...group, items: group.items.filter(item => item.id !== dialog.item!.id) } : group)
+            : previous.filter(group => group.id !== dialog.group.id));
+        setDialog(null);
+    };
+    const renderActions = (group: ResultTypeGroup, item?: ResultTypeItem) => {
+        const fullGroup = category.groups.find(entry => entry.id === group.id)!;
+        const siblings = item ? fullGroup.items : category.groups;
+        const index = siblings.findIndex(entry => entry.id === (item?.id ?? group.id));
+        const name = item ? item.name || t('二级分类名称') : group.name || t('分类名称');
+        return <td className="baseline-actions-cell result-types-actions"><div className="row-actions baseline-row-actions">
+            {!item && <button className="icon-button action-add" type="button" title={t('新增下级')}
+                aria-label={t('新增{name}下级', { name })}
+                onClick={() => setDialog({ kind: 'item', groupId: group.id })}><Plus size={18}/></button>}
+            <button className="icon-button action-edit" type="button" title={t('编辑')} aria-label={t('编辑{name}', { name })}
+                onClick={() => setDialog(item ? { kind: 'item', groupId: group.id, item } : { kind: 'group', group: fullGroup })}><Pencil size={18}/></button>
+            <button className="icon-button action-up" type="button" title={t('上移')} aria-label={t('上移{name}', { name })}
+                disabled={index === 0} onClick={() => move(group.id, -1, item?.id)}><ArrowUp size={18}/></button>
+            <button className="icon-button action-down" type="button" title={t('下移')} aria-label={t('下移{name}', { name })}
+                disabled={index === siblings.length - 1} onClick={() => move(group.id, 1, item?.id)}><ArrowDown size={18}/></button>
+            <button className="icon-button danger action-delete" type="button" title={t('删除')} aria-label={t('删除{name}', { name })}
+                onClick={() => setDialog({ kind: 'delete', group: fullGroup, item })}><Trash2 size={18}/></button>
+        </div></td>;
+    };
+    const renderField = (item: ResultTypeItem, field: ItemField) => {
+        const value = fieldValue(item, field);
+        return <span className={`result-types-text${value ? '' : ' result-types-empty'}`} data-field={field} title={value || undefined}>
+            {value || (field === 'name' ? t('二级分类名称') : '—')}
+        </span>;
     };
 
     return <section className="card baseline-list result-types-panel" data-baseline="naming">
@@ -114,15 +222,20 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                 }}>
                     {categories.map(entry => <option key={entry.id} value={entry.id}>{t(entry.name)}</option>)}
                 </select>
+                <button className="button" onClick={() => setDialog({ kind: 'group' })}><Plus size={16}/>{t('新增分类')}</button>
                 <button className="button primary" onClick={() => { saveResultTypes(categories); onSave(); }}>{t('保存')}</button>
             </div>
         </header>
-        <div className="table-wrap result-types-scroll" role="region" aria-label={t('成果类型列表')} tabIndex={0}>
+        <div className="table-wrap result-types-scroll" role="region" aria-label={t('成果类型列表')} tabIndex={0}
+            data-scrolled-left={scrolledLeft} onScroll={event => setScrolledLeft(event.currentTarget.scrollLeft > 0)}>
             <table ref={tableRef} className="result-types-table">
                 <colgroup>
                     {fields.map(([field]) => <col key={field} className={`result-types-column-${field}`}/>)}
+                    <col className="result-types-column-actions"/>
                 </colgroup>
-                <thead><tr>{fields.map(([field, label]) => <th scope="col" key={field}>{t(field === 'name' ? `${category.name}项目` : label)}</th>)}</tr></thead>
+                <thead><tr>{fields.map(([field, label]) => <th scope="col" key={field}>{t(field === 'name' ? `${category.name}项目` : label)}</th>)}
+                    <th scope="col" className="baseline-actions-heading result-types-actions">{t('操作')}</th>
+                </tr></thead>
                 <tbody>
                     {groups.map(group => {
                         const isExpanded = !(term ? searchCollapsed[group.id] : collapsed[group.id]);
@@ -136,24 +249,31 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                                             onClick={() => toggleGroup(group.id)}>
                                             {isExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                                         </button>
-                                        <textarea aria-label={`${category.name} / ${group.name} / ${t('名称')}`} data-field="groupName"
-                                            rows={2} wrap="soft" data-editor-row={group.id} style={{ height: editorHeights[group.id] ?? defaultEditorHeight }}
-                                            placeholder={t('请输入名称')} value={group.name} onChange={event => updateGroup(group.id, event.target.value)}/>
+                                        <span className="result-types-text" data-field="groupName" title={group.name || undefined}>{group.name || t('分类名称')}</span>
                                     </div>
                                 </td>
                                 <td colSpan={6}/>
+                                {renderActions(group)}
                             </tr>
                             {isExpanded && group.items.map(item => <tr key={item.id} data-item-id={item.id}>
-                                {fields.map(([field, label]) => <td key={field} className={field === 'name' ? 'result-types-name-cell' : undefined}>
-                                    {renderField(group.id, group.name, item, field, label)}
+                                {fields.map(([field]) => <td key={field} className={field === 'name' ? 'result-types-name-cell' : undefined}>
+                                    {renderField(item, field)}
                                 </td>)}
+                                {renderActions(group, item)}
                             </tr>)}
                         </Fragment>;
                     })}
                 </tbody>
             </table>
-            {!count && <div className="empty-state"><FileText size={42}/><h3>{t('未找到匹配记录')}</h3><p>{t('调整查询条件后重新查询')}</p></div>}
+            {!groups.length && <div className="empty-state"><FileText size={42}/><h3>{t(term ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(term ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p></div>}
         </div>
         <footer><span>{t('共 {count} 条', { count })}</span><span>{t('编辑后点击保存')}</span></footer>
+        {dialog && (dialog.kind === 'delete' ? <Modal title={t(dialog.item ? '删除成果项' : '删除分类')} onClose={() => setDialog(null)} footer={<>
+            <button className="button" onClick={() => setDialog(null)}>{t('取消')}</button>
+            <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button>
+        </>}>
+            <p>{t('确定删除“{name}”吗？', { name: dialog.item ? dialog.item.name || t('二级分类名称') : dialog.group.name || t('分类名称') })}
+                {!dialog.item && dialog.group.items.length > 0 && t('其下级记录也将删除。')}</p>
+        </Modal> : <ResultTypeEditor target={dialog} projectTypes={projectTypes} onClose={() => setDialog(null)} onSubmit={saveEditor}/>)}
     </section>;
 }
