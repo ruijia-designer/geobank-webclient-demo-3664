@@ -46,6 +46,8 @@ export const BASELINE_CONFIGS: BaselineConfig[] = [
             { id: '9', name: '二维处理', color: '#3D9187', level: 2, parent: '5' },
             { id: '10', name: '三维处理', color: '#4B9A88', level: 2, parent: '5' },
             { id: '6', name: '解释', color: '#7B6FA6', level: 1 },
+            { id: '15', name: '二维解释', color: '#8D7BAA', level: 2, parent: '6' },
+            { id: '16', name: '三维解释', color: '#9988B5', level: 2, parent: '6' },
             { id: '7', name: '井筒', color: '#B38439', level: 1 },
             { id: '11', name: '井中地震', color: '#AD8649', level: 2, parent: '7' },
             { id: '12', name: '常规测井', color: '#B4935D', level: 2, parent: '7' },

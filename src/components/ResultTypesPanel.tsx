@@ -1,11 +1,12 @@
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { Modal } from './Modal';
 import { ApplicableProjectsPicker } from './ApplicableProjectsPicker';
 import { getProjectTypeOptions } from '../services/projectClassification';
 import type { ProjectTypeOption } from '../services/projectClassification';
-import { applicableProjectSelections, applicableProjectsLabel } from '../services/resultTypeProjects';
+import { applicableProjectSelections, applicableProjectsLabel, getCategoryProjectTypes, scopeApplicableProjects } from '../services/resultTypeProjects';
 import { loadResultTypes, saveResultTypes } from '../services/resultTypes';
 import type { ResultTypeCategoryId, ResultTypeGroup, ResultTypeItem } from '../services/resultTypes';
 import './ResultTypesPanel.css';
@@ -36,9 +37,10 @@ function moveSibling<T extends { id: string }>(siblings: T[], id: string, direct
     return next;
 }
 
-function ResultTypeEditor({ target, projectTypes, onClose, onSubmit }: {
+function ResultTypeEditor({ target, projectTypes, categoryProjectTypes, onClose, onSubmit }: {
     target: EditorTarget;
     projectTypes: ProjectTypeOption[];
+    categoryProjectTypes: ProjectTypeOption[];
     onClose: () => void;
     onSubmit: (values: ItemValues) => void;
 }) {
@@ -46,7 +48,8 @@ function ResultTypeEditor({ target, projectTypes, onClose, onSubmit }: {
     const formId = useId();
     const formRef = useRef<HTMLFormElement>(null);
     const [values, setValues] = useState<ItemValues>(() => target.kind === 'group'
-        ? { ...emptyItem, name: target.group?.name ?? '' } : { ...emptyItem, ...target.item });
+        ? { ...emptyItem, name: target.group?.name ?? '' }
+        : scopeApplicableProjects({ ...emptyItem, ...target.item }, categoryProjectTypes, projectTypes));
     const [nameError, setNameError] = useState(false);
     const isEdit = target.kind === 'group' ? !!target.group : !!target.item;
     const nameRequired = target.kind === 'group' || !isEdit;
@@ -60,23 +63,24 @@ function ResultTypeEditor({ target, projectTypes, onClose, onSubmit }: {
             event.preventDefault();
             if (nameRequired && !values.name.trim()) {
                 setNameError(true);
-                formRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+                formRef.current?.querySelector<HTMLInputElement>('input')?.focus();
                 return;
             }
-            onSubmit(values.applicableProjectTypes ? {
-                ...values,
-                applicableProjectTypes: applicableProjectSelections(values, projectTypes),
-                applicableProjects: applicableProjectsLabel(values, projectTypes),
-            } : values);
+            const scopedValues = scopeApplicableProjects(values, categoryProjectTypes, projectTypes);
+            onSubmit(scopedValues.applicableProjectTypes ? {
+                ...scopedValues,
+                applicableProjectTypes: applicableProjectSelections(scopedValues, projectTypes),
+                applicableProjects: applicableProjectsLabel(scopedValues, projectTypes),
+            } : scopedValues);
         }}>
             {editorFields.map(([field, label]) => field === 'applicableProjects' ? <div className="field" key={field}>
                 <span>{t(label)}</span>
-                <ApplicableProjectsPicker options={projectTypes} value={applicableProjectSelections(values, projectTypes)} onChange={selected => setValues(previous => ({
+                <ApplicableProjectsPicker options={categoryProjectTypes} value={applicableProjectSelections(values, projectTypes)} onChange={selected => setValues(previous => ({
                     ...previous, applicableProjectTypes: selected, applicableProjects: selected.map(value => value.name).join('\n'),
                 }))}/>
             </div> : <label key={field} className={`field${field === 'name' || field === 'notes' ? ' full' : ''}`} htmlFor={`${formId}-${field}`}>
                 <span>{t(field === 'name' ? '名称' : label)}{field === 'name' && nameRequired && <span className="required"> *</span>}</span>
-                <textarea id={`${formId}-${field}`} aria-label={t(field === 'name' ? '名称' : label)} rows={2}
+                <input id={`${formId}-${field}`} type="text" aria-label={t(field === 'name' ? '名称' : label)} title={values[field] || undefined}
                     required={field === 'name' && nameRequired} aria-invalid={field === 'name' && nameError || undefined}
                     aria-describedby={field === 'name' && nameError ? `${formId}-name-error` : undefined}
                     value={values[field]} onChange={event => {
@@ -105,11 +109,52 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
     const [dialog, setDialog] = useState<DialogTarget | null>(null);
     const [focusRowId, setFocusRowId] = useState<string | null>(null);
     const [scrolledLeft, setScrolledLeft] = useState(false);
+    const [nameColumnWidth, setNameColumnWidth] = useState(180);
     const tableRef = useRef<HTMLTableElement>(null);
     const term = query.trim().toLocaleLowerCase();
     const category = categories.find(entry => entry.id === categoryId)!;
     const projectTypes = getProjectTypeOptions();
     const fieldValue = (item: ResultTypeItem, field: ItemField) => field === 'applicableProjects' ? applicableProjectsLabel(item, projectTypes) : item[field];
+
+    // Measure the whole category, including collapsed and filtered-out rows, so
+    // searching does not resize the fixed name column beneath the user.
+    useLayoutEffect(() => {
+        let disposed = false;
+        const measure = () => {
+            const table = tableRef.current;
+            if (disposed || !table) return;
+            const header = table.querySelector('th');
+            const textStyle = getComputedStyle(table);
+            const headerStyle = getComputedStyle(header ?? table);
+            const probe = document.createElement('span');
+            Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'pre', width: 'max-content' });
+            table.parentElement?.append(probe);
+            const textWidth = (text: string, weight = '400', size = textStyle.fontSize) => {
+                probe.style.font = `${weight} ${size} ${textStyle.fontFamily}`;
+                probe.style.letterSpacing = textStyle.letterSpacing;
+                probe.textContent = text;
+                return probe.getBoundingClientRect().width;
+            };
+            // Match the first-cell padding, child indent and disclosure width.
+            let width = Math.max(180, textWidth(header?.textContent ?? '', headerStyle.fontWeight, headerStyle.fontSize)
+                + parseFloat(headerStyle.paddingLeft || '0') + parseFloat(headerStyle.paddingRight || '0'));
+            for (const group of category.groups) {
+                width = Math.max(width, textWidth(group.name || t('分类名称'), '600') + 14 + 28 + 2 + 14);
+                for (const item of group.items) width = Math.max(width, textWidth(item.name || t('二级分类名称')) + 76 + 14);
+            }
+            probe.remove();
+            setNameColumnWidth(Math.ceil(width) + 2);
+        };
+        measure();
+        document.fonts?.ready.then(measure);
+        document.fonts?.addEventListener('loadingdone', measure);
+        window.addEventListener('resize', measure);
+        return () => {
+            disposed = true;
+            document.fonts?.removeEventListener('loadingdone', measure);
+            window.removeEventListener('resize', measure);
+        };
+    }, [category, t]);
 
     // Keep the submitted result set stable while its fields are edited. A new
     // submission (including the same keyword) searches the latest draft values.
@@ -141,20 +186,19 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
         setFocusRowId(null);
     }, [focusRowId, term, visibleRows]);
 
-    const updateGroup = (groupId: string, name: string) => setCategories(previous => previous.map(entry =>
-        entry.id !== categoryId ? entry : {
-            ...entry, groups: entry.groups.map(group => group.id === groupId ? { ...group, name } : group),
-        }));
     const toggleGroup = (groupId: string) => {
         const update = term ? setSearchCollapsed : setCollapsed;
         update(previous => ({ ...previous, [groupId]: !previous[groupId] }));
     };
-    const updateGroups = (update: (groups: ResultTypeGroup[]) => ResultTypeGroup[]) => setCategories(previous => previous.map(entry =>
-        entry.id === categoryId ? { ...entry, groups: update(entry.groups) } : entry));
+    const updateGroups = (update: (groups: ResultTypeGroup[]) => ResultTypeGroup[]) => {
+        const next = categories.map(entry => entry.id === categoryId ? { ...entry, groups: update(entry.groups) } : entry);
+        saveResultTypes(next);
+        setCategories(next);
+    };
     const saveEditor = (values: ItemValues) => {
         if (!dialog || dialog.kind === 'delete') return;
         if (dialog.kind === 'group') {
-            if (dialog.group) updateGroup(dialog.group.id, values.name);
+            if (dialog.group) updateGroups(previous => previous.map(group => group.id === dialog.group!.id ? { ...group, name: values.name } : group));
             else {
                 const id = `${categoryId}-group-${crypto.randomUUID()}`;
                 updateGroups(previous => [...previous, { id, name: values.name, items: [] }]);
@@ -175,6 +219,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
             }
         }
         setDialog(null);
+        onSave();
     };
     const move = (groupId: string, direction: -1 | 1, itemId?: string) => updateGroups(previous => itemId
         ? previous.map(group => group.id === groupId ? { ...group, items: moveSibling(group.items, itemId, direction) } : group)
@@ -212,7 +257,8 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
         </span>;
     };
 
-    return <section className="card baseline-list result-types-panel" data-baseline="naming">
+    return <section className="card baseline-list result-types-panel" data-baseline="naming"
+        style={{ '--result-types-name-width': `${nameColumnWidth}px` } as CSSProperties}>
         <header>
             <h2>{t('项目成果类型')}</h2>
             <div>
@@ -223,7 +269,6 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                     {categories.map(entry => <option key={entry.id} value={entry.id}>{t(entry.name)}</option>)}
                 </select>
                 <button className="button" onClick={() => setDialog({ kind: 'group' })}><Plus size={16}/>{t('新增分类')}</button>
-                <button className="button primary" onClick={() => { saveResultTypes(categories); onSave(); }}>{t('保存')}</button>
             </div>
         </header>
         <div className="table-wrap result-types-scroll" role="region" aria-label={t('成果类型列表')} tabIndex={0}
@@ -267,13 +312,13 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
             </table>
             {!groups.length && <div className="empty-state"><FileText size={42}/><h3>{t(term ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(term ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p></div>}
         </div>
-        <footer><span>{t('共 {count} 条', { count })}</span><span>{t('编辑后点击保存')}</span></footer>
+        <footer><span>{t('共 {count} 条', { count })}</span><span>{t('修改即时生效，刷新页面恢复初始数据')}</span></footer>
         {dialog && (dialog.kind === 'delete' ? <Modal title={t(dialog.item ? '删除成果项' : '删除分类')} onClose={() => setDialog(null)} footer={<>
             <button className="button" onClick={() => setDialog(null)}>{t('取消')}</button>
             <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button>
         </>}>
             <p>{t('确定删除“{name}”吗？', { name: dialog.item ? dialog.item.name || t('二级分类名称') : dialog.group.name || t('分类名称') })}
                 {!dialog.item && dialog.group.items.length > 0 && t('其下级记录也将删除。')}</p>
-        </Modal> : <ResultTypeEditor target={dialog} projectTypes={projectTypes} onClose={() => setDialog(null)} onSubmit={saveEditor}/>)}
+        </Modal> : <ResultTypeEditor target={dialog} projectTypes={projectTypes} categoryProjectTypes={getCategoryProjectTypes(categoryId, projectTypes)} onClose={() => setDialog(null)} onSubmit={saveEditor}/>)}
     </section>;
 }

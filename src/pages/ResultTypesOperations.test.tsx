@@ -59,6 +59,10 @@ function queryValue() {
 function savedCategory(id: ResultTypeCategoryId) { return loadResultTypes().find(category => category.id === id)!; }
 function allItemIds() { return Array.from(table().querySelectorAll('tr[data-item-id]'), row => row.getAttribute('data-item-id')); }
 function allGroupIds() { return Array.from(table().querySelectorAll('tr[data-group-id]'), row => row.getAttribute('data-group-id')); }
+function leaveAndReturn() {
+    fireEvent.click(screen.getByRole('button', { name: '项目类型' }));
+    fireEvent.click(screen.getByRole('button', { name: '成果类型' }));
+}
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -68,36 +72,41 @@ beforeEach(() => {
 afterEach(() => saveBaselineRows('types', structuredClone(baselineProjectTypes)));
 
 describe('成果类型新增、编辑与排序', () => {
-    it('一级和二级表单验证必填、取消不改草稿，空分类可添加首项，顶部保存才写缓存', async () => {
-        const user = userEvent.setup();
+    it('一级和二级必填校验与取消不写缓存，新增和编辑即时保存且离开返回保留', () => {
         render(<Harness />);
         const groupCount = seedCategory('processing').groups.length;
+        expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: '新增分类' }));
         expect(modal()).toHaveAccessibleName('新增分类');
         submitModal();
         expect(modal()).toBeVisible();
         expect(allGroupIds()).toHaveLength(groupCount);
+        expect(savedCategory('processing')).toEqual(seedCategory('processing'));
         fillModal('名称', '取消的新分类');
         cancelModal();
         expect(screen.queryByRole('button', { name: '编辑取消的新分类' })).not.toBeInTheDocument();
+        expect(savedCategory('processing')).toEqual(seedCategory('processing'));
 
         const newGroup = createGroup('新成果分类');
         expect(newGroup).toBeVisible();
         expect(allGroupIds()).toHaveLength(groupCount + 1);
         expect(allItemIds()).toHaveLength(30);
-        expect(savedCategory('processing').groups).toHaveLength(groupCount);
+        expect(savedCategory('processing').groups).toHaveLength(groupCount + 1);
+        const savedEmptyGroup = savedCategory('processing');
         rowAction(newGroup, '新增新成果分类下级');
         expect(modal()).toHaveAccessibleName('新增成果项');
         expect(modalField('成果编号')).toHaveValue('');
         submitModal();
         expect(modal()).toBeVisible();
+        expect(savedCategory('processing')).toEqual(savedEmptyGroup);
         fillModal('名称', '取消的新成果');
         cancelModal();
         expect(allItemIds()).toHaveLength(30);
+        expect(savedCategory('processing')).toEqual(savedEmptyGroup);
 
         rowAction(newGroup, '新增新成果分类下级');
         const values = {
-            '名称': '首个新成果', '适用项目': '井中地震\n常规测井', '成果编号': '0007',
+            '名称': '首个新成果', '适用项目': '二维处理\n三维处理', '成果编号': '0007',
             '中文目录': '成果目录', '英文目录': 'NEW_RESULT', '命名规则': '{name}.sgy', '备注': '新增备注',
         };
         for (const [label, value] of Object.entries(values)) fillModal(label, value);
@@ -107,6 +116,7 @@ describe('成果类型新增、编辑与排序', () => {
         const id = newItem.getAttribute('data-item-id');
         expect(fieldText(newItem, 'number')).toBe('0007');
         expect(allItemIds()).toHaveLength(31);
+        const savedNewItem = savedCategory('processing');
 
         rowAction(newGroup, '编辑新成果分类');
         expect(modal()).toHaveAccessibleName('编辑分类');
@@ -114,13 +124,16 @@ describe('成果类型新增、编辑与排序', () => {
         submitModal();
         expect(modal()).toBeVisible();
         expect(fieldText(newGroup, 'groupName')).toBe('新成果分类');
+        expect(savedCategory('processing')).toEqual(savedNewItem);
         fillModal('名称', '取消的组名');
         cancelModal();
         expect(fieldText(newGroup, 'groupName')).toBe('新成果分类');
+        expect(savedCategory('processing')).toEqual(savedNewItem);
         rowAction(newGroup, '编辑新成果分类');
         fillModal('名称', '改名后的分类');
         submitModal();
         expect(fieldText(newGroup, 'groupName')).toBe('改名后的分类');
+        const savedRenamedGroup = savedCategory('processing');
 
         rowAction(newItem, '编辑首个新成果');
         expect(modal()).toHaveAccessibleName('编辑成果项');
@@ -130,20 +143,25 @@ describe('成果类型新增、编辑与排序', () => {
         cancelModal();
         expect(fieldText(newItem, 'name')).toBe('首个新成果');
         expect(fieldText(newItem, 'number')).toBe('0007');
+        expect(savedCategory('processing')).toEqual(savedRenamedGroup);
         rowAction(newItem, '编辑首个新成果');
         fillModal('名称', '改名后的成果');
         fillModal('备注', '修改后的备注');
         submitModal();
         expect(namedRow('改名后的成果').getAttribute('data-item-id')).toBe(id);
-        expect(savedCategory('processing').groups).toHaveLength(groupCount);
-        await user.click(screen.getByRole('button', { name: '保存' }));
+        expect(savedCategory('processing').groups).toHaveLength(groupCount + 1);
         const saved = savedCategory('processing').groups.find(group => group.name === '改名后的分类')!;
         expect(saved.items).toHaveLength(1);
         expect(saved.items[0]).toMatchObject({
-            id, name: '改名后的成果', applicableProjects: '井中地震\n常规测井', number: '0007', chineseDirectory: '成果目录',
+            id, name: '改名后的成果', applicableProjects: '二维处理\n三维处理', number: '0007', chineseDirectory: '成果目录',
             englishDirectory: 'NEW_RESULT', namingRule: '{name}.sgy', notes: '修改后的备注',
         });
         expect(notify).toHaveBeenCalledWith('成果类型已保存');
+        leaveAndReturn();
+        expect(namedRow('改名后的分类')).toBeVisible();
+        expect(namedRow('改名后的成果').getAttribute('data-item-id')).toBe(id);
+        expect(fieldText(namedRow('改名后的成果'), 'number')).toBe('0007');
+        expect(fieldText(namedRow('改名后的成果'), 'notes')).toBe('修改后的备注');
     });
 
     it('一级行新增下级追加到本组末尾，成果编号保持空值，已有预留项允许空名称编辑', async () => {
@@ -170,15 +188,14 @@ describe('成果类型新增、编辑与排序', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(fieldText(itemRow(blank), 'name')).toBe('二级分类名称');
         expect(fieldText(itemRow(blank), 'notes')).toBe('仍然保留空名称');
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         expect(savedCategory('processing').groups.find(entry => entry.id === group.id)!.items.map(item => item.id)).toEqual([
             ...group.items.map(item => item.id), newId,
         ]);
         expect(savedCategory('wellbore').groups.find(entry => entry.name === '井轨迹')!.items[0].name).toBe('');
     });
 
-    it('一级移动携带整组且二级仅在本组移动，边界禁用，保存后恢复实际顺序', () => {
-        const view = render(<Harness />);
+    it('一级移动携带整组且二级仅在本组移动，边界禁用，离开返回保留即时保存的顺序', () => {
+        render(<Harness />);
         const original = seedCategory('processing').groups;
         const basic = original[0], results = original[1], lastGroup = original.at(-1)!;
         expect(within(groupRow(basic)).getByRole('button', { name: `上移${basic.name}` })).toBeDisabled();
@@ -194,14 +211,11 @@ describe('成果类型新增、编辑与排序', () => {
         expect(allItemIds().slice(0, results.items.length)).toEqual([second.id, first.id, ...results.items.slice(2).map(item => item.id)]);
         expect(within(itemRow(second)).getByRole('button', { name: `上移${second.name}` })).toBeDisabled();
         expect(within(itemRow(first)).getByRole('button', { name: `上移${first.name}` })).toBeEnabled();
-        expect(savedCategory('processing').groups[0].id).toBe(basic.id);
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         const saved = savedCategory('processing').groups;
         expect(saved.map(group => group.id)).toEqual([results.id, basic.id, ...original.slice(2).map(group => group.id)]);
         expect(saved[0].items.map(item => item.id)).toEqual([second.id, first.id, ...results.items.slice(2).map(item => item.id)]);
         expect(saved[1].items).toEqual(basic.items);
-        view.unmount();
-        render(<Harness />);
+        leaveAndReturn();
         expect(allGroupIds()).toEqual(saved.map(group => group.id));
         expect(allItemIds()).toEqual(saved.flatMap(group => group.items.map(item => item.id)));
     });
@@ -220,25 +234,34 @@ describe('成果类型删除与查询下操作', () => {
         expect(modal()).toHaveAccessibleName('删除成果项');
         cancelModal();
         expect(itemRow(originalItem)).toBeVisible();
+        expect(savedCategory('processing')).toEqual(processing);
         rowAction(itemRow(originalItem), `删除${originalItem.name}`);
         fireEvent.click(within(modal()).getByRole('button', { name: '确认删除' }));
         expect(allItemIds()).toHaveLength(0);
         expect(groupRow(originalGroup)).toBeVisible();
-        expect(savedCategory('processing').groups[0].items).toHaveLength(1);
+        expect(savedCategory('processing').groups[0].items).toHaveLength(0);
+        leaveAndReturn();
+        expect(groupRow(originalGroup)).toBeVisible();
+        expect(allItemIds()).toHaveLength(0);
 
         rowAction(groupRow(originalGroup), `新增${originalGroup.name}下级`);
         fillModal('名称', '恢复的首条成果');
         submitModal();
         expect(namedRow('恢复的首条成果')).toBeVisible();
+        const savedRestoredGroup = savedCategory('processing');
         rowAction(groupRow(originalGroup), `删除${originalGroup.name}`);
         expect(modal()).toHaveAccessibleName('删除分类');
         expect(modal()).toHaveTextContent(/其下.*删除/);
         cancelModal();
         expect(namedRow('恢复的首条成果')).toBeVisible();
+        expect(savedCategory('processing')).toEqual(savedRestoredGroup);
         rowAction(groupRow(originalGroup), `删除${originalGroup.name}`);
         fireEvent.click(within(modal()).getByRole('button', { name: '确认删除' }));
         expect(allGroupIds()).toHaveLength(0);
         expect(allItemIds()).toHaveLength(0);
+        expect(savedCategory('processing').groups).toHaveLength(0);
+        leaveAndReturn();
+        expect(allGroupIds()).toHaveLength(0);
         expect(screen.getByRole('button', { name: '新增分类' })).toBeVisible();
         const emptyGroup = createGroup('待删除空分类');
         rowAction(emptyGroup, '删除待删除空分类');
@@ -249,7 +272,6 @@ describe('成果类型删除与查询下操作', () => {
         rowAction(restored, '新增空类别恢复分类下级');
         fillModal('名称', '空类别恢复成果');
         submitModal();
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         expect(savedCategory('processing').groups).toHaveLength(1);
         expect(savedCategory('processing').groups[0]).toMatchObject({ name: '空类别恢复分类', items: [{ name: '空类别恢复成果' }] });
     });
@@ -274,7 +296,6 @@ describe('成果类型删除与查询下操作', () => {
         fireEvent.click(within(modal()).getByRole('button', { name: '确认删除' }));
         expect(allItemIds()).not.toContain(magnetic.id);
         expect(itemRow(geochemical)).toBeVisible();
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         expect(savedCategory('processing').groups.some(group => group.id === processingBasic.id)).toBe(false);
         expect(savedCategory('acquisition').groups).toEqual(seedCategory('acquisition').groups);
         expect(savedCategory('nonseismic').groups.find(group => group.name === '化探')!.items[0]).toEqual(geochemical);
@@ -319,7 +340,6 @@ describe('成果类型删除与查询下操作', () => {
         expect(queryValue()).toHaveValue('');
         expect(newGroup).toBeVisible();
         expect(allItemIds()).toHaveLength(30);
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         const saved = savedCategory('processing').groups.find(group => group.id === results.id)!;
         expect(saved.items[saved.items.findIndex(entry => entry.id === item.id) + 1].id).toBe(previous.id);
         expect(saved.items.find(entry => entry.id === item.id)!.englishDirectory).toBe('CHANGED_DIRECTORY');

@@ -80,6 +80,10 @@ function search(value: string) {
     fireEvent.change(within(form).getByRole('textbox'), { target: { value } });
     fireEvent.click(within(form).getByRole('button', { name: '查询' }));
 }
+function leaveAndReturn() {
+    fireEvent.click(screen.getByRole('button', { name: '项目类型' }));
+    fireEvent.click(screen.getByRole('button', { name: '成果类型' }));
+}
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -119,6 +123,8 @@ describe('成果类型页面操作', () => {
         expect(screen.getByRole('heading', { name: '成果类型', level: 1 })).toBeVisible();
         expect(screen.getByRole('button', { name: '成果类型' })).toBeVisible();
         expect(screen.getByRole('heading', { name: '项目成果类型' })).toBeVisible();
+        expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
+        expect(screen.getByText('修改即时生效，刷新页面恢复初始数据')).toBeVisible();
         expect(screen.queryByRole('button', { name: '命名规则' })).not.toBeInTheDocument();
         expect(screen.getAllByRole('columnheader').map(item => item.textContent)).toEqual(headers);
         const select = screen.getByRole('combobox', { name: '数据类别' });
@@ -145,14 +151,14 @@ describe('成果类型页面操作', () => {
         expect(within(firstItem).queryByRole('button', { name: /^新增/ })).not.toBeInTheDocument();
     });
 
-    it('八个业务字段仅通过弹窗编辑，修改名称焦点稳定，保存后表格按文本恢复全部字段', async () => {
+    it('八个业务字段仅通过弹窗编辑，修改名称焦点稳定，弹窗保存后离开返回保留全部字段', async () => {
         const user = userEvent.setup();
-        const view = render(<Harness />);
+        render(<Harness />);
         const item = seedItem('processing', '处理成果', '水平叠加纯波数据');
         const changes = {
             name: '新的成果名称', applicableProjects: '二维处理\n三维处理', number: '002',
             chineseDirectory: '新的中文目录', englishDirectory: 'NEW_DIRECTORY', namingRule: 'line_{name}.sgy',
-            notes: '第一行备注\n第二行备注',
+            notes: '第一条备注，第二条备注',
         };
         openEditor(row(item));
         const nameInput = modalField('name');
@@ -167,25 +173,23 @@ describe('成果类型页面操作', () => {
         submitEditor();
         for (const [key, value] of Object.entries(changes)) expect(field(row(item), key).textContent).toBe(value);
         editFields(groupRow('processing', '处理成果'), { groupName: '重命名处理成果' });
-        await user.click(screen.getByRole('button', { name: '保存' }));
         expect(notify).toHaveBeenCalledWith('成果类型已保存');
         const savedGroup = loadResultTypes().find(entry => entry.id === 'processing')!.groups.find(entry => entry.id === group('processing', '处理成果').id)!;
         expect(savedGroup.name).toBe('重命名处理成果');
         expect(savedGroup.items.find(entry => entry.id === item.id)).toMatchObject(changes);
         expect(savedGroup.items.map(entry => entry.id)).toEqual(group('processing', '处理成果').items.map(entry => entry.id));
-        view.unmount();
-        render(<Harness />);
+        leaveAndReturn();
         for (const [key, value] of Object.entries(changes)) expect(field(row(item), key).textContent).toBe(value);
         expect(table().querySelectorAll('input,textarea')).toHaveLength(0);
         expect(screen.getByRole('button', { name: '收起重命名处理成果' })).toHaveAttribute('aria-expanded', 'true');
         expect(seedItem('processing', '处理成果', '水平叠加纯波数据').number).toBe('02');
     });
 
-    it('切换类别保留五类草稿，一次保存全部类别，同名条目跨组和类别互不覆盖', async () => {
+    it('五类编辑即时保存，切换类别保留修改，同名条目跨组和类别互不覆盖', async () => {
         const user = userEvent.setup();
         render(<Harness />);
         const select = screen.getByRole('combobox', { name: '数据类别' });
-        const selections = ['三维陆上常规采集', '二维处理', '解释', '井中地震', '重力'];
+        const selections = ['三维陆上常规采集', '二维处理', '二维解释', '井中地震', '重力'];
         for (const [index, entry] of RESULT_TYPE_CATEGORIES.entries()) {
             await user.selectOptions(select, entry.id);
             const first = seedItem(entry.id, '基本信息', '项目信息');
@@ -197,7 +201,6 @@ describe('成果类型页面操作', () => {
         editFields(row(geochemical), { namingRule: 'geochemical.dat' });
         await user.selectOptions(select, 'processing');
         expect(field(row(seedItem('processing', '基本信息', '项目信息')), 'number').textContent).toBe('002');
-        await user.click(screen.getByRole('button', { name: '保存' }));
         const saved = loadResultTypes();
         for (const [index, entry] of saved.entries()) {
             expect(entry.groups[0].items[0].number).toBe(`00${index + 1}`);
@@ -212,6 +215,8 @@ describe('成果类型页面操作', () => {
         expect(RESULT_TYPE_CATEGORIES.every(entry => entry.groups[0].items[0].number === '01')).toBe(true);
         saved[0].groups[0].items[0].number = 'changed outside the cache';
         expect(loadResultTypes()[0].groups[0].items[0].number).toBe('001');
+        leaveAndReturn();
+        expect(field(row(seedItem('processing', '基本信息', '项目信息')), 'number').textContent).toBe('002');
     });
 
     it('三个空二级分类显示占位文字，独立填写且未填项保存仍为空', async () => {
@@ -231,7 +236,6 @@ describe('成果类型页面操作', () => {
         submitEditor();
         editFields(row(trajectory), { namingRule: 'well_path.txt' });
         expect(field(row(lithology), 'name').textContent).toBe('二级分类名称');
-        await user.click(screen.getByRole('button', { name: '保存' }));
         const saved = loadResultTypes().find(entry => entry.id === 'wellbore')!.groups.flatMap(entry => entry.items);
         expect(saved.find(entry => entry.id === environment.id)!.name).toBe('环境参数预留项');
         expect(saved.find(entry => entry.id === trajectory.id)).toMatchObject({ name: '', namingRule: 'well_path.txt' });
@@ -337,27 +341,116 @@ describe('成果类型页面操作', () => {
 });
 
 describe('成果类型适用项目选择', () => {
-    it('只选择末级类型，六个示例可多选，筛选保留已选项，取消和清空按弹窗保存生效', () => {
+    it('五类新增和编辑均只提供本类别末级选项，选择及保存相互隔离', async () => {
+        const user = userEvent.setup();
+        render(<Harness />);
+        const scenarios: Array<{ id: ResultTypeCategoryId; paths: string[] }> = [
+            { id: 'acquisition', paths: ['采集 / 三维陆上常规采集', '采集 / 三维陆上混叠采集', '采集 / 二维陆上采集'] },
+            { id: 'processing', paths: ['处理 / 二维处理', '处理 / 三维处理'] },
+            { id: 'interpretation', paths: ['解释 / 二维解释', '解释 / 三维解释'] },
+            { id: 'wellbore', paths: ['井筒 / 井中地震', '井筒 / 常规测井'] },
+            { id: 'nonseismic', paths: ['非地震 / 重力', '非地震 / 磁法'] },
+        ];
+        for (const { id, paths } of scenarios) {
+            await user.selectOptions(screen.getByRole('combobox', { name: '数据类别' }), id);
+            fireEvent.click(within(groupRow(id, '基本信息')).getByRole('button', { name: '新增基本信息下级' }));
+            let options = within(projectOptions());
+            expect(options.getAllByRole('checkbox')).toHaveLength(paths.length);
+            for (const path of paths) expect(options.getByRole('checkbox', { name: path })).toBeEnabled();
+            fireEvent.click(options.getByRole('checkbox', { name: paths[0] }));
+            fireEvent.change(options.getByLabelText('搜索项目类型'), { target: { value: id === 'processing' ? '井中地震' : '二维处理' } });
+            expect(options.queryAllByRole('checkbox')).toHaveLength(0);
+            expect(options.getByText('无匹配项目类型')).toBeVisible();
+            const name = `${category(id).name}限定成果项`;
+            fireEvent.change(modalField('name'), { target: { value: name } });
+            submitEditor();
+            const created = screen.getByRole('button', { name: `编辑${name}` }).closest('tr')!;
+            expect(field(created, 'applicableProjects').textContent).toBe(paths[0].split(' / ').at(-1));
+            openEditor(created);
+            options = within(projectOptions());
+            expect(options.getAllByRole('checkbox')).toHaveLength(paths.length);
+            for (const path of paths) expect(options.getByRole('checkbox', { name: path })).toBeEnabled();
+            expect(options.getByRole('checkbox', { name: paths[0] })).toBeChecked();
+            chooseProjects([paths.at(-1)!.split(' / ').at(-1)!]);
+            submitEditor();
+            expect(field(created, 'applicableProjects').textContent).toBe(paths.at(-1)!.split(' / ').at(-1));
+        }
+        const saved = loadResultTypes();
+        for (const { id, paths } of scenarios) {
+            const name = paths.at(-1)!.split(' / ').at(-1)!;
+            const option = getProjectTypeOptions().find(option => option.path.join(' / ') === paths.at(-1))!;
+            const item = saved.find(entry => entry.id === id)!.groups.flatMap(group => group.items).find(item => item.name === `${category(id).name}限定成果项`)!;
+            expect(item.applicableProjects).toBe(name);
+            expect(item.applicableProjectTypes).toEqual([{ id: option.id, name }]);
+        }
+    });
+
+    it('已知跨类旧关联只从编辑草稿剔除，取消保留原值，保存清理跨类但保留未知与已删快照', () => {
+        const initial = loadResultTypes();
+        const items = initial.find(category => category.id === 'processing')!.groups.find(group => group.name === '处理成果')!.items;
+        const item = items[0], legacyTextItem = items[1];
+        const allowed = getProjectTypeOptions().find(option => option.name === '二维处理')!;
+        const other = getProjectTypeOptions().find(option => option.name === '井中地震')!;
+        const retained = [{ name: '历史自由类型' }, { id: 'deleted-project-type', name: '已删除类型快照' }];
+        item.applicableProjectTypes = [{ id: allowed.id, name: allowed.name }, { id: other.id, name: other.name }, ...retained];
+        item.applicableProjects = '二维处理\n井中地震\n历史自由类型\n已删除类型快照';
+        legacyTextItem.applicableProjects = '井中地震';
+        saveResultTypes(initial);
+        render(<Harness />);
+        openEditor(row(item));
+        let options = within(projectOptions());
+        expect(options.queryByRole('checkbox', { name: /井中地震/ })).not.toBeInTheDocument();
+        for (const name of ['处理 / 二维处理', '历史自由类型', '已删除类型快照']) {
+            expect(options.getByRole('checkbox', { name })).toBeChecked();
+        }
+        expect(field(row(item), 'applicableProjects').textContent).toBe(item.applicableProjects);
+        fireEvent.click(options.getByRole('checkbox', { name: '处理 / 三维处理' }));
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
+        expect(field(row(item), 'applicableProjects').textContent).toBe(item.applicableProjects);
+        expect(loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)).toEqual(item);
+        openEditor(row(item));
+        options = within(projectOptions());
+        expect(options.getByRole('checkbox', { name: '处理 / 三维处理' })).not.toBeChecked();
+        expect(options.queryByRole('checkbox', { name: /井中地震/ })).not.toBeInTheDocument();
+        submitEditor();
+        expect(field(row(item), 'applicableProjects').textContent).toBe('二维处理\n历史自由类型\n已删除类型快照');
+        expect(field(row(legacyTextItem), 'applicableProjects').textContent).toBe('井中地震');
+        openEditor(row(legacyTextItem));
+        expect(within(projectOptions()).queryByRole('checkbox', { name: /井中地震/ })).not.toBeInTheDocument();
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
+        expect(field(row(legacyTextItem), 'applicableProjects').textContent).toBe('井中地震');
+        openEditor(row(legacyTextItem));
+        submitEditor();
+        expect(field(row(legacyTextItem), 'applicableProjects').textContent).toBe('—');
+        const saved = loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items);
+        expect(saved.find(entry => entry.id === item.id)!.applicableProjectTypes).toEqual([{ id: allowed.id, name: allowed.name }, ...retained]);
+        expect(saved.find(entry => entry.id === legacyTextItem.id)).toMatchObject({ applicableProjects: '', applicableProjectTypes: [] });
+    });
+
+    it('只选择当前处理类别的末级类型，筛选保留多选，其他类别无结果，取消和清空按弹窗保存生效', () => {
         render(<Harness />);
         const item = seedItem('processing', '处理成果', '水平叠加纯波数据');
         openEditor(row(item));
         expect(within(screen.getByRole('dialog')).queryByRole('textbox', { name: '适用项目' })).not.toBeInTheDocument();
         const options = within(projectOptions());
-        for (const path of ['处理 / 二维处理', '处理 / 三维处理', '井筒 / 井中地震', '井筒 / 常规测井', '非地震 / 重力', '非地震 / 磁法']) {
+        for (const path of ['处理 / 二维处理', '处理 / 三维处理']) {
             expect(options.getByRole('checkbox', { name: path })).toBeEnabled();
         }
-        expect(options.getByRole('checkbox', { name: '解释' })).toBeEnabled();
+        expect(options.getAllByRole('checkbox')).toHaveLength(2);
         for (const parent of ['采集', '处理', '井筒', '非地震']) {
             const checkbox = options.queryByRole('checkbox', { name: parent });
             if (checkbox) expect(checkbox).toBeDisabled();
         }
         fireEvent.click(options.getByRole('checkbox', { name: '处理 / 二维处理' }));
-        fireEvent.click(options.getByRole('checkbox', { name: '井筒 / 井中地震' }));
-        fireEvent.change(options.getByLabelText('搜索项目类型'), { target: { value: '磁' } });
-        expect(options.queryByRole('checkbox', { name: '处理 / 二维处理' })).not.toBeInTheDocument();
-        fireEvent.click(options.getByRole('checkbox', { name: '非地震 / 磁法' }));
+        fireEvent.click(options.getByRole('checkbox', { name: '处理 / 三维处理' }));
+        fireEvent.change(options.getByLabelText('搜索项目类型'), { target: { value: '二维' } });
+        expect(options.queryByRole('checkbox', { name: '处理 / 三维处理' })).not.toBeInTheDocument();
+        expect(options.getByRole('checkbox', { name: '处理 / 二维处理' })).toBeChecked();
+        fireEvent.change(options.getByLabelText('搜索项目类型'), { target: { value: '井中地震' } });
+        expect(options.queryAllByRole('checkbox')).toHaveLength(0);
+        expect(options.getByText('无匹配项目类型')).toBeVisible();
         fireEvent.change(options.getByLabelText('搜索项目类型'), { target: { value: '' } });
-        for (const path of ['处理 / 二维处理', '井筒 / 井中地震', '非地震 / 磁法']) {
+        for (const path of ['处理 / 二维处理', '处理 / 三维处理']) {
             expect(options.getByRole('checkbox', { name: path })).toBeChecked();
         }
         fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
@@ -365,7 +458,7 @@ describe('成果类型适用项目选择', () => {
 
         editFields(row(item), { applicableProjects: '二维处理\n三维处理' });
         expect(field(row(item), 'applicableProjects').textContent).toBe('二维处理\n三维处理');
-        expect(loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!.applicableProjects).toBe('');
+        expect(loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!.applicableProjects).toBe('二维处理\n三维处理');
         search('二维处理');
         expect(itemRows()).toHaveLength(1);
         expect(row(item)).toBeVisible();
@@ -375,14 +468,13 @@ describe('成果类型适用项目选择', () => {
         expect(field(row(item), 'applicableProjects').textContent).toBe('二维处理\n三维处理');
         editFields(row(item), { applicableProjects: '' });
         expect(field(row(item), 'applicableProjects').textContent).toBe('—');
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         const saved = loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!;
         expect(saved).toMatchObject({ applicableProjects: '', applicableProjectTypes: [] });
         search('二维处理');
         expect(itemRows()).toHaveLength(0);
     });
 
-    it('读取动态新增类型，按ID显示最新名称，删除类型后保留快照并可取消关联', () => {
+    it('读取动态新增类型，根和末级改名仍按ID归属，删除类型后保留快照并可取消关联', () => {
         const view = render(<Harness />);
         const item = seedItem('processing', '处理成果', '水平叠加纯波数据');
         const parent = demoRows.types.find(type => type.name === '处理' && !type.parent)!;
@@ -392,16 +484,17 @@ describe('成果类型适用项目选择', () => {
         expect(within(projectOptions()).getByRole('checkbox', { name: '处理 / 动态处理类型' })).toBeEnabled();
         fireEvent.click(within(projectOptions()).getByRole('checkbox', { name: '处理 / 动态处理类型' }));
         submitEditor();
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         const saved = loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!;
         expect(saved.applicableProjectTypes).toEqual([{ id: addedType.id, name: '动态处理类型' }]);
         expect(saved.applicableProjects).toBe('动态处理类型');
 
-        saveBaselineRows('types', demoRows.types.map(type => type.id === addedType.id ? { ...type, name: '改名后的动态类型' } : type));
+        saveBaselineRows('types', demoRows.types.map(type => type.id === addedType.id ? { ...type, name: '改名后的动态类型' }
+            : type.id === parent.id ? { ...type, name: '处理根节点新名称' } : type));
         view.rerender(<Harness />);
         expect(field(row(item), 'applicableProjects').textContent).toBe('改名后的动态类型');
         openEditor(row(item));
-        expect(within(projectOptions()).getByRole('checkbox', { name: '处理 / 改名后的动态类型' })).toBeChecked();
+        expect(within(projectOptions()).getByRole('checkbox', { name: '处理根节点新名称 / 改名后的动态类型' })).toBeChecked();
+        expect(within(projectOptions()).queryByRole('checkbox', { name: '井筒 / 井中地震' })).not.toBeInTheDocument();
         fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
         search('改名后的动态类型');
         expect(itemRows()).toHaveLength(1);
@@ -416,7 +509,6 @@ describe('成果类型适用项目选择', () => {
         fireEvent.click(retained);
         submitEditor();
         expect(field(row(item), 'applicableProjects').textContent).toBe('—');
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         expect(loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!.applicableProjectTypes).toEqual([]);
     });
 
@@ -432,7 +524,6 @@ describe('成果类型适用项目选择', () => {
         fireEvent.click(within(projectOptions()).getByRole('checkbox', { name: '处理 / 三维处理' }));
         submitEditor();
         expect(field(row(item), 'applicableProjects').textContent).toBe('历史自由类型\n三维处理');
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         const savedItem = () => loadResultTypes().find(category => category.id === 'processing')!.groups.flatMap(group => group.items).find(entry => entry.id === item.id)!;
         expect(savedItem().applicableProjectTypes).toEqual([
             { name: '历史自由类型' },
@@ -442,7 +533,6 @@ describe('成果类型适用项目选择', () => {
         fireEvent.click(within(projectOptions()).getByRole('checkbox', { name: '历史自由类型' }));
         expect(within(projectOptions()).getByRole('checkbox', { name: '处理 / 三维处理' })).toBeChecked();
         submitEditor();
-        fireEvent.click(screen.getByRole('button', { name: '保存' }));
         expect(savedItem().applicableProjects).toBe('三维处理');
         expect(savedItem().applicableProjectTypes).toEqual([
             { id: getProjectTypeOptions().find(option => option.name === '三维处理')!.id, name: '三维处理' },

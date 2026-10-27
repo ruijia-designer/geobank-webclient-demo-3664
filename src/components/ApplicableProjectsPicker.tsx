@@ -19,7 +19,6 @@ export function ApplicableProjectsPicker({ options, value, onChange }: {
     const term = query.trim().toLocaleLowerCase();
     const leaves = options.filter(option => option.leaf);
     const matches = leaves.filter(option => option.path.join(' / ').toLocaleLowerCase().includes(term));
-    const roots = [...new Set(matches.map(option => option.path[0]))];
     const retained = value.filter(selected => !leaves.some(option => option.id === selected.id));
     const retainedMatches = retained.filter(selected => selected.name.toLocaleLowerCase().includes(term));
     const summary = value.map(selected => selected.name).join('、');
@@ -85,16 +84,15 @@ export function ApplicableProjectsPicker({ options, value, onChange }: {
                         <span>{selected.name}</span>
                     </label>)}
                 </div>}
-                {roots.map(name => <div key={name} className="applicable-project-option-group">
-                    <strong>{t(name)}</strong>
-                    {matches.filter(option => option.path[0] === name).map(option => <label key={option.id}>
+                {matches.length > 0 && <div className="applicable-project-option-group">
+                    {matches.map(option => <label key={option.id}>
                         <input type="checkbox" aria-label={option.path.map(part => t(part)).join(' / ')}
                             checked={value.some(selected => selected.id === option.id)} onChange={event => onChange(event.target.checked
                                 ? [...value, { id: option.id, name: option.name }]
                                 : value.filter(selected => selected.id !== option.id))}/>
                         <span>{option.path.slice(1).map(part => t(part)).join(' / ') || t(option.name)}</span>
                     </label>)}
-                </div>)}
+                </div>}
                 {!matches.length && !retainedMatches.length && <p>{t('无匹配项目类型')}</p>}
             </div>
             <footer>

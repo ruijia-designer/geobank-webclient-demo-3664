@@ -92,7 +92,7 @@ export const baselineEn: Record<string, string> = {
   '中文目录': 'Chinese Directory',
   '英文目录': 'English Directory',
   '请输入命名规则': 'Enter a naming rule',
-  '编辑后点击保存': 'Click Save after editing',
+  '修改即时生效，刷新页面恢复初始数据': 'Changes take effect immediately; reloading restores the initial data',
   '请输入': "Enter a value",
   '请选择': "Please select",
   '请输入序号': 'Enter sequence number',
