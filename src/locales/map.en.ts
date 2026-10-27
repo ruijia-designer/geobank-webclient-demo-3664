@@ -32,7 +32,5 @@ export const mapEnglish: Record<string, string> = {
   '设计参考影像': 'Design reference image',
   '固定演示坐标，非实时定位数据': 'Fixed demonstration coordinates, not a live location',
   '圆形定位图标': 'Circular location icon',
-  '本地简化地理示意，不用于测绘或项目边界判断': 'Local geographic schematic; not for surveying or project boundary assessment',
-  '地图 · 地理示意，非测绘数据': 'Map · geographic schematic, not survey data',
 };
 export default mapEnglish;

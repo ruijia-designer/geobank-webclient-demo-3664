@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, FolderTree, Grid2X2, HardDrive, Image, Layers, MapPinned, Pencil, Plus, ScanLine, Server, Trash2, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, FolderTree, Grid2X2, HardDrive, Image, Layers, MapPinned, Pencil, Plus, ScanLine, Server, Trash2, Users } from 'lucide-react';
 import type { AppApi } from '../types';
 import { ResultTypesPanel } from '../components/ResultTypesPanel';
+import { RowReorderHandle, useRowReorder } from '../components/RowReorder';
 import { Modal } from '../components/Modal';
-import { BASELINE_CONFIGS, baselineFilter, demoRows, saveBaselineRows, SORTABLE_BASELINE_IDS, baselineSiblings, moveBaselineRow, placeBaselineRow, projectTypeParentOptions, projectTypeParentError, baselinePath } from '../services/baseline';
+import { BaselineFileInput, BaselineMultiSelect, parseBaselineMultiValues } from '../components/BaselineFormControls';
+import { BASELINE_CONFIGS, baselineFilter, demoRows, saveBaselineRows, SORTABLE_BASELINE_IDS, baselineSiblings, placeBaselineRow, projectTypeParentOptions, projectTypeParentError, baselinePath } from '../services/baseline';
 import type { BaselineRow } from '../services/baseline';
 import { useTranslation } from '../i18n';
 import './BaselinePage.css';
@@ -16,15 +18,17 @@ type Dialog = {
 export default function BaselinePage({ api }: {
     api: AppApi;
 }) {
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const rowActionLabel = (action: string, name: string) => t(action) === action
         ? action === '新增下级' ? '新增' + name + '下级' : action + name
         : t(action) + ' ' + name;
     const section = api.state.route.section || 'types';
     const config = BASELINE_CONFIGS.find(c => c.id === section || c.title === section) || BASELINE_CONFIGS[0];
+    const newItemLabel = config.id === 'mining' ? '新增矿权' : '新增' + config.title;
     const displayFieldValue = (key: string, raw: string | number | undefined) => {
         const value = String(raw ?? '');
         const field = config.fields.find(candidate => candidate.key === key);
+        if (field?.kind === 'multiselect') return parseBaselineMultiValues(value).map(item => t(item)).join(locale === 'en' ? ', ' : '、') || '—';
         return field?.kind === 'select' && key !== 'parent' ? t(value || '—') : value || '—';
     };
     const [rows, setRows] = useState(demoRows[config.id]);
@@ -99,9 +103,7 @@ export default function BaselinePage({ api }: {
         return;
     }
     const saved = { ...form, name: form.name.trim() };
-    const hasSortField = config.fields.some(field => field.key === 'sort');
-    const position = hasSortField && form.sort !== undefined && String(form.sort).trim() !== '' ? Number(form.sort) : undefined;
-    update(placeBaselineRow(config.id, rows, saved, position));
+    update(placeBaselineRow(config.id, rows, saved));
     if (config.tree && saved.parent) {
         const ancestors: string[] = [];
         let parent = saved.parent;
@@ -114,28 +116,40 @@ export default function BaselinePage({ api }: {
         rows.forEach(r => { if (r.parent && ids.has(r.parent))
             ids.add(r.id); });
     } update(rows.filter(r => !ids.has(r.id))); close(); api.notify(t('已删除本地演示记录')); };
-    const move = (row: BaselineRow, direction: -1 | 1) => update(moveBaselineRow(config.id, rows, row.id, direction));
     const toggle = (id: string) => setExpanded(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
     const bodyRows = (() => { if (!config.tree)
         return visible; const sorted: BaselineRow[] = []; const visit = (parent = '') => { for (const r of visible.filter(x => (x.parent || '') === parent)) {
         sorted.push(r);
         visit(r.id);
     } }; visit(); return sorted; })();
+    const reorder = useRowReorder({
+        items: sortable ? rows.map(row => ({ id: row.id, parentId: row.parent || undefined, label: row.name })) : [],
+        scopeKey: `${config.id}:${query}:${codeQuery}:${extraQuery}:${bodyRows.map(row => row.id).join('|')}:${dialog?.mode || ''}`,
+        onReorder: (sourceId, targetId, placement) => {
+            const source = rows.find(row => row.id === sourceId);
+            const target = rows.find(row => row.id === targetId);
+            if (!source || !target || source.id === target.id || (source.parent || '') !== (target.parent || '')) return;
+            const siblings = baselineSiblings(rows, source).filter(row => row.id !== sourceId);
+            const position = siblings.findIndex(row => row.id === targetId) + (placement === 'after' ? 1 : 0);
+            update(placeBaselineRow(config.id, rows, source, position + 1));
+        },
+    });
     const secondary = ['areas', 'mining', 'imagery', 'datum', 'velocity', 'servers'].includes(config.id);
     const secondaryKey = config.id === 'mining' ? 'type' : config.id === 'imagery' ? 'service' : config.id === 'servers' ? 'primary' : 'basin';
     const secondaryLabel = config.id === 'mining' ? '类型' : config.id === 'imagery' ? '服务类型' : config.id === 'servers' ? '是否主节点' : '盆地';
     return <div className="baseline-layout"><aside className="baseline-sidebar"><h2>{t('基准')}</h2><nav aria-label={t('基准栏目')}>{BASELINE_CONFIGS.map((c, i) => { const Icon = icons[i]; return <Fragment key={c.id}>{navigationGroupStarts.has(c.id) && <hr className="baseline-nav-divider" aria-hidden="true"/>}<button className={c.id === config.id ? 'active' : ''} onClick={() => api.navigate({ page: 'baseline', section: c.id })}><Icon size={19}/>{t(c.title)}</button></Fragment>; })}</nav></aside><main className="baseline-main"><div className="page-heading"><h1>{t(config.title)}</h1><p>{t(config.description)}</p></div><form className="card baseline-filters" onSubmit={e => { e.preventDefault(); setQuery(draft); if (config.id === 'naming') setNamingQueryVersion(version => version + 1); setCodeQuery(codeDraft); setExtraQuery(extra); }}>{secondary && <label className="field">{t(secondaryLabel)}<select value={extra} onChange={e => setExtra(e.target.value)}><option value="">{t('全部')}</option>{[...new Set(rows.map(r => String(r[secondaryKey] || '')).filter(Boolean))].map(x => <option key={x} value={x}>{t(x)}</option>)}</select></label>}<label className="field">{t(config.id === 'naming' ? '搜索' : '名称')}<input placeholder={t('请输入')} value={draft} onChange={e => setDraft(e.target.value)}/></label>{config.id === 'structure' && <label className="field">{t('编码')}<input placeholder={t('请输入')} value={codeDraft} onChange={e => setCodeDraft(e.target.value)}/></label>}<div className="filter-actions"><button type="button" className="button" onClick={() => { setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); }}>{t('重置')}</button><button className="button primary">{t('查询')}</button></div></form>
- {config.id === 'naming' ? <ResultTypesPanel query={query} queryVersion={namingQueryVersion} onCategoryChange={() => { setDraft(''); setQuery(''); }} onSave={() => api.notify(t('成果类型已保存'))}/> : <section className="card baseline-list" data-baseline={config.id}><header><h2>{t(config.title + '列表')}</h2><div>{config.tree && config.id === 'structure' && <button className="button" onClick={() => setExpanded(expanded.length ? [] : rows.map(r => r.id))}>{t(expanded.length ? '收起全部' : '展开全部')}</button>}<button className="button primary" onClick={() => open('new')}><Plus size={16}/>{t(config.id === 'structure' ? '新增盆地' : '新增' + config.title)}</button></div></header>
- <div className="table-wrap"><table><thead><tr>{config.id !== 'types' && <th>#</th>}{config.columns.map(([key, label]) => <th key={key}>{t(label)}</th>)}<th className="baseline-actions-heading">{t('操作')}</th></tr></thead><tbody>{bodyRows.map((r, index) => { const children = rows.some(x => x.parent === r.id), siblings = baselineSiblings(rows, r), at = siblings.findIndex(x => x.id === r.id); return <tr key={r.id}>{config.id !== 'types' && <td>{index + 1}</td>}{config.columns.map(([key]) => <td key={key}>{key === 'name' ? <div className="tree-name" style={{ paddingLeft: ((r.level || 1) - 1) * 24 }}>{config.tree && (children ? <button className="icon-button tree-toggle" aria-label={rowActionLabel(expanded.includes(r.id) ? '收起' : '展开', r.name)} onClick={() => toggle(r.id)}>{expanded.includes(r.id) ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}</button> : <span className="tree-spacer"/>)}<button className="link-button" onClick={() => open('detail', r)}>{r.name}</button></div> : key === 'color' ? <span className="color-swatch" style={{ backgroundColor: String(r.color) }}>{r.color}</span> : displayFieldValue(key, r[key])}</td>)}<td className="baseline-actions-cell"><div className="row-actions baseline-row-actions">
+ {config.id === 'naming' ? <ResultTypesPanel query={query} queryVersion={namingQueryVersion} onCategoryChange={() => { setDraft(''); setQuery(''); }} onSave={() => api.notify(t('成果类型已保存'))}/> : <section className="card baseline-list" data-baseline={config.id}><header><h2>{t(config.title + '列表')}</h2><div>{config.tree && config.id === 'structure' && <button className="button" onClick={() => setExpanded(expanded.length ? [] : rows.map(r => r.id))}>{t(expanded.length ? '收起全部' : '展开全部')}</button>}<button className="button primary" onClick={() => open('new')}><Plus size={16}/>{t(config.id === 'structure' ? '新增盆地' : newItemLabel)}</button></div></header>
+ <div className="table-wrap"><table {...reorder.tableProps}><colgroup>{config.id !== 'types' && <col className="baseline-sequence-column"/>}{config.columns.map(([key]) => <col key={key}/>)}<col/></colgroup><thead><tr>{config.id !== 'types' && <th className="baseline-sequence-cell">#</th>}{config.columns.map(([key, label]) => <th key={key}>{t(label)}</th>)}<th className="baseline-actions-heading">{t('操作')}</th></tr></thead><tbody>{bodyRows.map((r, index) => { const children = rows.some(x => x.parent === r.id); return <tr key={r.id} {...reorder.rowProps(r.id)}>{config.id !== 'types' && <td className="baseline-sequence-cell">{index + 1}</td>}{config.columns.map(([key]) => <td key={key}>{key === 'name' ? <div className="tree-name" style={{ paddingLeft: ((r.level || 1) - 1) * 24 }}>{config.tree && (children ? <button className="icon-button tree-toggle" aria-label={rowActionLabel(expanded.includes(r.id) ? '收起' : '展开', r.name)} onClick={() => toggle(r.id)}>{expanded.includes(r.id) ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}</button> : <span className="tree-spacer"/>)}<button className="link-button" onClick={() => open('detail', r)}>{r.name}</button></div> : key === 'color' ? <span className="color-swatch" style={{ backgroundColor: String(r.color) }}>{r.color}</span> : displayFieldValue(key, r[key])}</td>)}<td className="baseline-actions-cell"><div className="row-actions baseline-row-actions">
  {config.tree && (r.level || 1) < (config.id === 'types' ? 2 : 3) && <button className="icon-button action-add" title={t('新增下级')} aria-label={rowActionLabel('新增下级', r.name)} onClick={() => open('new', undefined, r)}><Plus size={18}/></button>}
  <button className="icon-button action-edit" title={t('编辑')} aria-label={rowActionLabel('编辑', r.name)} onClick={() => open('edit', r)}><Pencil size={18}/></button>
- {sortable && <><button className="icon-button action-up" title={t('上移')} aria-label={rowActionLabel('上移', r.name)} disabled={at === 0} onClick={() => move(r, -1)}><ArrowUp size={18}/></button><button className="icon-button action-down" title={t('下移')} aria-label={rowActionLabel('下移', r.name)} disabled={at === siblings.length - 1} onClick={() => move(r, 1)}><ArrowDown size={18}/></button></>}
+ {sortable && <RowReorderHandle {...reorder.handleProps(r.id)}/>}
  {config.scan && <button className="icon-button action-scan" title={t('扫描')} aria-label={rowActionLabel('扫描', r.name)} onClick={() => open('scan', r)}><ScanLine size={18}/></button>}
  <button className="icon-button danger action-delete" title={t('删除')} aria-label={rowActionLabel('删除', r.name)} onClick={() => open('delete', r)}><Trash2 size={18}/></button>
- </div></td></tr>; })}</tbody></table>{!bodyRows.length && <div className="empty-state"><FileText size={42}/><h3>{t(query || extraQuery ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(query ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p>{!query && <button className="button primary" onClick={() => open('new')}>{t('新增' + config.title)}</button>}</div>}</div>
+ </div></td></tr>; })}</tbody></table>{!bodyRows.length && <div className="empty-state"><FileText size={42}/><h3>{t(query || extraQuery ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(query ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p>{!query && <button className="button primary" onClick={() => open('new')}>{t(newItemLabel)}</button>}</div>}</div>
+ <span className="sr-only" role="status" aria-live="polite">{reorder.announcement}</span>
  <footer><span>{bodyRows.length ? t('共 {count} 条', { count: bodyRows.length }) : '—'}</span><span>{t('10 条 / 页')} <button className="button" disabled>{t('上一页')}</button><button className="button primary">1</button><button className="button" disabled>{t('下一页')}</button></span></footer></section>}</main>
- {dialog && <Modal title={t(dialog.mode === 'delete' ? '删除' + config.title : dialog.mode === 'scan' ? '扫描磁盘' : (dialog.mode === 'detail' ? '查看' : dialog.mode === 'edit' ? '编辑' : '新增') + config.title)} onClose={close} wide={config.id === 'mining' || config.id === 'closure'} footer={<><button className="button" onClick={close}>{t(dialog.mode === 'detail' ? '关闭' : '取消')}</button>{dialog.mode === 'delete' ? <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button> : dialog.mode === 'scan' ? <button className="button primary" onClick={() => { update(rows.map(r => r.id === form.id ? { ...r, scanned: new Date().toLocaleString('sv-SE') } : r)); close(); api.notify(t('本地演示扫描完成')); }}>{t('开始扫描')}</button> : dialog.mode !== 'detail' && <button className="button primary" onClick={save}>{t('保存')}</button>}</>}>
- {dialog.mode === 'delete' ? <p>{t('确定删除“{name}”吗？', { name: form.name })}{rows.some(r => r.parent === form.id) && t('其下级记录也将删除。')}</p> : dialog.mode === 'scan' ? <div><p>{t('磁盘：')}{form.name}</p><p>{t('挂载路径：')}{form.path}</p><p className="muted">{t('扫描演示将更新扫描时间。')}</p></div> : <><div ref={formRef} className={'form-grid baseline-form' + (config.id === 'types' ? ' baseline-type-form' : '')}>{config.id === 'structure' && <div className="baseline-tree-note">{t('上级单元：')}{rows.find(r => r.id === form.parent)?.name || t('无（顶级盆地）')}　{t('单元类型：')}{t(String(form.type || '盆地'))}　{t('等级：')}{form.level || 1}</div>}{config.fields.filter(f => { if (config.id === 'datum') {
+ {dialog && <Modal title={t(dialog.mode === 'delete' ? '删除' + config.title : dialog.mode === 'scan' ? '扫描磁盘' : dialog.mode === 'new' ? newItemLabel : (dialog.mode === 'detail' ? '查看' : '编辑') + config.title)} onClose={close} wide={config.id === 'mining' || config.id === 'closure'} footer={<><button className="button" onClick={close}>{t(dialog.mode === 'detail' ? '关闭' : '取消')}</button>{dialog.mode === 'delete' ? <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button> : dialog.mode === 'scan' ? <button className="button primary" onClick={() => { update(rows.map(r => r.id === form.id ? { ...r, scanned: new Date().toLocaleString('sv-SE') } : r)); close(); api.notify(t('本地演示扫描完成')); }}>{t('开始扫描')}</button> : dialog.mode !== 'detail' && <button className="button primary" onClick={save}>{t('保存')}</button>}</>}>
+ {dialog.mode === 'delete' ? <p>{t('确定删除“{name}”吗？', { name: form.name })}{rows.some(r => r.parent === form.id) && t('其下级记录也将删除。')}</p> : dialog.mode === 'scan' ? <div><p>{t('磁盘：')}{form.name}</p><p>{t('挂载路径：')}{form.path}</p></div> : <><div ref={formRef} className={'form-grid baseline-form' + (config.id === 'types' ? ' baseline-type-form' : '')}>{config.id === 'structure' && <div className="baseline-tree-note">{t('上级单元：')}{rows.find(r => r.id === form.parent)?.name || t('无（顶级盆地）')}　{t('单元类型：')}{t(String(form.type || '盆地'))}　{t('等级：')}{form.level || 1}</div>}{config.fields.filter(f => { if (config.id === 'datum') {
             if (f.key === 'value')
                 return form.type !== '浮动基准面';
             if (f.kind === 'file')
@@ -150,16 +164,23 @@ export default function BaselinePage({ api }: {
         const fieldId = `${formId}-${f.key}`;
         const attributes = { id: fieldId, 'aria-label': t(f.label), ...fieldAttributes(f.key) };
         const change = (value: string) => updateField(f.key, value);
+        if (f.kind === 'multiselect') return <div key={f.key} className="field">
+            <label htmlFor={fieldId} className="field-label">{t(f.label)}{f.required && <span className="required"> *</span>}</label>
+            {dialog.mode === 'detail' ? <div className="detail-value">{displayFieldValue(f.key, form[f.key])}</div>
+                : <BaselineMultiSelect id={fieldId} label={t(f.label)} {...fieldAttributes(f.key)}
+                    value={String(form[f.key] || '')} options={options.map(option => ({ ...option, label: t(option.label) }))} onChange={change}/>}
+            {dialog.mode !== 'detail' && fieldErrors[f.key] && <span id={`${formId}-${f.key}-error`} className="field-error" role="alert">{t(fieldErrors[f.key])}</span>}
+        </div>;
         return <label key={f.key} htmlFor={fieldId} className={'field' + (f.kind === 'textarea' || (config.id === 'types' && f.kind === 'color') ? ' full' : '')}>
             <span className="field-label">{t(f.label)}{f.required && <span className="required"> *</span>}</span>
             {dialog.mode === 'detail' ? <div className="detail-value">{f.key === 'parent' ? baselinePath(rows, form.parent || '') || '—' : displayFieldValue(f.key, form[f.key])}</div>
             : f.kind === 'select' ? <select {...attributes} value={String(form[f.key] || '')} onChange={e => change(e.target.value)}><option value="">{t('请选择')}</option>{options.map(o => <option key={o.value} value={o.value}>{f.key === 'parent' ? o.label : t(o.label)}</option>)}</select>
             : f.kind === 'textarea' ? <textarea {...attributes} value={String(form[f.key] || '')} placeholder={t('请输入')} onChange={e => change(e.target.value)}/>
-            : f.kind === 'file' ? <input {...attributes} type="file" accept=".json,.geojson,.grd,.txt" onChange={e => change(e.target.files?.[0]?.name || '')}/>
+            : f.kind === 'file' ? <BaselineFileInput {...attributes} fileName={String(form[f.key] || '')} accept=".json,.geojson,.grd,.txt" onChange={e => change(e.target.files?.[0]?.name || '')}/>
             : f.kind === 'color' ? <div className="color-input"><input type="color" aria-label={t('选择颜色')} value={/^#[0-9a-f]{6}$/i.test(String(form.color)) ? String(form.color) : '#277DA8'} onChange={e => change(e.target.value.toUpperCase())}/><input {...attributes} aria-label={t('颜色值')} value={String(form.color || '')} onChange={e => change(e.target.value)}/></div>
-            : <input {...attributes} type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'} min={f.key === 'sort' ? 1 : undefined} step={f.key === 'sort' ? 1 : undefined} placeholder={t('请输入')} value={String(form[f.key] ?? '')} onChange={e => change(e.target.value)}/>}
+            : <input {...attributes} type={f.kind === 'date' ? 'date' : f.kind === 'number' ? 'number' : 'text'} placeholder={t('请输入')} value={String(form[f.key] ?? '')} onChange={e => change(e.target.value)}/>}
             {dialog.mode !== 'detail' && fieldErrors[f.key] && <span id={`${formId}-${f.key}-error`} className="field-error" role="alert">{t(fieldErrors[f.key])}</span>}
         </label>;
-    })}</div>{config.id === 'mining' && <section className="baseline-ranges"><header><h3>{t('矿权范围记录')}</h3>{dialog.mode !== 'detail' && <button className="button" onClick={() => setRangeCount(n => n + 1)}><Plus size={14}/>{t('添加行')}</button>}</header>{Array.from({ length: rangeCount }, (_, i) => <div className="form-grid" key={i}><label className="field">{t('日期')}<input type="date" disabled={dialog.mode === 'detail'} value={String(form['rangeDate' + i] || '')} onChange={e => setForm({ ...form, ['rangeDate' + i]: e.target.value })}/></label><label className="field">{t('登记面积（km²）')}<input type="number" disabled={dialog.mode === 'detail'} value={String(form[i === 0 ? 'area' : 'area' + i] || '')} onChange={e => setForm({ ...form, [i === 0 ? 'area' : 'area' + i]: e.target.value })}/></label><label className="field full">{t('范围（GeoJSON）')}<input type="file" disabled={dialog.mode === 'detail'} accept=".json,.geojson" onChange={e => setForm({ ...form, ['rangeFile' + i]: e.target.files?.[0]?.name || '' })}/></label></div>)}</section>}</>}
+    })}</div>{config.id === 'mining' && <section className="baseline-ranges"><header><h3>{t('矿权范围记录')}</h3>{dialog.mode !== 'detail' && <button className="button" onClick={() => setRangeCount(n => n + 1)}><Plus size={14}/>{t('添加行')}</button>}</header>{Array.from({ length: rangeCount }, (_, i) => <div className="form-grid" key={i}><label className="field">{t('日期')}<input type="date" disabled={dialog.mode === 'detail'} value={String(form['rangeDate' + i] || '')} onChange={e => setForm({ ...form, ['rangeDate' + i]: e.target.value })}/></label><label className="field">{t('登记面积（km²）')}<input type="number" disabled={dialog.mode === 'detail'} value={String(form[i === 0 ? 'area' : 'area' + i] || '')} onChange={e => setForm({ ...form, [i === 0 ? 'area' : 'area' + i]: e.target.value })}/></label><label className="field full" htmlFor={formId + '-rangeFile-' + i}>{t('范围（GeoJSON）')}<BaselineFileInput id={formId + '-rangeFile-' + i} aria-label={t('范围（GeoJSON）')} fileName={String(form['rangeFile' + i] || '')} disabled={dialog.mode === 'detail'} accept=".json,.geojson" onChange={e => setForm({ ...form, ['rangeFile' + i]: e.target.files?.[0]?.name || '' })}/></label></div>)}</section>}</>}
  </Modal>}</div>;
 }

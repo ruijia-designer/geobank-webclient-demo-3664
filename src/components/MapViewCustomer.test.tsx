@@ -71,7 +71,7 @@ describe('客户确认的地图控件', () => {
     expect(imageryOption.querySelector('.basemap-thumb.imagery')).not.toBeNull();
     await user.click(screen.getByRole('menuitemradio', { name: /^地图/ }));
     expect(screen.getByAltText('地理示意地图（非测绘数据）')).toHaveAttribute('src', './assets/schematic-map.svg');
-    expect(screen.getByText('地图 · 地理示意，非测绘数据')).toBeInTheDocument();
+    expect(screen.queryByText('地图 · 地理示意，非测绘数据')).not.toBeInTheDocument();
     expect(scene.style.transform).toBe(transform); expect([point.style.left, point.style.top]).toEqual(location);
     expect(p.onRefresh).not.toHaveBeenCalled(); expect(p.onZoom).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: '切换底图' })); await user.click(screen.getByRole('menuitemradio', { name: /^影像/ }));
@@ -183,7 +183,7 @@ describe('客户确认的地图控件', () => {
     await user.click(screen.getByRole('button', { name: 'Switch basemap' }));
     await user.click(screen.getByRole('menuitemradio', { name: /^Map/ }));
     expect(screen.getByAltText('Schematic geographic map (not survey data)')).toBeInTheDocument();
-    expect(screen.getByText('Map · geographic schematic, not survey data')).toBeInTheDocument();
+    expect(screen.queryByText('Map · geographic schematic, not survey data')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Test language' }));
     expect(screen.getByRole('button', { name: '重置项目类型' })).toHaveTextContent(/^重置$/);
     expect(screen.getByRole('checkbox', { name: '处理' })).toBeChecked();

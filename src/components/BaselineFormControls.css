@@ -1,0 +1,20 @@
+.baseline-multiselect{position:relative;min-width:0;width:100%}
+.baseline-multiselect-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:white;color:#435e70;text-align:left}
+.baseline-multiselect-trigger>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+.baseline-multiselect-trigger>svg{flex-shrink:0;transition:transform .15s}
+.baseline-multiselect-trigger>svg.is-open{transform:rotate(180deg)}
+.baseline-multiselect-popover{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:5;background:white;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 20px #183a5224;overflow:hidden}
+.baseline-multiselect-options{max-height:208px;overflow:auto;padding:6px}
+.baseline-multiselect-option{display:flex;align-items:center;gap:9px;min-height:36px;padding:6px 9px;border-radius:4px;color:#435e70;cursor:pointer}
+.baseline-multiselect-option:hover{background:#f0f8fb}
+.baseline-multiselect-option input[type=checkbox]{width:16px;height:16px;padding:0;margin:0;flex:0 0 16px}
+.baseline-multiselect-option>span{line-height:1.4;overflow-wrap:anywhere}
+.baseline-multiselect-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #e7eef2;padding:8px 12px}
+.baseline-multiselect-actions .button{height:30px;padding:0 12px}
+.baseline-file-control{position:relative;display:flex;align-items:center;gap:12px;min-width:0;min-height:42px;border:1px solid var(--border);border-radius:4px;background:#fff;padding:4px 10px 4px 4px}
+.baseline-file-control .baseline-file-native{position:absolute;width:1px;height:1px;padding:0;border:0;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.baseline-file-control:focus-within{outline:2px solid #67b6d7;outline-offset:-1px}
+.baseline-file-control .baseline-file-button{flex-shrink:0;height:32px;padding:0 12px;background:#eff7fb;border-color:#d4e6ef;gap:7px}
+.baseline-file-control .baseline-file-name{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#435e70;font-size:13px}
+.baseline-file-control .baseline-file-name.muted{color:var(--muted)}
+.baseline-file-control.is-disabled{background:#f4f8fa}

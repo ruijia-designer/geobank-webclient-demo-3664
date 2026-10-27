@@ -122,7 +122,6 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
             </div>
             <div id="login-demo" className="demo-hint">
               {t('离线演示账号：Demo / demo123')}
-              <small>{t('仅用于交互演示，不连接真实账户。')}</small>
             </div>
           </form>
           <p className="company-signature">{t('中国石油集团东方地球物理勘探有限责任公司')}</p>

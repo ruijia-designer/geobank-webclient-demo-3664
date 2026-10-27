@@ -10,7 +10,6 @@ const searchEnglish:Record<string,string>={
  '试试关键词':'Suggested searches','试试：':'Try:','检索结果栏目':'Result categories',
  '筛选条件':'Filters','未选择时检索全部':'No selection searches all results','{value}检索结果数量':'Result count for {value}','暂无匹配选项':'No matching options','已选筛选条件':'Selected filters','取消筛选 {value}':'Remove filter {value}',
  'AI 智能总结':'AI summary','已生成':'Generated','重新生成演示摘要':'Regenerate demo summary','已根据当前结果重新生成演示摘要':'Demo summary regenerated from the current results','重新生成':'Regenerate','复制':'Copy',
- '依据当前 {count} 条项目结果生成 · 本地演示摘要':'Based on {count} current project results · Local demo summary',
  '共找到':'Found','项目结果数量':'Project result count','条项目结果':'project results','当前检索：':'Current search:','排序':'Sort','相关度':'Relevance','↓ 年度':'↓ Year','列表':'List',
  '所属区域':'Region','项目年度':'Project year','查看参数':'View parameters','请调整关键词或筛选条件后重试':'Change the keyword or filters and try again',
  '1–{count} / 共 {count} 条':'1–{count} of {count} results','每页结果数量':'Results per page','30 条/页':'30 per page','首页':'First','末页':'Last',

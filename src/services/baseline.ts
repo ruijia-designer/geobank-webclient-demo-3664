@@ -1,7 +1,7 @@
 export interface BaselineField {
     key: string;
     label: string;
-    kind?: 'select' | 'number' | 'date' | 'file' | 'textarea' | 'color';
+    kind?: 'select' | 'multiselect' | 'number' | 'date' | 'file' | 'textarea' | 'color';
     options?: string[];
     required?: boolean;
 }
@@ -34,7 +34,7 @@ const contact = [name, { key: 'address', label: '地址' }, { key: 'phone', labe
 const structure: BaselineRow[] = [['百色盆地', '4501', '盆地', 1, ''], ['东部坳陷', '450101', '坳陷', 2, '1'], ['田东凹陷', '', '凹陷', 3, '2'], ['田阳凹陷', '', '凹陷', 3, '2'], ['南部隆起', '450103', '坳陷', 2, '1'], ['靖西凸起', '', '凹陷', 3, '5'], ['西部坳陷', '450102', '坳陷', 2, '1'], ['百色凹陷', '', '凹陷', 3, '7'], ['那坡凹陷', '', '凹陷', 3, '7'], ['北部湾盆地', '8403', '盆地', 1, ''], ['北部坳陷', '840301', '坳陷', 2, '10'], ['福山凹陷', '', '凹陷', 3, '11'], ['海中凹陷', '', '凹陷', 3, '11'], ['涠西南凹陷', '', '凹陷', 3, '11'], ['东部隆起', '840304', '坳陷', 2, '10'], ['涠洲凸起', '', '凹陷', 3, '15'], ['斜阳凸起', '', '凹陷', 3, '15'], ['南部坳陷', '840303', '坳陷', 2, '10'], ['昌化凹陷', '', '凹陷', 3, '18']].map(([n, c, t, l, p], i) => ({ id: String(i + 1), name: String(n), code: String(c), type: String(t), level: Number(l), parent: String(p) }));
 export const BASELINE_CONFIGS: BaselineConfig[] = [
     {
-        id: 'types', title: '项目类型', description: '维护最多三级项目分类，分别设置各级类型的显示颜色', tree: true,
+        id: 'types', title: '项目类型', description: '维护最多二级项目分类，分别设置各级类型的显示颜色', tree: true,
         columns: [['name', '名称'], ['color', '颜色']],
         fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }],
         rows: [
@@ -57,11 +57,11 @@ export const BASELINE_CONFIGS: BaselineConfig[] = [
         ],
     },
     { id: 'naming', title: '成果类型', description: '维护各类项目成果的分类、目录与命名规则', columns: [], fields: [], rows: [] },
-    { id: 'structure', title: '构造单元', description: '维护盆地、坳陷、凹陷与凸起的层级关系', tree: true, columns: [['name', '名称'], ['code', '编码'], ['type', '类型'], ['level', '等级'], ['note', '备注']], fields: [name, code, { key: 'sort', label: '排序值', kind: 'number' }, note], rows: structure },
-    { id: 'areas', title: '工区', description: '维护工区名称、空间归属与地表信息', columns: [['name', '名称'], ['code', '代码'], ['basin', '所属盆地'], ['surface', '地表类型'], ['note', '备注']], fields: [name, { key: 'code', label: '工区代码' }, basin, { key: 'surface', label: '地表类型', kind: 'select', options: ['草原', '水域', '河流', '山地', '平原'] }, { key: 'range', label: '范围（GeoJSON）', kind: 'file' }, note], rows: simple(['东台坳陷海安凹陷孙家洼次凹', '东台坳陷白驹凹陷大丰次凹', '东台坳陷白驹凹陷大丰次凹海丰构造', '大丰次凹', '大安区块', '川南低陡褶带南缘YS112井区', '川南低陡褶带南缘云山坝区块', '川南低陡褶带南缘太阳工区', '川南低陡褶带南缘太阳背斜构造', '川南低陡褶带南缘建武向斜西南斜坡']).map((r, i) => ({ ...r, basin: i === 4 ? '四川盆地' : '', surface: i === 3 ? '草原, 水域, 河流' : '' })) },
+    { id: 'structure', title: '构造单元', description: '维护盆地、坳陷、凹陷与凸起的层级关系', tree: true, columns: [['name', '名称'], ['code', '编码'], ['type', '类型'], ['level', '等级'], ['note', '备注']], fields: [name, code, note], rows: structure },
+    { id: 'areas', title: '工区', description: '维护工区名称、空间归属与地表信息', columns: [['name', '名称'], ['code', '代码'], ['basin', '所属盆地'], ['surface', '地表类型'], ['note', '备注']], fields: [name, { key: 'code', label: '工区代码' }, basin, { key: 'surface', label: '地表类型', kind: 'multiselect', options: ['草原', '水域', '河流', '山地', '平原'] }, { key: 'range', label: '范围（GeoJSON）', kind: 'file' }, note], rows: simple(['东台坳陷海安凹陷孙家洼次凹', '东台坳陷白驹凹陷大丰次凹', '东台坳陷白驹凹陷大丰次凹海丰构造', '大丰次凹', '大安区块', '川南低陡褶带南缘YS112井区', '川南低陡褶带南缘云山坝区块', '川南低陡褶带南缘太阳工区', '川南低陡褶带南缘太阳背斜构造', '川南低陡褶带南缘建武向斜西南斜坡']).map((r, i) => ({ ...r, basin: i === 4 ? '四川盆地' : '', surface: i === 3 ? '草原, 水域, 河流' : '' })) },
     { id: 'mining', title: '矿权管理', description: '管理矿权信息、有效期与区块范围记录', columns: [['name', '名称'], ['basin', '盆地'], ['type', '矿权类型'], ['area', '登记面积（km²）']], fields: [name, basin, { key: 'type', label: '矿权类型', kind: 'select', options: ['采矿权', '探矿权'] }, { key: 'code', label: '矿权编号' }, { key: 'owner', label: '权属单位' }, { key: 'start', label: '有效期开始', kind: 'date' }, { key: 'end', label: '有效期结束', kind: 'date' }, note], rows: simple(['白驹油田开采', '海安油田开采', '黄204井区开采', '宜昌地区勘查', '镇雄-毕节勘查', '泰州-姜堰勘查', '筠连-威信勘查', '大安区块']).map((r, i) => ({ ...r, type: i < 3 ? '采矿权' : '探矿权', area: ['16.554', '39.0504', '36.2668', '2502.6312', '3332.801', '837.8994', '4310.2662', '1403.1353'][i] })) },
-    { id: 'imagery', title: '遥感影像', description: '配置影像图层、地图服务与显示参数', columns: [['name', '名称'], ['layer', '图层名称'], ['service', '服务类型'], ['url', '服务地址'], ['status', '状态']], fields: [name, { key: 'layer', label: '图层名称' }, { key: 'service', label: '服务类型', kind: 'select', options: ['WMS', 'WMTS', 'XYZ'] }, { key: 'url', label: '服务地址' }, { key: 'opacity', label: '透明度（0–1）', kind: 'number' }, { key: 'sort', label: '显示顺序', kind: 'number' }, { key: 'status', label: '状态', kind: 'select', options: ['启用', '停用'] }], rows: simple(['大安工区遥感卫片', '中国地质分布图']) },
-    { id: 'wells', title: '井别', description: '维护井别分类，为井筒数据归档与检索提供依据', columns: [['name', '名称'], ['code', '编码'], ['sort', '排序值'], ['note', '备注']], fields: [name, code, { key: 'sort', label: '排序值', kind: 'number' }, note], rows: [] },
+    { id: 'imagery', title: '遥感影像', description: '配置影像图层、地图服务与显示参数', columns: [['name', '名称'], ['layer', '图层名称'], ['service', '服务类型'], ['url', '服务地址'], ['status', '状态']], fields: [name, { key: 'layer', label: '图层名称' }, { key: 'service', label: '服务类型', kind: 'select', options: ['WMS', 'WMTS', 'XYZ'] }, { key: 'url', label: '服务地址' }, { key: 'opacity', label: '透明度（0–1）', kind: 'number' }, { key: 'status', label: '状态', kind: 'select', options: ['启用', '停用'] }], rows: simple(['大安工区遥感卫片', '中国地质分布图']) },
+    { id: 'wells', title: '井别', description: '维护井别分类，为井筒数据归档与检索提供依据', columns: [['name', '名称'], ['code', '编码'], ['note', '备注']], fields: [name, code, note], rows: [] },
     { id: 'closure', title: '闭合标准', description: '配置闭合差精度标准与容许阈值', columns: [['name', '名称'], ['note', '备注']], fields: [name, ...[['surfaceHeight', '地表高程（m）'], ['datumHeight', '基准面高程（m）'], ['static', '静校正量（ms）'], ['top', '高速顶高程（m）'], ['weather', '风化层速度（m/s）'], ['correct', '校正速度（m/s）'], ['delay', '延迟时（ms）'], ['thickness', '等效厚度（m）']].map(([key, label]): BaselineField => ({ key, label, kind: 'number' })), note], rows: [{ id: '1', name: '大安地图闭合标准', note: '这是该地区通用闭合标准' }] },
     { id: 'datum', title: '基准面', description: '管理高程基准参数与浮动基准面文件', columns: [['name', '名称'], ['basin', '所属盆地'], ['type', '类型'], ['value', '高程值']], fields: [name, basin, { key: 'type', label: '基准面类型', kind: 'select', options: ['水平基准面', '浮动基准面'] }, { key: 'value', label: '高程值（m）', kind: 'number' }, { key: 'grid', label: '网格文件', kind: 'file' }, { key: 'contour', label: '等值线文件', kind: 'file' }], rows: [{ id: '1', name: 'datumTest', type: '水平基准面', value: '0' }] },
     { id: 'velocity', title: '替换速度', description: '维护静校正与速度分析所需的替换速度参数', columns: [['name', '名称'], ['basin', '所属盆地'], ['type', '类型'], ['value', '速度值']], fields: [name, basin, { key: 'type', label: '替换速度类型', kind: 'select', options: ['均一替换速度', '空变替换速度'] }, { key: 'value', label: '速度值（m/s）', kind: 'number' }, { key: 'grid', label: '网格文件', kind: 'file' }, { key: 'contour', label: '等值线文件', kind: 'file' }], rows: [{ id: '1', name: '测试替换速度', type: '均一替换速度', value: '0' }] },
@@ -81,7 +81,7 @@ export function baselineFilter(rows: BaselineRow[], query: string, codeQuery: st
     }
 } return rows.filter(r => ids.has(r.id)); }
 
-export const SORTABLE_BASELINE_IDS = new Set(['types', 'structure', 'areas', 'mining', 'imagery', 'wells']);
+export const SORTABLE_BASELINE_IDS = new Set(['types', 'structure', 'areas', 'mining', 'imagery', 'wells', 'closure', 'datum', 'velocity', 'clients', 'contractors', 'teams', 'disks', 'servers']);
 export function baselineParentKey(row: Pick<BaselineRow, 'parent'>) { return row.parent || ''; }
 export function baselineSiblings(rows: BaselineRow[], row: BaselineRow) {
     return rows.filter(candidate => baselineParentKey(candidate) === baselineParentKey(row));
@@ -130,7 +130,7 @@ export function projectTypeParentError(rows: BaselineRow[], record: BaselineRow)
 export function normalizeBaselineOrder(id: string, rows: BaselineRow[]): BaselineRow[] {
     if (!SORTABLE_BASELINE_IDS.has(id)) return rows.map(row => ({ ...row }));
     const config = BASELINE_CONFIGS.find(candidate => candidate.id === id);
-    const hasSortField = config?.fields.some(field => field.key === 'sort');
+    const hasSortMetadata = ['structure', 'imagery', 'wells'].includes(id);
     const groups = new Map<string, BaselineRow[]>();
     for (const row of rows) {
         const parent = config?.tree ? baselineParentKey(row) : '';
@@ -138,7 +138,7 @@ export function normalizeBaselineOrder(id: string, rows: BaselineRow[]): Baselin
         siblings.push({ ...row, ...(config?.tree ? { parent } : {}) });
         groups.set(parent, siblings);
     }
-    if (hasSortField) for (const siblings of groups.values()) {
+    if (hasSortMetadata) for (const siblings of groups.values()) {
         siblings.forEach((row, index) => { row.sort = index + 1; });
     }
     if (!config?.tree) return groups.get('') || [];
@@ -171,7 +171,7 @@ export function moveBaselineRow(id: string, rows: BaselineRow[], rowId: string, 
     return normalizeBaselineOrder(id, ordered);
 }
 
-/** A manual sort value is a 1-based position within the same parent, not a global tree position. */
+/** A 1-based destination is a position within the same parent, not a global tree position. */
 export function placeBaselineRow(id: string, rows: BaselineRow[], record: BaselineRow, position?: number): BaselineRow[] {
     const without = rows.filter(row => row.id !== record.id);
     const nextRecord = { ...record, ...(BASELINE_CONFIGS.find(config => config.id === id)?.tree ? { parent: baselineParentKey(record) } : {}) };

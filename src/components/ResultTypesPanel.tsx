@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { Modal } from './Modal';
+import { RowReorderHandle, useRowReorder } from './RowReorder';
 import { ApplicableProjectsPicker } from './ApplicableProjectsPicker';
 import { getProjectTypeOptions } from '../services/projectClassification';
 import type { ProjectTypeOption } from '../services/projectClassification';
@@ -28,12 +29,12 @@ type DialogTarget = EditorTarget | { kind: 'delete'; group: ResultTypeGroup; ite
 
 const emptyItem: ItemValues = { name: '', applicableProjects: '', number: '', chineseDirectory: '', englishDirectory: '', namingRule: '', notes: '' };
 
-function moveSibling<T extends { id: string }>(siblings: T[], id: string, direction: -1 | 1): T[] {
-    const index = siblings.findIndex(entry => entry.id === id);
-    const destination = index + direction;
-    if (index < 0 || destination < 0 || destination >= siblings.length) return siblings;
-    const next = [...siblings];
-    [next[index], next[destination]] = [next[destination], next[index]];
+function reorderSibling<T extends { id: string }>(siblings: T[], sourceId: string, targetId: string, placement: 'before' | 'after'): T[] {
+    const source = siblings.find(entry => entry.id === sourceId);
+    if (!source || sourceId === targetId || !siblings.some(entry => entry.id === targetId)) return siblings;
+    const next = siblings.filter(entry => entry.id !== sourceId);
+    const destination = next.findIndex(entry => entry.id === targetId) + (placement === 'after' ? 1 : 0);
+    next.splice(destination, 0, source);
     return next;
 }
 
@@ -221,9 +222,18 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
         setDialog(null);
         onSave();
     };
-    const move = (groupId: string, direction: -1 | 1, itemId?: string) => updateGroups(previous => itemId
-        ? previous.map(group => group.id === groupId ? { ...group, items: moveSibling(group.items, itemId, direction) } : group)
-        : moveSibling(previous, groupId, direction));
+    const reorder = useRowReorder({
+        items: category.groups.flatMap(group => [
+            { id: group.id, label: group.name || t('分类名称'), parentId: undefined as string | undefined },
+            ...group.items.map(item => ({ id: item.id, parentId: group.id, label: item.name || t('二级分类名称') })),
+        ]),
+        scopeKey: `${categoryId}:${term}:${visibleRows}:${dialog?.kind || ''}`,
+        onReorder: (sourceId, targetId, placement) => updateGroups(previous => {
+            if (previous.some(group => group.id === sourceId)) return reorderSibling(previous, sourceId, targetId, placement);
+            return previous.map(group => group.items.some(item => item.id === sourceId)
+                ? { ...group, items: reorderSibling(group.items, sourceId, targetId, placement) } : group);
+        }),
+    });
     const remove = () => {
         if (!dialog || dialog.kind !== 'delete') return;
         updateGroups(previous => dialog.item
@@ -233,8 +243,6 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
     };
     const renderActions = (group: ResultTypeGroup, item?: ResultTypeItem) => {
         const fullGroup = category.groups.find(entry => entry.id === group.id)!;
-        const siblings = item ? fullGroup.items : category.groups;
-        const index = siblings.findIndex(entry => entry.id === (item?.id ?? group.id));
         const name = item ? item.name || t('二级分类名称') : group.name || t('分类名称');
         return <td className="baseline-actions-cell result-types-actions"><div className="row-actions baseline-row-actions">
             {!item && <button className="icon-button action-add" type="button" title={t('新增下级')}
@@ -242,10 +250,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                 onClick={() => setDialog({ kind: 'item', groupId: group.id })}><Plus size={18}/></button>}
             <button className="icon-button action-edit" type="button" title={t('编辑')} aria-label={t('编辑{name}', { name })}
                 onClick={() => setDialog(item ? { kind: 'item', groupId: group.id, item } : { kind: 'group', group: fullGroup })}><Pencil size={18}/></button>
-            <button className="icon-button action-up" type="button" title={t('上移')} aria-label={t('上移{name}', { name })}
-                disabled={index === 0} onClick={() => move(group.id, -1, item?.id)}><ArrowUp size={18}/></button>
-            <button className="icon-button action-down" type="button" title={t('下移')} aria-label={t('下移{name}', { name })}
-                disabled={index === siblings.length - 1} onClick={() => move(group.id, 1, item?.id)}><ArrowDown size={18}/></button>
+            <RowReorderHandle {...reorder.handleProps(item?.id ?? group.id)}/>
             <button className="icon-button danger action-delete" type="button" title={t('删除')} aria-label={t('删除{name}', { name })}
                 onClick={() => setDialog({ kind: 'delete', group: fullGroup, item })}><Trash2 size={18}/></button>
         </div></td>;
@@ -273,7 +278,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
         </header>
         <div className="table-wrap result-types-scroll" role="region" aria-label={t('成果类型列表')} tabIndex={0}
             data-scrolled-left={scrolledLeft} onScroll={event => setScrolledLeft(event.currentTarget.scrollLeft > 0)}>
-            <table ref={tableRef} className="result-types-table">
+            <table {...reorder.tableProps} ref={element => { tableRef.current = element; reorder.tableProps.ref(element); }} className="result-types-table">
                 <colgroup>
                     {fields.map(([field]) => <col key={field} className={`result-types-column-${field}`}/>)}
                     <col className="result-types-column-actions"/>
@@ -286,7 +291,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                         const isExpanded = !(term ? searchCollapsed[group.id] : collapsed[group.id]);
                         const action = t(isExpanded ? '收起' : '展开');
                         return <Fragment key={group.id}>
-                            <tr className="result-types-group" data-group-id={group.id}>
+                            <tr {...reorder.rowProps(group.id)} className={`result-types-group ${reorder.rowProps(group.id).className || ''}`} data-group-id={group.id}>
                                 <td>
                                     <div className="result-types-group-name">
                                         <button className="icon-button" type="button" aria-expanded={isExpanded}
@@ -300,7 +305,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                                 <td colSpan={6}/>
                                 {renderActions(group)}
                             </tr>
-                            {isExpanded && group.items.map(item => <tr key={item.id} data-item-id={item.id}>
+                            {isExpanded && group.items.map(item => <tr key={item.id} {...reorder.rowProps(item.id)} data-item-id={item.id}>
                                 {fields.map(([field]) => <td key={field} className={field === 'name' ? 'result-types-name-cell' : undefined}>
                                     {renderField(item, field)}
                                 </td>)}
@@ -312,7 +317,8 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
             </table>
             {!groups.length && <div className="empty-state"><FileText size={42}/><h3>{t(term ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(term ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p></div>}
         </div>
-        <footer><span>{t('共 {count} 条', { count })}</span><span>{t('修改即时生效，刷新页面恢复初始数据')}</span></footer>
+        <span className="sr-only" role="status" aria-live="polite">{reorder.announcement}</span>
+        <footer><span>{t('共 {count} 条', { count })}</span></footer>
         {dialog && (dialog.kind === 'delete' ? <Modal title={t(dialog.item ? '删除成果项' : '删除分类')} onClose={() => setDialog(null)} footer={<>
             <button className="button" onClick={() => setDialog(null)}>{t('取消')}</button>
             <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button>

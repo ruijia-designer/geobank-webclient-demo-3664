@@ -26,6 +26,13 @@ function itemRow(item: ResultTypeItem) { return table().querySelector<HTMLTableR
 function fieldText(element: Element, key: string) { return element.querySelector<HTMLElement>(`[data-field="${key}"]`)!.textContent; }
 function namedRow(name: string) { return screen.getByRole('button', { name: `编辑${name}` }).closest('tr')!; }
 function rowAction(element: Element, name: string) { fireEvent.click(within(element as HTMLElement).getByRole('button', { name })); }
+function dragHandle(element: HTMLElement) { return within(element).getByRole('button', { name: /^拖动排序/ }); }
+function reorder(element: HTMLElement, direction: 'ArrowUp' | 'ArrowDown', commit = true) {
+    const handle = dragHandle(element);
+    fireEvent.keyDown(handle, { key: ' ' });
+    fireEvent.keyDown(handle, { key: direction });
+    fireEvent.keyDown(handle, { key: commit ? ' ' : 'Escape' });
+}
 function modal() { return screen.getByRole('dialog'); }
 function modalField(label: string) { return within(modal()).getByRole('textbox', { name: new RegExp(`^${label}(?:\\s|$)`) }); }
 function fillModal(label: string, value: string) {
@@ -194,26 +201,31 @@ describe('成果类型新增、编辑与排序', () => {
         expect(savedCategory('wellbore').groups.find(entry => entry.name === '井轨迹')!.items[0].name).toBe('');
     });
 
-    it('一级移动携带整组且二级仅在本组移动，边界禁用，离开返回保留即时保存的顺序', () => {
+    it('一级拖动携带整组且二级仅在本组排序，短点和取消不保存，离开返回保留提交顺序', () => {
         render(<Harness />);
         const original = seedCategory('processing').groups;
         const basic = original[0], results = original[1], lastGroup = original.at(-1)!;
-        expect(within(groupRow(basic)).getByRole('button', { name: `上移${basic.name}` })).toBeDisabled();
-        expect(within(groupRow(lastGroup)).getByRole('button', { name: `下移${lastGroup.name}` })).toBeDisabled();
-        rowAction(groupRow(results), `上移${results.name}`);
+        expect(dragHandle(groupRow(basic))).toBeEnabled();
+        expect(dragHandle(groupRow(lastGroup))).toBeEnabled();
+        fireEvent.click(dragHandle(groupRow(results)));
+        expect(savedCategory('processing').groups).toEqual(original);
+        reorder(groupRow(results), 'ArrowUp', false);
+        expect(savedCategory('processing').groups).toEqual(original);
+        reorder(groupRow(basic), 'ArrowUp');
+        reorder(groupRow(lastGroup), 'ArrowDown');
+        expect(allGroupIds()).toEqual(original.map(group => group.id));
+        reorder(groupRow(results), 'ArrowUp');
         expect(allGroupIds()).toEqual([results.id, basic.id, ...original.slice(2).map(group => group.id)]);
         expect(allItemIds().slice(0, results.items.length)).toEqual(results.items.map(item => item.id));
-        expect(within(groupRow(results)).getByRole('button', { name: `上移${results.name}` })).toBeDisabled();
         const first = results.items[0], second = results.items[1], last = results.items.at(-1)!;
-        expect(within(itemRow(first)).getByRole('button', { name: `上移${first.name}` })).toBeDisabled();
-        expect(within(itemRow(last)).getByRole('button', { name: `下移${last.name}` })).toBeDisabled();
-        rowAction(itemRow(first), `下移${first.name}`);
+        reorder(itemRow(first), 'ArrowUp');
+        reorder(itemRow(last), 'ArrowDown');
+        expect(savedCategory('processing').groups[0].items).toEqual(results.items);
+        reorder(itemRow(first), 'ArrowDown');
         expect(allItemIds().slice(0, results.items.length)).toEqual([second.id, first.id, ...results.items.slice(2).map(item => item.id)]);
-        expect(within(itemRow(second)).getByRole('button', { name: `上移${second.name}` })).toBeDisabled();
-        expect(within(itemRow(first)).getByRole('button', { name: `上移${first.name}` })).toBeEnabled();
         const saved = savedCategory('processing').groups;
         expect(saved.map(group => group.id)).toEqual([results.id, basic.id, ...original.slice(2).map(group => group.id)]);
-        expect(saved[0].items.map(item => item.id)).toEqual([second.id, first.id, ...results.items.slice(2).map(item => item.id)]);
+        expect(saved[0].items).toEqual([second, first, ...results.items.slice(2)]);
         expect(saved[1].items).toEqual(basic.items);
         leaveAndReturn();
         expect(allGroupIds()).toEqual(saved.map(group => group.id));
@@ -230,6 +242,8 @@ describe('成果类型删除与查询下操作', () => {
         const originalGroup = processing.groups[0], originalItem = originalGroup.items[0];
         saveResultTypes(sparse);
         render(<Harness />);
+        expect(dragHandle(groupRow(originalGroup))).toBeDisabled();
+        expect(dragHandle(itemRow(originalItem))).toBeDisabled();
         rowAction(itemRow(originalItem), `删除${originalItem.name}`);
         expect(modal()).toHaveAccessibleName('删除成果项');
         cancelModal();
@@ -309,9 +323,8 @@ describe('成果类型删除与查询下操作', () => {
         const previous = results.items[results.items.indexOf(item) - 1];
         search('pstm_raw');
         expect(allItemIds()).toEqual([item.id]);
-        expect(within(itemRow(item)).getByRole('button', { name: `上移${item.name}` })).toBeEnabled();
-        expect(within(itemRow(item)).getByRole('button', { name: `下移${item.name}` })).toBeEnabled();
-        rowAction(itemRow(item), `上移${item.name}`);
+        expect(dragHandle(itemRow(item))).toBeEnabled();
+        reorder(itemRow(item), 'ArrowUp');
         expect(allItemIds()).toEqual([item.id]);
         rowAction(itemRow(item), `编辑${item.name}`);
         fillModal('英文目录', 'CHANGED_DIRECTORY');

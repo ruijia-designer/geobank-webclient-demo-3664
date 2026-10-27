@@ -111,6 +111,5 @@ export function MapView({ projects, selectedId, focusId, zoom, collapsed, colorM
       </div>
     </div>
     <div className="coordinates" title={t('固定演示坐标，非实时定位数据')}><LocateFixed size={20} aria-label={t('圆形定位图标')}/><span className="coordinates-divider" aria-hidden="true"/><span className="coordinates-value">136.23° E, 39.89° N, 10.81</span></div>
-    {basemap === 'map' && <div className="map-demo-attribution" title={t('本地简化地理示意，不用于测绘或项目边界判断')}>{t('地图 · 地理示意，非测绘数据')}</div>}
   </section>;
 }

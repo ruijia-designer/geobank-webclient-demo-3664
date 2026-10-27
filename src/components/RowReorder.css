@@ -1,0 +1,8 @@
+.row-reorder-handle{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.row-reorder-handle:disabled{cursor:default}
+.row-reorder-handle[aria-pressed="true"]{cursor:grabbing;background:#dceff8;color:#075a80}
+table[data-reorder-active="true"]{user-select:none;-webkit-user-select:none;cursor:grabbing}
+/* Use paint-only cues: no transforms, added cells or changed row dimensions. */
+tr.row-reorder-source>td{outline:1px dashed #5c9ebc;outline-offset:-3px}
+tr.row-reorder-before>td{background-image:linear-gradient(#0a6f9e,#0a6f9e)!important;background-position:top!important;background-size:100% 3px!important;background-repeat:no-repeat!important}
+tr.row-reorder-after>td{background-image:linear-gradient(#0a6f9e,#0a6f9e)!important;background-position:bottom!important;background-size:100% 3px!important;background-repeat:no-repeat!important}

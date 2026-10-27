@@ -143,7 +143,6 @@ body.geobank-login-active {
 .geobank-login .form-notice { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: #89624d; line-height: 1.6; margin: 0; }
 .geobank-login .form-notice svg { flex: none; margin-top: 2px; }
 .geobank-login .demo-hint { padding: 12px 14px; border: 1px solid var(--login-border); border-radius: 4px; background: #e8f0fc; color: #385575; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.geobank-login .demo-hint small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
 .geobank-login .company-signature { margin: 14px 0 0; padding-top: 24px; border-top: 1px solid var(--login-border); color: var(--muted); font-size: 13px; line-height: 1.9; text-align: center; text-wrap: balance; }
 
 @media (min-width: 1600px) {

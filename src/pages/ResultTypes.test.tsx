@@ -124,7 +124,7 @@ describe('成果类型页面操作', () => {
         expect(screen.getByRole('button', { name: '成果类型' })).toBeVisible();
         expect(screen.getByRole('heading', { name: '项目成果类型' })).toBeVisible();
         expect(screen.queryByRole('button', { name: '保存' })).not.toBeInTheDocument();
-        expect(screen.getByText('修改即时生效，刷新页面恢复初始数据')).toBeVisible();
+        expect(document.querySelector('.result-types-panel>footer')).toHaveTextContent(/^共 30 条$/);
         expect(screen.queryByRole('button', { name: '命名规则' })).not.toBeInTheDocument();
         expect(screen.getAllByRole('columnheader').map(item => item.textContent)).toEqual(headers);
         const select = screen.getByRole('combobox', { name: '数据类别' });
@@ -139,16 +139,17 @@ describe('成果类型页面操作', () => {
         }
         expect(screen.getByRole('button', { name: '新增分类' })).toBeVisible();
         const firstGroup = groupRow('nonseismic', '基本信息');
-        for (const label of ['新增基本信息下级', '编辑基本信息', '上移基本信息', '下移基本信息', '删除基本信息']) {
+        for (const label of ['新增基本信息下级', '编辑基本信息', '拖动排序基本信息', '删除基本信息']) {
             expect(within(firstGroup).getByRole('button', { name: label })).toBeVisible();
         }
-        expect(within(within(firstGroup).getAllByRole('cell').at(-1)!).getAllByRole('button')).toHaveLength(5);
+        expect(within(within(firstGroup).getAllByRole('cell').at(-1)!).getAllByRole('button')).toHaveLength(4);
         const firstItem = row(seedItem('nonseismic', '基本信息', '项目信息'));
-        for (const label of ['编辑项目信息', '上移项目信息', '下移项目信息', '删除项目信息']) {
+        for (const label of ['编辑项目信息', '拖动排序项目信息', '删除项目信息']) {
             expect(within(firstItem).getByRole('button', { name: label })).toBeVisible();
         }
-        expect(within(firstItem).getAllByRole('button')).toHaveLength(4);
+        expect(within(firstItem).getAllByRole('button')).toHaveLength(3);
         expect(within(firstItem).queryByRole('button', { name: /^新增/ })).not.toBeInTheDocument();
+        expect(within(table()).queryByRole('button', { name: /^(上移|下移)/ })).not.toBeInTheDocument();
     });
 
     it('八个业务字段仅通过弹窗编辑，修改名称焦点稳定，弹窗保存后离开返回保留全部字段', async () => {

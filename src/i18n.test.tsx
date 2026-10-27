@@ -24,7 +24,7 @@ describe('顶部中英文切换',()=>{
     expect(screen.getByText('Enter your account details to access the system')).toBeInTheDocument();
     expect(screen.getByRole('button',{name:'Sign in'})).toBeInTheDocument();
     expect(screen.getByText('Offline demo account: Demo / demo123')).toBeInTheDocument();
-    expect(screen.getByText('Interactive demo only; no live accounts are connected.')).toBeInTheDocument();
+    expect(screen.queryByText('Interactive demo only; no live accounts are connected.')).not.toBeInTheDocument();
     expect(screen.getByRole('textbox',{name:'Username'})).toBeInTheDocument();
     const password=screen.getByLabelText('Password',{exact:true});
     expect(password).toHaveAttribute('type','password');

@@ -24,7 +24,7 @@ const commonEnglish: Record<string, string> = {
   '用户名或密码错误，请使用下方演示账号': 'Incorrect username or password. Use the demo account below.',
   '面向地震勘探数据的统一管理、共享、应用平台。': 'A unified platform to manage, share and use seismic exploration data.',
   '中国石油集团东方地球物理勘探有限责任公司': 'BGP Inc., China National Petroleum Corporation',
-  '离线演示账号：Demo / demo123': 'Offline demo account: Demo / demo123', '仅用于交互演示，不连接真实账户。': 'Interactive demo only; no live accounts are connected.',
+  '离线演示账号：Demo / demo123': 'Offline demo account: Demo / demo123',
   '深耕数据价值 赋能智慧勘探': 'Unlock data value · Empower exploration',
   '搜索项目': 'Search projects', '搜索': 'Search', '配色方式': 'Color scheme', '{count} 个项目': '{count} projects',
   '按项目类型着色': 'Color by project type', '按年度着色': 'Color by year', '项目：{name}': 'Project: {name}',

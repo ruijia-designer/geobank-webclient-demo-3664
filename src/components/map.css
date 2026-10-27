@@ -65,6 +65,5 @@ button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1
 .basemap-thumb{width:47px;height:37px;background-position:center;background-size:cover;border:1px solid #d8e3e9;border-radius:4px;flex-shrink:0}
 .basemap-thumb.imagery{background-image:url('/assets/satellite-map.webp')}
 .basemap-thumb.schematic{background-image:url('/assets/schematic-map.svg')}
-.map-demo-attribution{position:absolute;left:16px;bottom:60px;max-width:calc(100% - 90px);background:#fffffff0;border-radius:4px;padding:5px 8px;font-size:var(--font-caption);color:#59717b;pointer-events:none}
 @media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.layer-pill,.map-layer-panel header .layer-reset{padding:0 16px}}
 @media(prefers-reduced-motion:reduce){.map-scene,.map-point,.layer-pill,.map-zoom .map-round,.project-layer-panel .layer-row{transition:none}.rotating svg{animation:none}}
