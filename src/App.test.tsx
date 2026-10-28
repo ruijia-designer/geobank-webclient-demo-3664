@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import {StrictMode} from 'react';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import App,{parseRoute} from './App';
-import {canRead,initialState,projectOptions,visibleProjects} from './services/demo';
+import {CURRENT_PROJECT,canRead,initialState,projectOptions,visibleProjects} from './services/demo';
 
 beforeEach(()=>{sessionStorage.clear();sessionStorage.setItem('geobank-demo-authenticated-v1','true');window.history.replaceState(null,'','/#/overview')});
 describe('全局角色与 Hash 路由',()=>{
@@ -32,6 +32,49 @@ describe('全局角色与 Hash 路由',()=>{
   expect(screen.getByRole('dialog',{name:'无浏览权限'})).toHaveTextContent('您无浏览此项目数据的权限');
   expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
   expect(window.location.hash).toBe('#/overview');
+ });
+ it.each(['ordinary','admin'] as const)('%s 零可读项目时顶部成果进入完整空态，重载后保持',async role=>{
+  const u=userEvent.setup();
+  const state=initialState(role);
+  if(role==='admin')state.projects=[...state.projects.map(project=>({...project,readable:false})),{...CURRENT_PROJECT,readable:false}];
+  sessionStorage.setItem('geobank-demo-ui-v1',JSON.stringify({version:1,state}));
+  const mounted=render(<App/>);
+  await u.click(screen.getByRole('button',{name:'成果'}));
+  expect(window.location.hash).toBe('#/results');
+  expect(screen.getByText('您无任何可查阅的项目，请联系系统管理员。')).toBeVisible();
+  expect(screen.getByRole('button',{name:'成果'})).toHaveClass('active');
+  expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('navigation',{name:'成果目录'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  mounted.unmount();
+  render(<App/>);
+  expect(window.location.hash).toBe('#/results');
+  expect(screen.getByText('您无任何可查阅的项目，请联系系统管理员。')).toBeVisible();
+  expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
+ });
+ it('普通用户直接打开无项目成果地址保持空态，不回到概览',()=>{
+  window.history.replaceState(null,'','/?role=ordinary#/results');render(<App/>);
+  expect(window.location.hash).toBe('#/results');
+  expect(screen.getByText('您无任何可查阅的项目，请联系系统管理员。')).toBeVisible();
+  expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
+ });
+ it('当前项目不可读时顶部成果打开其他可读项目',async()=>{
+  const u=userEvent.setup();
+  const state=initialState('ordinary');
+  state.projects=state.projects.map(project=>project.id==='4'?{...project,readable:true}:project);
+  sessionStorage.setItem('geobank-demo-ui-v1',JSON.stringify({version:1,state}));
+  render(<App/>);
+  await u.click(screen.getByRole('button',{name:'成果'}));
+  expect(window.location.hash).toBe('#/results/4');
+  expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
+  expect(screen.queryByText('您无任何可查阅的项目，请联系系统管理员。')).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
+ });
+ it('已有其他可读项目时，显式无权限地址仍拒绝，不自动切换项目',()=>{
+  window.history.replaceState(null,'','/#/results/2');render(<App/>);
+  expect(screen.getByRole('dialog',{name:'无浏览权限'})).toHaveTextContent('您无浏览此项目数据的权限');
+  expect(window.location.hash).toBe('#/overview');
+  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
  });
 });
 describe('概览与跨页面流程',()=>{

@@ -3,6 +3,7 @@ const commonEnglish: Record<string, string> = {
   '物探数据银行': 'Geophysical Data Bank', '物探标志': 'GeoBank logo', '深耕数据价值　赋能智慧勘探': 'Unlock data value · Empower exploration',
   '顶部导航': 'Main navigation', '此栏目暂无设计画板': 'This section is not available in the demo', 'Demo 用户菜单': 'Demo account menu',
   '资产监控': 'Asset monitoring', 'AI 开放平台': 'AI Open Platform', '示例链接': 'Example link',
+  '预览无权限页面': 'Preview no-access page', '退出无权限预览': 'Exit no-access preview',
   '选择语言': 'Choose language', '语言': 'Languages', '仅展示': 'Display only',
   '在线': 'Online', '系统管理': 'System management', '退出登录': 'Sign out', '账户信息': 'Account information', '当前账户': 'Current account',
   '返回项目': 'Back to projects', '无浏览权限': 'Access denied', '您无浏览此项目数据的权限': "You do not have permission to view this project.",

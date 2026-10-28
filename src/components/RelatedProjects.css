@@ -60,6 +60,9 @@
   background: #fff;
 }
 
+.related-project-card.is-restricted { padding-bottom: 17px; }
+.related-project-card.is-restricted .related-project-facts { margin-bottom: 0; }
+
 .related-project-card-labels {
   display: flex;
   align-items: center;
@@ -150,6 +153,7 @@
 
 @container (max-width: 310px) {
   .related-project-card { padding: 14px 12px 0; }
+  .related-project-card.is-restricted { padding-bottom: 14px; }
   .related-project-card > footer { margin-right: -12px; margin-left: -12px; }
   .related-project-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }

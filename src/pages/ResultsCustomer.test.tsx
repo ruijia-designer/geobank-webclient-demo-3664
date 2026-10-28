@@ -157,13 +157,17 @@ describe('成果页本轮客户流程',()=>{
   expect(getDownloadSummary('current')).toMatchObject({count:0,totalBytes:0,users:0});expect(bytesLabel(0)).toBe('0 B');
   render(<Harness/>);expect(screen.getByText('成果完整度详情')).toBeVisible();expect(screen.getByText('最近数据下载动态')).toBeVisible();expect(screen.getByText('暂无下载记录')).toBeVisible();
  });
- it('完整度表格包含六列且目录数量、原始字节与状态一致',()=>{
+ it('完整度表格移除类别与状态列，仅有文件的目录显示数量与大小',()=>{
   render(<Harness/>);
   const table=screen.getByRole('table',{name:'成果完整度明细'});
-  expect(within(table).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['类别','名称','数量','大小','状态','备注']);
+  expect(within(table).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['名称','数量','大小','备注']);
   const row=within(table).getByRole('button',{name:'测井数据'}).closest('tr')!;
   const wellFiles=INITIAL_RESULT_FILES.filter(file=>file.directory==='测井数据');
-  expect(within(row).getAllByRole('cell').map(cell=>cell.textContent)).toEqual(['井筒数据','测井数据','18',bytesLabel(wellFiles.reduce((sum,file)=>sum+parseFileBytes(file.size),0)),'已录入','—']);
+  expect(within(row).getAllByRole('cell').map(cell=>cell.textContent)).toEqual(['测井数据','18',bytesLabel(wellFiles.reduce((sum,file)=>sum+parseFileBytes(file.size),0)),'—']);
+  for(const name of ['井位坐标、轨迹','岩芯','时深关系']){
+   const emptyRow=within(table).getByRole('button',{name}).closest('tr')!;
+   expect(within(emptyRow).getAllByRole('cell').slice(1,3).map(cell=>cell.textContent)).toEqual(['-','-']);
+  }
   const summary=getResultSummary(getResultDirectories(CURRENT_PROJECT),[{id:'precise',name:'precise.las',format:'las',directory:'测井数据',size:'1.46 KB',bytes:1500,user:'Demo',uploaded:'2026-10-18'}]);
   expect(summary.totalBytes).toBe(1500);expect(summary.entries.find(entry=>entry.name==='测井数据')).toMatchObject({count:1,totalBytes:1500,status:'ready'});
  });

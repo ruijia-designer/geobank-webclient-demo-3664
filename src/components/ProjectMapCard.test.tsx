@@ -50,7 +50,7 @@ describe('地图项目详情卡片', () => {
     expect(fieldValue(card, '纵横比')).toHaveTextContent('0.8');
     expect(fieldValue(card, '最大炮检距')).toHaveTextContent('8 km');
     expect(within(card).getByText('暂无关联项目')).toBeVisible();
-    expect(within(card).getByRole('button', { name: '查询成果' })).toBeVisible();
+    expect(within(card).getByRole('button', { name: '查阅成果' })).toBeVisible();
   });
 
   it('未提供的参数显示缺省值，不把零值当作缺失数据', () => {
@@ -107,12 +107,12 @@ describe('地图项目详情卡片', () => {
     expect(screen.getAllByRole('button', { name: /^查阅关联项目：/ })).toHaveLength(3);
   });
 
-  it('关闭、查询成果及关联项目入口将原始项目交给外层回调，关联名称提供完整提示', async () => {
+  it('关闭、查阅成果及关联项目入口将原始项目交给外层回调，关联名称提供完整提示', async () => {
     const user = userEvent.setup();
     const related = project({ id: 'related-action', name: '关联项目完整名称', archived: true });
     const selected = project({ mapDetails: { relatedProjectIds: [related.id] } });
     render(<ProjectMapCard project={selected} projects={[selected, related]} role="admin" onClose={onClose} onOpen={onOpen}/>);
-    await user.click(screen.getByRole('button', { name: '查询成果' }));
+    await user.click(screen.getByRole('button', { name: '查阅成果' }));
     expect(onOpen).toHaveBeenLastCalledWith(selected);
     const relatedButton = screen.getByRole('button', { name: '查阅关联项目：' + related.name });
     expect(relatedButton).toHaveAttribute('title', related.name);

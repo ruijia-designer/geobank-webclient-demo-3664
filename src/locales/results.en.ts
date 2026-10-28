@@ -16,6 +16,7 @@ const resultsEnglish:Record<string,string>={
  '成果完整度详情':'Results completeness','已录入':'Recorded','未录入':"Not recorded",'无需录入':'Not required','成果完整度':'Results completeness','成果完整度明细':'Results completeness details','类别':'Category','名称':'Name','数量':'Count','大小':'Size','状态':'Status',
  '最近上传':'Recent uploads','暂无上传记录':'No upload records','最近数据下载动态':'Recent downloads','下载次数':'Downloads','下载总量':'Downloaded size','下载人数':'Users','暂无下载记录':'No download records',
  '您无浏览此项目数据的权限':"You do not have permission to view this project.",'返回概览':'Back to overview',
+ '您无任何可查阅的项目，请联系系统管理员。':'You do not have access to any projects. Please contact your system administrator.',
  '请输入非负数':'Enter a non-negative number','请输入非负整数':'Enter a non-negative whole number',
  '请输入项目名称':'Enter a project name','结束日期不能早于起始日期':'The end date cannot be before the start date','面积、数据大小和数量须为非负数，数量须为整数':'Area, data size and counts must be non-negative; counts must be whole numbers','年度须为四位数字':'The year must contain four digits','项目信息已保存':'Project information saved','请选择 Excel 文件（.xls 或 .xlsx）':'Select an Excel file (.xls or .xlsx)','Excel 文件已选择，演示信息已自动回填':'Excel selected; demo information filled in','文件已加入当前成果目录（本地演示）':'Files added to the current results folder (local demo)','已删除所选文件':'Selected files deleted',
  '显示成果视图':'Show results pane','隐藏成果视图':'Hide results pane','筛选项目':'Filter projects','搜索项目名称、盆地或年度…':'Search project name, basin or year…','项目':"Project",'采集':'Acquisition','处理':'Processing','解释':'Interpretation','井筒':"Well",'非地震':'Non-seismic','已选择上传成果入口':'Upload results selected','上传成果':'Upload results',
@@ -40,7 +41,6 @@ const resultsEnglish:Record<string,string>={
  "无浏览权限":"No viewing permission",
  "无权限":"No access",
  "演示关联":"Demo relations",
- "查看成果":"View results",
- "查看项目成果：{name}":"View results for: {name}",
+ "查阅项目成果：{name}":"View results for: {name}",
 };
 export default resultsEnglish;

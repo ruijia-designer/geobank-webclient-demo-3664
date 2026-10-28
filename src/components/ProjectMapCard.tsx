@@ -98,7 +98,7 @@ export function ProjectMapCard({ project, projects, role, anchor, onClose, onOpe
       </section>
     </div>
     <footer className="map-project-footer"><button className="button primary" onClick={() => onOpen(project)}>
-      {t('查询成果')}<ArrowUpRight size={16} aria-hidden="true"/>
+      {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>
     </button>{!canRead(project, role) && <span className="sr-only">{t('当前项目无查阅权限')}</span>}</footer>
   </section>;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { ChevronDown, ExternalLink } from 'lucide-react';
+import { ChevronDown, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import type { Route } from '../types';
 
@@ -9,7 +9,9 @@ const toolLinks = [
   {label:'AI 开放平台',href:'https://example.com/#ai-open-platform'},
 ];
 
-export function ToolsMenu({route,onOpen}:{route:Route;onOpen:()=>void}) {
+export interface ResultsPreviewControl { active:boolean;onToggle:()=>void }
+
+export function ToolsMenu({route,onOpen,resultsPreview}:{route:Route;onOpen:()=>void;resultsPreview?:ResultsPreviewControl}) {
   const {t}=useTranslation();
   const [open,setOpen]=useState(false);
   const root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null);
@@ -20,7 +22,7 @@ export function ToolsMenu({route,onOpen}:{route:Route;onOpen:()=>void}) {
   useEffect(()=>{setOpen(false);},[route]);
   useEffect(()=>{
     if(!open)return;
-    const items=root.current?.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]');
+    const items=root.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
     (initialFocus.current==='last'?items?.[items.length-1]:items?.[0])?.focus();
     const outside=(event:MouseEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(false);};
     const escape=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setOpen(false);trigger.current?.focus();}};
@@ -32,8 +34,8 @@ export function ToolsMenu({route,onOpen}:{route:Route;onOpen:()=>void}) {
     if(event.key==='Tab'){close(true);return;}
     if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
     event.preventDefault();
-    const items=Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]'));
-    const index=items.indexOf(document.activeElement as HTMLAnchorElement);
+    const items=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    const index=items.indexOf(document.activeElement as HTMLElement);
     const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
     items[next]?.focus();
   };
@@ -46,6 +48,10 @@ export function ToolsMenu({route,onOpen}:{route:Route;onOpen:()=>void}) {
     {open&&<div id={menuId} className="tools-menu" role="menu" aria-label={t('工具')} onKeyDown={moveFocus}>
       {toolLinks.map(link=><a key={link.label} role="menuitem" tabIndex={-1} href={link.href} target="_blank" rel="noopener noreferrer"
         title={t('示例链接')} onClick={()=>close(true)}><span>{t(link.label)}</span><ExternalLink size={15}/></a>)}
+      {import.meta.env.DEV&&route.page==='results'&&resultsPreview&&<button type="button" role="menuitem" tabIndex={-1}
+        onClick={()=>{resultsPreview.onToggle();close(true);}}>
+        <span>{t(resultsPreview.active?'退出无权限预览':'预览无权限页面')}</span>
+        {resultsPreview.active?<EyeOff size={15}/>:<Eye size={15}/>}</button>}
     </div>}
   </div>;
 }

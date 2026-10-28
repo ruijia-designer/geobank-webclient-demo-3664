@@ -36,7 +36,7 @@ export function RelatedProjects({ project, projects, role, onOpen }: {
     {related.length ? <ul className="related-projects-list">{related.map(item => {
       const classification = projectCardClassification(item);
       const readable = canRead(item, role);
-      return <li key={item.id} className="related-project-card">
+      return <li key={item.id} className={'related-project-card' + (readable ? '' : ' is-restricted')}>
         <div className="related-project-card-labels">
           <span className="related-project-category" style={{ backgroundColor: classification.primaryColor, color: classification.textColor }}>{t(classification.label)}</span>
           <span className={'badge related-project-access' + (readable ? ' is-readable' : '')}>
@@ -49,10 +49,10 @@ export function RelatedProjects({ project, projects, role, onOpen }: {
           <div><dt>{t('所属盆地')}</dt><dd>{item.basin || '—'}</dd></div>
           <div><dt>{t('工区面积（km²）')}</dt><dd>{item.area || '—'}</dd></div>
         </dl>
-        <footer><button type="button" className="related-project-open"
-          aria-label={t('查看项目成果：{name}', { name: item.name })} onClick={() => onOpen(item)}>
-          {t('查看成果')}<ArrowUpRight size={16} aria-hidden="true"/>
-        </button></footer>
+        {readable && <footer><button type="button" className="related-project-open"
+          aria-label={t('查阅项目成果：{name}', { name: item.name })} onClick={() => onOpen(item)}>
+          {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>
+        </button></footer>}
       </li>;
     })}</ul> : <div className="empty-state related-projects-empty"><Folder size={42} aria-hidden="true"/><h3>{t('暂无关联项目')}</h3></div>}
   </section>;

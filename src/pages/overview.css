@@ -10,12 +10,19 @@
 .project-stripe-type{flex:1;min-height:0;background:currentColor}
 .type-options{max-height:290px;overflow-y:auto;top:100%;margin-top:4px}
 .type-options button{display:flex;align-items:center;gap:8px;min-height:40px;height:auto;padding:10px 12px;white-space:normal}
-.type-options button:disabled{color:#8ca0ac;background:#f5f8fa;cursor:default}
-.type-options i{width:9px;height:9px;border-radius:2px;flex:none}.type-options small{margin-left:auto;white-space:nowrap;font-size:var(--font-caption)}
+.type-options button:disabled{opacity:1;color:var(--ink);background:#f5f8fa;font-weight:600;cursor:default}
+.type-options i{width:9px;height:9px;border-radius:2px;flex:none}
 .select-trigger{gap:10px;text-align:left}.select-trigger svg{flex:none}
 
 /* Fixed positioning escapes the modal body scroll clip and flips above when needed. */
-.type-options.type-options-floating{position:fixed;right:auto;z-index:120;margin-top:0;overscroll-behavior:contain}
+.type-options.type-options-floating{position:fixed;right:auto;z-index:120;margin-top:0;display:flex;flex-direction:column;overflow:hidden}
+.type-options-search{display:flex;align-items:center;gap:8px;flex:none;height:36px;margin:9px 10px;border:1px solid #b9ced9;border-radius:4px;padding:0 10px;background:#f7f9fa;color:var(--muted)}
+.type-options-search:focus-within{border-color:var(--blue);box-shadow:0 0 0 2px #0a6f9e14}
+.type-options-search svg{flex:none}
+.type-picker .type-options-search input{height:34px;border:0;padding:0;background:transparent;outline:none;font-size:14px}
+.type-options-list{min-height:0;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid #e0e8ed}
+.type-options button[aria-selected=true]{background:#eaf5f9;color:var(--blue);font-weight:600}
+.type-options-empty{margin:0;padding:22px 12px;color:var(--muted);text-align:center;font-size:14px}
 
 .project-archive-icon{display:flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:6px;border-radius:4px;background:#e8f2f7;color:#277DA8;transition:background-color .15s,color .15s,box-shadow .15s}
 

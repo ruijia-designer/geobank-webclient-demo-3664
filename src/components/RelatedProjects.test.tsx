@@ -26,6 +26,7 @@ describe('成果页关联项目', () => {
       ['1', '4', '2'].map(id => PROJECTS.find(item => item.id === id)!.name));
     expect(screen.getAllByText('可查阅')).toHaveLength(1);
     expect(screen.getAllByText('无权限')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^查阅项目成果：/ })).toHaveLength(1);
     expect(JSON.stringify([CURRENT_PROJECT, PROJECTS])).toBe(before);
   });
 
@@ -59,13 +60,26 @@ describe('成果页关联项目', () => {
     expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual(['2024', '沁水盆地', '0']);
   });
 
-  it('权限不足的查看入口仍交给外层回调显示统一权限提示，键盘可操作', async () => {
-    const user = userEvent.setup();
+  it('无查阅权限时保留项目详情，不显示查阅按钮或空操作栏', () => {
     const item = project({ id: 'restricted', name: '无权限关联项目', readable: false });
     const selected = project({ mapDetails: { relatedProjectIds: [item.id] } });
-    render(<RelatedProjects project={selected} projects={[item]} role="ordinary" onOpen={onOpen}/>);
+    const { rerender } = render(<RelatedProjects project={selected} projects={[item]} role="ordinary" onOpen={onOpen}/>);
     expect(screen.getByText('无权限')).toBeVisible();
-    const button = screen.getByRole('button', { name: '查看项目成果：' + item.name });
+    expect(screen.getByRole('heading', { name: item.name })).toBeVisible();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('listitem').querySelector('footer')).toBeNull();
+    rerender(<RelatedProjects project={selected} projects={[item]} role="admin" onOpen={onOpen}/>);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('有查阅权限时显示查阅成果入口，支持键盘打开项目', async () => {
+    const user = userEvent.setup();
+    const item = project({ id: 'readable', name: '可查阅关联项目' });
+    const selected = project({ mapDetails: { relatedProjectIds: [item.id] } });
+    render(<RelatedProjects project={selected} projects={[item]} role="ordinary" onOpen={onOpen}/>);
+    const button = screen.getByRole('button', { name: '查阅项目成果：' + item.name });
+    expect(button).toHaveTextContent('查阅成果');
     expect(button).toBeEnabled();
     await user.tab();
     expect(button).toHaveFocus();
