@@ -1,12 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { demoRows } from './baseline';
-import { projectCardClassification, projectTypeColor, projectTypeLabel } from './projectClassification';
+import { getProjectTypeOptions, projectCardClassification, projectTypeColor, projectTypeLabel } from './projectClassification';
 
 const originalTypes = structuredClone(demoRows.types);
 beforeEach(() => { demoRows.types = structuredClone(originalTypes); });
 afterEach(() => { demoRows.types = structuredClone(originalTypes); });
 
 describe('地图详情分类层级与配色', () => {
+  it('级联选项保留真实父级ID，重名分支的三级类型归属不混淆', () => {
+    demoRows.types.push(
+      { id: 'duplicate', name: '三维陆上常规采集', parent: '1', level: 2, color: '#abcdef' },
+      { id: 'third', name: '三级采集', parent: 'duplicate', level: 3, color: '#123456' },
+    );
+    const options = getProjectTypeOptions();
+    expect(options.find(option => option.id === '1')).toMatchObject({ parentId: undefined, leaf: false });
+    expect(options.find(option => option.id === 'duplicate')).toMatchObject({ parentId: '1', leaf: false });
+    expect(options.find(option => option.id === 'third')).toMatchObject({
+      parentId: 'duplicate', path: ['采集', '三维陆上常规采集', '三级采集'], leaf: true, level: 3,
+    });
+  });
+
   it('二级项目采用一级名称和底色、二级色条，保留已有末级颜色语义', () => {
     const project = { type: '三维陆上常规采集', typeId: '2', typePath: ['采集', '三维陆上常规采集'] };
     expect(projectCardClassification(project)).toMatchObject({

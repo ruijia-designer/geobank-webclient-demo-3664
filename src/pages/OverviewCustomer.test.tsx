@@ -74,8 +74,12 @@ describe('概览及客户联动要求',()=>{
     await user.type(within(modal).getByLabelText('项目名称'),'分类联动演示');
     await user.selectOptions(within(modal).getByLabelText('所属盆地'),'新增基准盆地');
     await user.click(within(modal).getByRole('button',{name:'项目类型'}));
-    expect(screen.getByRole('option',{name:'采集'})).toBeDisabled();
-    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集'})).toBeDisabled();
+    expect(screen.getByRole('option',{name:'采集'})).toHaveAttribute('aria-expanded','true');
+    const secondLevel=screen.getByRole('option',{name:'采集 / 三维陆上常规采集'});
+    expect(secondLevel).toHaveTextContent(/^三维陆上常规采集$/);
+    await user.click(secondLevel);
+    expect(within(modal).getByRole('button',{name:'项目类型'})).toHaveTextContent('请选择最末级项目类型');
+    expect(secondLevel).toHaveAttribute('aria-expanded','true');
     await user.click(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'}));
     await user.click(within(modal).getByRole('button',{name:'确定'}));
     const created=api.state.projects.at(-1)!;
@@ -132,13 +136,15 @@ describe('概览及客户联动要求',()=>{
     const popup=list.parentElement!;
     expect(popup.style.left).toBe('100px');expect(popup.style.width).toBe('600px');
     expect(Number.parseFloat(popup.style.top)).toBeLessThan(500);
-    expect(within(list).getByRole('option',{name:'处理'})).toBeDisabled();
+    await user.click(within(list).getByRole('option',{name:'处理'}));
+    expect(within(list).getByRole('option',{name:'处理'})).toHaveAttribute('aria-expanded','true');
     expect(within(list).getByRole('option',{name:'处理 / 二维处理'})).toBeEnabled();
     const initialTop=popup.style.top,initialHeight=popup.style.height;
     expect(Number.parseFloat(initialTop)+Number.parseFloat(initialHeight)).toBe(496);
     const search=within(modal).getByRole('searchbox',{name:'搜索项目类型'});
     await user.type(search,'处理 / 二维处理');
-    expect(within(list).getAllByRole('option')).toHaveLength(1);
+    expect(within(list).getAllByRole('option')).toHaveLength(2);
+    expect(within(list).getByRole('option',{name:'处理 / 二维处理'})).toHaveTextContent(/^二维处理$/);
     expect(popup.style.top).toBe(initialTop);expect(popup.style.height).toBe(initialHeight);
     await user.clear(search);await user.type(search,'不存在的类型');
     expect(within(modal).getByRole('status')).toHaveTextContent('无匹配项目类型');
@@ -159,7 +165,7 @@ describe('概览及客户联动要求',()=>{
     const search=within(modal).getByRole('searchbox',{name:'搜索项目类型'});
     expect(search).toHaveFocus();
     await user.type(search,' 处理 ');
-    expect(screen.getByRole('option',{name:'处理'})).toBeDisabled();
+    expect(screen.getByRole('option',{name:'处理'})).toHaveAttribute('aria-expanded','true');
     expect(screen.getByRole('option',{name:'处理 / 二维处理'})).toBeEnabled();
     expect(screen.queryByRole('option',{name:'采集'})).not.toBeInTheDocument();
     await user.clear(search);await user.type(search,'不存在的类型');
@@ -172,5 +178,51 @@ describe('概览及客户联动要求',()=>{
     expect(within(modal).getByRole('searchbox',{name:'搜索项目类型'})).toHaveValue('');
     expect(screen.getByRole('option',{name:'采集'})).toBeVisible();
     expect(screen.getByRole('option',{name:'处理 / 二维处理'})).toHaveAttribute('aria-selected','true');
+  });
+
+  it('级联分类可用方向键展开三级并回到父项，仅叶子确认选择',async()=>{
+    demoRows.types.push({id:'third',parent:'2',name:'三级采集演示',level:3,color:'#123456'});
+    const user=userEvent.setup();render(<Harness/>);
+    await user.click(screen.getByRole('button',{name:'新建项目'}));
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
+    await user.click(trigger);
+    await user.keyboard('{ArrowDown}');
+    const root=screen.getByRole('option',{name:'采集'});
+    expect(root).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    const parent=screen.getByRole('option',{name:'采集 / 三维陆上常规采集'});
+    expect(parent).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    const leaf=screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'});
+    expect(leaf).toHaveFocus();expect(leaf).toHaveTextContent(/^三级采集演示$/);
+    expect(trigger).toHaveTextContent('请选择最末级项目类型');
+    await user.keyboard('{ArrowLeft}');expect(parent).toHaveFocus();
+    await user.keyboard('{ArrowRight}{Enter}');
+    expect(screen.queryByRole('listbox',{name:'项目类型选项'})).not.toBeInTheDocument();
+    expect(trigger).toHaveTextContent('采集 / 三维陆上常规采集 / 三级采集演示');
+    await user.click(trigger);
+    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'})).toHaveAttribute('aria-selected','true');
+  });
+
+  it('同名二级按ID展开自己的三级，跨分支搜索后可直接选择匹配叶子',async()=>{
+    demoRows.types.push(
+      {id:'duplicate',parent:'1',name:'三维陆上常规采集',level:2,color:'#abcdef'},
+      {id:'original-leaf',parent:'2',name:'原始分支成果',level:3,color:'#123456'},
+      {id:'duplicate-leaf',parent:'duplicate',name:'重名分支成果',level:3,color:'#654321'},
+    );
+    const user=userEvent.setup();render(<Harness/>);
+    await user.click(screen.getByRole('button',{name:'新建项目'}));
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
+    await user.click(trigger);
+    await user.click(screen.getAllByRole('option',{name:'采集 / 三维陆上常规采集'})[1]);
+    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).toHaveTextContent(/^重名分支成果$/);
+    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'})).not.toBeInTheDocument();
+    await user.type(within(modal).getByRole('searchbox',{name:'搜索项目类型'}),'原始分支成果');
+    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).not.toBeInTheDocument();
+    await user.click(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'}));
+    expect(trigger).toHaveTextContent('采集 / 三维陆上常规采集 / 原始分支成果');
+    await user.click(trigger);
+    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'})).toHaveAttribute('aria-selected','true');
+    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).not.toBeInTheDocument();
   });
 });

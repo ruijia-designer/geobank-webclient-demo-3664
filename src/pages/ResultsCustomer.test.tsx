@@ -157,19 +157,51 @@ describe('成果页本轮客户流程',()=>{
   expect(getDownloadSummary('current')).toMatchObject({count:0,totalBytes:0,users:0});expect(bytesLabel(0)).toBe('0 B');
   render(<Harness/>);expect(screen.getByText('成果完整度详情')).toBeVisible();expect(screen.getByText('最近数据下载动态')).toBeVisible();expect(screen.getByText('暂无下载记录')).toBeVisible();
  });
- it('完整度表格移除类别与状态列，仅有文件的目录显示数量与大小',()=>{
+ it('完整度明细仅展示实际有文件的目录，保留全部目录的完整度统计',()=>{
   render(<Harness/>);
   const table=screen.getByRole('table',{name:'成果完整度明细'});
   expect(within(table).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['名称','数量','大小','备注']);
+  expect(within(table).getAllByRole('button').map(button=>button.textContent)).toEqual(['测井数据','地层厚度图','项目成果文档']);
   const row=within(table).getByRole('button',{name:'测井数据'}).closest('tr')!;
   const wellFiles=INITIAL_RESULT_FILES.filter(file=>file.directory==='测井数据');
   expect(within(row).getAllByRole('cell').map(cell=>cell.textContent)).toEqual(['测井数据','18',bytesLabel(wellFiles.reduce((sum,file)=>sum+parseFileBytes(file.size),0)),'—']);
   for(const name of ['井位坐标、轨迹','岩芯','时深关系']){
-   const emptyRow=within(table).getByRole('button',{name}).closest('tr')!;
-   expect(within(emptyRow).getAllByRole('cell').slice(1,3).map(cell=>cell.textContent)).toEqual(['-','-']);
+   expect(within(table).queryByRole('button',{name})).not.toBeInTheDocument();
+   expect(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name})).toBeVisible();
   }
+  const fullSummary=getResultSummary(getResultDirectories(CURRENT_PROJECT),INITIAL_RESULT_FILES);
+  const completeness=within(table.closest('section')!);
+  expect(completeness.getByText('已录入 '+fullSummary.ready)).toBeVisible();
+  expect(completeness.getByText('未录入 '+fullSummary.pending)).toBeVisible();
+  expect(completeness.getByText('无需录入 '+fullSummary.neutral)).toBeVisible();
+  expect(completeness.getByRole('progressbar',{name:'成果完整度'})).toHaveAttribute('value',String(fullSummary.percent));
   const summary=getResultSummary(getResultDirectories(CURRENT_PROJECT),[{id:'precise',name:'precise.las',format:'las',directory:'测井数据',size:'1.46 KB',bytes:1500,user:'Demo',uploaded:'2026-10-18'}]);
   expect(summary.totalBytes).toBe(1500);expect(summary.entries.find(entry=>entry.name==='测井数据')).toMatchObject({count:1,totalBytes:1500,status:'ready'});
+ });
+ it('完整度明细全部无文件时显示清晰空态，目录树和状态统计仍保留',()=>{
+  resultFilesCache.current=[];
+  render(<Harness/>);
+  const table=screen.getByRole('table',{name:'成果完整度明细'});
+  expect(within(table).getAllByRole('columnheader').map(header=>header.textContent)).toEqual(['名称','数量','大小','备注']);
+  expect(within(table).getByText('暂无已录入成果')).toBeVisible();
+  expect(within(table).queryByRole('button')).not.toBeInTheDocument();
+  const directory=within(screen.getByRole('navigation',{name:'成果目录'}));
+  for(const name of ['测井数据','井位坐标、轨迹','岩芯','时深关系'])expect(directory.getByRole('button',{name})).toBeVisible();
+  const summary=getResultSummary(getResultDirectories(CURRENT_PROJECT),[]);
+  const completeness=within(table.closest('section')!);
+  expect(completeness.getByText('已录入 '+summary.ready)).toBeVisible();
+  expect(completeness.getByText('未录入 '+summary.pending)).toBeVisible();
+  expect(completeness.getByText('无需录入 '+summary.neutral)).toBeVisible();
+  expect(completeness.getByRole('progressbar',{name:'成果完整度'})).toHaveAttribute('value',String(summary.percent));
+ });
+ it('存在实际零字节文件的目录仍显示数量和大小',()=>{
+  resultFilesCache.current=[{...INITIAL_RESULT_FILES[0],size:'0 B',bytes:0}];
+  render(<Harness/>);
+  const table=screen.getByRole('table',{name:'成果完整度明细'});
+  const row=within(table).getByRole('button',{name:'测井数据'}).closest('tr')!;
+  expect(within(table).getAllByRole('button')).toHaveLength(1);
+  expect(within(row).getAllByRole('cell').map(cell=>cell.textContent)).toEqual(['测井数据','1','0 B','—']);
+  expect(within(table).queryByText('暂无已录入成果')).not.toBeInTheDocument();
  });
  it('新建分类项目没有文件或录入记录时保持零完整度',()=>{
   const project={...CURRENT_PROJECT,id:'created-customer',name:'新建解释项目',typeId:'interpretation',type:'解释'} as Project;

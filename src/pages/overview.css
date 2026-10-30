@@ -10,8 +10,7 @@
 .project-stripe-type{flex:1;min-height:0;background:currentColor}
 .type-options{max-height:290px;overflow-y:auto;top:100%;margin-top:4px}
 .type-options button{display:flex;align-items:center;gap:8px;min-height:40px;height:auto;padding:10px 12px;white-space:normal}
-.type-options button:disabled{opacity:1;color:var(--ink);background:#f5f8fa;font-weight:600;cursor:default}
-.type-options i{width:9px;height:9px;border-radius:2px;flex:none}
+.type-options i{width:7px;height:24px;border-radius:3px;flex:none}
 .select-trigger{gap:10px;text-align:left}.select-trigger svg{flex:none}
 
 /* Fixed positioning escapes the modal body scroll clip and flips above when needed. */
@@ -20,9 +19,20 @@
 .type-options-search:focus-within{border-color:var(--blue);box-shadow:0 0 0 2px #0a6f9e14}
 .type-options-search svg{flex:none}
 .type-picker .type-options-search input{height:34px;border:0;padding:0;background:transparent;outline:none;font-size:14px}
-.type-options-list{min-height:0;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid #e0e8ed}
+.type-options-list{min-height:0;overscroll-behavior:contain;border-top:1px solid #e0e8ed}
+.type-options-columns{display:flex;flex:1;overflow-x:auto;overflow-y:hidden}
+.type-options-column{flex:1;min-width:170px;overflow-y:auto;overscroll-behavior:contain;padding:4px 0}
+.type-options-column:first-child{flex:0 0 30%;min-width:132px;max-width:180px;background:#f7fafb}
+.type-options-column+.type-options-column{border-left:1px solid #e0e8ed}
+.type-options-column button{min-height:40px;padding:8px 14px;gap:11px;background:transparent;color:#435e70}
+.type-options-column button>span{flex:1;min-width:0;line-height:20px;overflow-wrap:anywhere}
+.type-options-column button>svg{flex:none;margin-left:auto;color:#8aa8b8}
+.type-options-column:first-child button{color:var(--ink)}
+.type-options-column button.active-branch{background:#eaf5f9;color:var(--blue);font-weight:600}
+.type-options-column button.active-branch>svg,.type-options-column button[aria-selected=true]>svg{color:var(--blue)}
+.type-options-column button:focus-visible{outline:2px solid #67b6d7;outline-offset:-2px}
 .type-options button[aria-selected=true]{background:#eaf5f9;color:var(--blue);font-weight:600}
-.type-options-empty{margin:0;padding:22px 12px;color:var(--muted);text-align:center;font-size:14px}
+.type-options-empty{width:100%;margin:0;padding:22px 12px;color:var(--muted);text-align:center;font-size:14px}
 
 .project-archive-icon{display:flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:6px;border-radius:4px;background:#e8f2f7;color:#277DA8;transition:background-color .15s,color .15s,box-shadow .15s}
 

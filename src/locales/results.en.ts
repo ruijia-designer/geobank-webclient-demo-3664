@@ -1,4 +1,11 @@
 const resultsEnglish:Record<string,string>={
+ '暂无已录入成果':'No recorded results yet',
+ '所属目录':'Folder','暂无可预览内容':'No content available to preview',
+ '暂不支持此格式的内容预览':'Content preview is not supported for this format',
+ '无法预览此文件内容':'Unable to preview this file',
+ '正在读取文件内容…':'Reading file contents…',
+ '文件较大，仅预览前 1 MiB 内容。':'This file is large. Only the first 1 MiB is shown.',
+ '文件文本内容':'File text content','文件内容为空':'This file is empty','PDF文件预览':'PDF file preview',
  '归档操作':'Archive actions','申请归档':'Request archiving','查看归档申请':'View archiving request','归档审批中':'Archiving pending',
  '提交项目归档审批':'Submit project archiving request','项目归档申请详情':'Project archiving request details','提交审批':'Submit for approval',
  '文件总大小':'Total file size','文件个数':'File count','共 {count} 个文件':'{count} files','理由':'Reason','请输入理由…':'Enter a reason…',

@@ -1,0 +1,18 @@
+.result-file-preview{padding:24px;min-height:100%;color:#435e70;background:#f4f8fa}
+.result-file-preview-heading{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
+.result-file-preview-heading>svg{flex:none;color:var(--blue);margin-top:2px}
+.result-file-preview-heading h2{margin:0;min-width:0;font-size:18px;line-height:1.5;overflow-wrap:anywhere;color:var(--ink)}
+.result-file-preview-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:0;margin:0 0 20px;border:1px solid var(--border);border-radius:6px;background:#fff;overflow:hidden}
+.result-file-preview-facts>div{display:flex;min-width:0;padding:10px 12px;gap:12px;border-bottom:1px solid #e8eef2;font-size:13px;line-height:1.6}
+.result-file-preview-facts dt{flex:0 0 62px;color:var(--muted)}
+.result-file-preview-facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.result-file-preview-content{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.result-file-preview-empty{display:flex;min-height:260px;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px 16px;text-align:center;color:var(--muted)}
+.result-file-preview-empty>svg{color:#88aabf}
+.result-file-preview-empty p{margin:0;font-size:14px}
+.result-file-preview-loading{padding:30px 16px;margin:0;color:var(--muted);font-size:14px;text-align:center}
+.result-file-preview-notice{margin:0;padding:10px 16px;background:#edf6fa;border-bottom:1px solid #dce9f0;color:#476d82;font-size:12px;line-height:1.6}
+.result-file-preview-text{margin:0;padding:18px;max-height:68vh;overflow:auto;white-space:pre;font-size:13px;line-height:1.7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:4}
+.result-file-preview-image{display:block;width:100%;height:auto;max-height:68vh;object-fit:contain;padding:14px}
+.result-file-preview-pdf{display:block;width:100%;height:65vh;min-height:360px;border:0;background:#fff}
+@media(max-width:1350px){.result-file-preview{padding:18px 16px}.result-file-preview-heading h2{font-size:16px}}

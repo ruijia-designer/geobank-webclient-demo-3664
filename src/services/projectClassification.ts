@@ -5,6 +5,7 @@ export interface ProjectTypeOption {
   id: string;
   name: string;
   path: string[];
+  parentId?: string;
   color: string;
   level: number;
   leaf: boolean;
@@ -21,7 +22,8 @@ export function getProjectTypeOptions(): ProjectTypeOption[] {
       path.unshift(current.name);
       current = rows.find(parent => parent.id === current!.parent);
     }
-    return { id: row.id, name: row.name, path, color: String(row.color || '#647C97'),
+    return { id: row.id, name: row.name, path, parentId: rows.some(parent=>parent.id===row.parent)?row.parent:undefined,
+      color: String(row.color || '#647C97'),
       level: path.length, leaf: !rows.some(child => child.parent === row.id) };
   });
 }
