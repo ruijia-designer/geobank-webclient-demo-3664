@@ -15,11 +15,11 @@ beforeEach(() => { vi.clearAllMocks(); sessionStorage.removeItem('geobank-demo-l
 afterEach(() => { sessionStorage.removeItem('geobank-demo-locale'); });
 
 describe('成果页关联项目', () => {
-  it('仅当前演示项目使用三条现有样例，并明确标记演示关联，不修改项目关系', () => {
+  it('当前演示项目保留三条现有样例，不显示演示标签且不修改项目关系', () => {
     const before = JSON.stringify([CURRENT_PROJECT, PROJECTS]);
     render(<RelatedProjects project={CURRENT_PROJECT} projects={PROJECTS} role="admin" onOpen={onOpen}/>);
     expect(screen.getByRole('heading', { name: '关联项目' })).toBeVisible();
-    expect(screen.getByText('演示关联')).toBeVisible();
+    expect(screen.queryByText('演示关联')).not.toBeInTheDocument();
     expect(screen.getByText('3 个项目')).toBeVisible();
     const items = screen.getAllByRole('listitem');
     expect(items.map(item => within(item).getByRole('heading').textContent)).toEqual(

@@ -1,0 +1,13 @@
+
+> geobank-frontend@1.0.0 test
+> vitest run --reporter=dot
+
+
+ RUN  v4.0.18 /Users/lurj/Desktop/测试网址/geobank-github
+
+······································································································································································································································
+
+ Test Files  28 passed (28)
+      Tests  230 passed (230)
+   Start at  20:14:21
+   Duration  15.25s (transform 3.10s, setup 4.92s, import 10.94s, tests 110.81s, environment 18.44s)
