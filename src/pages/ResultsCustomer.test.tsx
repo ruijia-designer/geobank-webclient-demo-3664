@@ -52,10 +52,47 @@ describe('成果页本轮客户流程',()=>{
   expect(screen.getByText('已选 1 个文件')).toBeVisible();
   const directory=within(screen.getByRole('navigation',{name:'成果目录'}));
   await user.click(directory.getByRole('button',{name:'时深关系'}));
-  expect(screen.getByRole('button',{name:/^删除$/})).toBeDisabled();
+  expect(screen.queryByRole('button',{name:/^删除$/})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
   await user.click(directory.getByRole('button',{name:'测井数据'}));
   expect(screen.getByText('第 1–50 条，共 51 条')).toBeVisible();
   expect(screen.getByRole('checkbox',{name:'选择page-0.las'})).not.toBeChecked();
+ });
+
+ it('当前目录总大小跨页统计，取消及删除最后一项选择后隐藏批量操作',async()=>{
+  resultFilesCache.current=[
+   ...Array.from({length:50},(_,i)=>({...INITIAL_RESULT_FILES[0],id:'small-'+i,name:'small-'+i+'.las',size:'1 KB',bytes:1024})),
+   {...INITIAL_RESULT_FILES[0],id:'large',name:'large.las',size:'1.00 MB',bytes:1024*1024+512},
+   {...INITIAL_RESULT_FILES[0],id:'other',name:'other.dat',directory:'时深关系',size:'1 GB'},
+  ];
+  const user=userEvent.setup();const {container}=render(<Harness section="wells"/>);
+  const heading=within(container.querySelector('.files-heading') as HTMLElement);
+  expect(heading.getByText('51个文件')).toBeVisible();
+  expect(heading.getByText('总大小 1.05 MB')).toBeVisible();
+  expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
+  expect(heading.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
+  await user.click(screen.getByRole('checkbox',{name:'选择small-0.las'}));
+  expect(heading.getByRole('button',{name:'删除'})).toBeEnabled();
+  await user.click(heading.getByRole('button',{name:'取消'}));
+  expect(screen.getByRole('checkbox',{name:'选择small-0.las'})).not.toBeChecked();
+  expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button',{name:'下一页'}));
+  expect(heading.getByText('总大小 1.05 MB')).toBeVisible();
+  await user.click(screen.getByRole('checkbox',{name:'选择large.las'}));
+  await user.click(heading.getByRole('button',{name:'删除'}));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'确认删除'}));
+  expect(heading.getByText('50个文件')).toBeVisible();
+  expect(heading.getByText('总大小 50.00 KB')).toBeVisible();
+  expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
+  expect(heading.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
+  await user.click(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name:'岩芯'}));
+  expect(heading.getByText('总大小 0 B')).toBeVisible();
+  await user.click(heading.getByRole('button',{name:'上传文件'}));
+  await user.click(screen.getByRole('button',{name:'本地上传'}));
+  await user.upload(screen.getByLabelText('选择本地文件'),new File(['abc'],'core.txt'));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'上传'}));
+  expect(heading.getByText('1个文件')).toBeVisible();
+  expect(heading.getByText('总大小 3 B')).toBeVisible();
  });
 
  it('右侧最大化均隐藏顶部上传成果，其他布局显示且目录上传独立',async()=>{

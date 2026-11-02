@@ -3,7 +3,9 @@ export type Role='admin'|'ordinary';
 export type Page='overview'|'results'|'search'|'approval'|'baseline'|'admin'|'login'|'statistics';
 export interface ProjectMapDetails {
  fullFoldAreaKm2?:number;
- processing?:{shotCount?:number;binSizeMeters?:[number,number];aspectRatio?:number;maxOffsetKm?:number};
+ acquisition?:{shotCount?:number;coverageCount?:number;binSizeMeters?:[number,number];maxOffsetKm?:number;shotTraceDensity?:number};
+ processing?:{shotCount?:number;rawDataTb?:number;recordLengthMs?:number;sampleRateMs?:number;binSizeMeters?:[number,number];aspectRatio?:number;maxOffsetKm?:number};
+ interpretation?:{coverageCount?:number;binSizeMeters?:[number,number];aspectRatio?:number;maxOffsetKm?:number};
  relatedProjectIds?:string[];
 }
 export interface Project { id:string;name:string;year:string;basin:string;type:string;area:string;point:[number,number];readable:boolean;archived:boolean;dataId?:string;typeId?:string;typePath?:string[];mapDetails?:ProjectMapDetails }

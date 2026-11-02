@@ -4,6 +4,7 @@ import type { Project, Role } from '../types';
 import { useTranslation } from '../i18n';
 import { canRead, visibleProjects } from '../services/demo';
 import { projectCardClassification } from '../services/projectClassification';
+import { projectBriefSummary } from '../services/projectBriefSummary';
 import './RelatedProjects.css';
 
 const DEMO_RELATED_IDS = ['1', '4', '2'];
@@ -34,6 +35,7 @@ export function RelatedProjects({ project, projects, role, onOpen }: {
     </header>
     {related.length ? <ul className="related-projects-list">{related.map(item => {
       const classification = projectCardClassification(item);
+      const summary = projectBriefSummary(item, t);
       const readable = canRead(item, role);
       return <li key={item.id} className="related-project-card">
         <div className="related-project-card-labels">
@@ -44,11 +46,17 @@ export function RelatedProjects({ project, projects, role, onOpen }: {
           </span>
         </div>
         <div className="related-project-card-details">
-          <dl className="related-project-facts">
-            <div><dt>{t('年度')}</dt><dd>{item.year || '—'}</dd></div>
-            <div><dt>{t('所属盆地')}</dt><dd>{item.basin || '—'}</dd></div>
-            <div><dt>{t('工区面积（km²）')}</dt><dd>{item.area || '—'}</dd></div>
-          </dl>
+          <div className="related-project-summary">
+            <dl className="related-project-facts">
+              {summary.overview.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+            </dl>
+            {summary.parameterTitle && <div className="related-project-parameters">
+              <h3>{t(summary.parameterTitle)}</h3>
+              <dl className="related-project-facts">
+                {summary.parameters.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+              </dl>
+            </div>}
+          </div>
           {readable && <button type="button" className="related-project-open"
             aria-label={t('查阅项目成果：{name}', { name: item.name })} onClick={() => onOpen(item)}>
             {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>

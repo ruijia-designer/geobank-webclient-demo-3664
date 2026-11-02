@@ -1,4 +1,6 @@
 const resultsEnglish:Record<string,string>={
+ '采集参数':'Acquisition parameters','解释参数':'Interpretation parameters','覆盖次数':'Fold coverage',
+ '炮道密度':'Shot-trace density','原始数据量':'Raw data volume','记录长度':'Record length','采样率':'Sample rate','横纵比':'Aspect ratio','次':'times',
  '成果选项卡':'Result tabs','向左滚动选项卡':'Scroll tabs left','向右滚动选项卡':'Scroll tabs right',
  '暂无已录入成果':'No recorded results yet',
  '所属目录':'Folder','暂无可预览内容':'No content available to preview',
@@ -9,7 +11,7 @@ const resultsEnglish:Record<string,string>={
  '文件文本内容':'File text content','文件内容为空':'This file is empty','PDF文件预览':'PDF file preview',
  '归档操作':'Archive actions','申请归档':'Request archiving','查看归档申请':'View archiving request','归档审批中':'Archiving pending',
  '提交项目归档审批':'Submit project archiving request','项目归档申请详情':'Project archiving request details','提交审批':'Submit for approval',
- '文件总大小':'Total file size','文件个数':'File count','共 {count} 个文件':'{count} files','理由':'Reason','请输入理由…':'Enter a reason…',
+ '总大小':'Total size','文件总大小':'Total file size','文件个数':'File count','共 {count} 个文件':'{count} files','理由':'Reason','请输入理由…':'Enter a reason…',
  '审批流程':'Approval workflow','请输入申请理由':'Enter a reason for this request','归档申请已提交（本地演示）':'Archiving request submitted (local demo)',
  '{count} 条数据':'{count} records',
  '成果文件列表':'Result files','文件分页':'File pagination','每页行数':'Rows per page','全选当前页文件':'Select all files on this page',

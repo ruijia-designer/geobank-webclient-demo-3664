@@ -1,5 +1,5 @@
 .results-related.related-projects {
-  padding: 10px 20px 20px;
+  padding: 0 20px 20px;
   container-type: inline-size;
   background: #f7fafc;
 }
@@ -14,15 +14,15 @@
 
 .related-projects-heading {
   justify-content: space-between;
-  min-height: 32px;
-  margin-bottom: 10px;
+  min-height: var(--results-heading-height);
+  margin-bottom: 0;
 }
 
 .related-projects-heading h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--results-heading-font-size);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--results-heading-line-height);
   color: var(--ink, #1b3c52);
 }
 
@@ -103,12 +103,33 @@
 
 .related-project-card-details {
   display: grid;
-  grid-template-columns: minmax(0, .65fr) minmax(0, 1fr) minmax(0, 1fr) minmax(92px, max-content);
+  grid-template-columns: minmax(0, 1fr) minmax(92px, max-content);
   align-items: end;
   gap: 12px;
 }
 
-.related-project-facts { display: contents; }
+.related-project-summary { min-width: 0; }
+.related-project-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.related-project-parameters {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e8eef3;
+}
+.related-project-parameters h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.related-project-parameters .related-project-facts {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
 .related-project-card-details > .related-project-open { justify-self: end; }
 
 .related-project-facts > div { min-width: 0; }
@@ -147,10 +168,11 @@
 .related-projects-empty { margin-top: 24px; }
 
 @media (max-width: 1450px) {
-  .results-related.related-projects { padding: 10px 16px 16px; }
+  .results-related.related-projects { padding: 0 16px 16px; }
 }
 
 @container (max-width: 560px) {
-  .related-project-card-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .related-project-card-details > .related-project-open { grid-column: 2; grid-row: 2; }
+  .related-project-card-details { grid-template-columns: minmax(0, 1fr); }
+  .related-project-facts,
+  .related-project-parameters .related-project-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
