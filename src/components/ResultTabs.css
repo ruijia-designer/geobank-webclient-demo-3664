@@ -34,7 +34,6 @@
 @container (max-width:54px) {
   .result-tabstrip .result-tab > button:first-child span { display:none; }
   .result-tabstrip .result-tab > button:first-child { justify-content:center; gap:0; padding:0; }
-  .result-tabstrip .result-tab:not(.active).is-closable:hover > button:first-child svg { visibility:hidden; }
-  .result-tabstrip .result-tab:not(.active) > .tab-close { position:absolute; left:50%; transform:translateX(-50%); margin:0; background:#e5eef4; }
+  .result-tabstrip .result-tab:not(.active) > .tab-close { display:none; }
 }
 @media (prefers-reduced-motion:reduce) { .result-tabstrip .result-tab { transition:none; } }
