@@ -1,5 +1,5 @@
 const resultsEnglish:Record<string,string>={
- '成果选项卡':'Result tabs','已打开的选项卡':'Open tabs','向左滚动选项卡':'Scroll tabs left','向右滚动选项卡':'Scroll tabs right',
+ '成果选项卡':'Result tabs','向左滚动选项卡':'Scroll tabs left','向右滚动选项卡':'Scroll tabs right',
  '暂无已录入成果':'No recorded results yet',
  '所属目录':'Folder','暂无可预览内容':'No content available to preview',
  '暂不支持此格式的内容预览':'Content preview is not supported for this format',
