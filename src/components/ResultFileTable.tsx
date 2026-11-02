@@ -53,7 +53,7 @@ export function ResultFileTable({ files, selected, onSelect, onView, onFields, o
           <td>{offset + index + 1}</td>
           <td><button className="file-name" onClick={() => onView(file)}><FileText size={19}/>{file.name}</button></td>
           <td>{file.format}</td><td>{file.size}</td><td>{file.uploaded}</td><td>{file.user}</td>
-          <td><span className="badge success">{t('• 上传完成')}</span></td>
+          <td><span className="badge success">{t('上传完成')}</span></td>
           <td><div className="row-actions">
             <button className="icon-button" title={t('查看')} aria-label={t('查看{file}', { file: file.name })} onClick={() => onView(file)}><Eye size={18}/></button>
             <button className="icon-button" title={t('扩展字段')} aria-label={t('扩展字段{file}', { file: file.name })} onClick={() => onFields(file)}><ListPlus size={18}/></button>

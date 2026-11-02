@@ -49,7 +49,7 @@ describe('成果文件右侧标签预览',()=>{
   it.each(['眼睛按钮','文件名'])('%s 打开正确文件的右侧预览和元数据，不出现查看弹窗',async entry=>{
     const user=userEvent.setup();const {container}=render(<Harness/>);
     await user.click(fileTable().getByRole('button',{name:entry==='眼睛按钮'?'查看'+firstFile.name:firstFile.name}));
-    expect(tabbar(container).getByRole('button',{name:firstFile.name})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).getByRole('tab',{name:firstFile.name})).toHaveAttribute('aria-current','page');
     expect(within(container.querySelector('.result-right-content') as HTMLElement).getByRole('heading',{name:firstFile.name})).toBeVisible();
     expect(previewFacts(firstFile.name)).toEqual(['LAS','测井数据',projectA.name,'1 KB',firstFile.uploaded,firstFile.user]);
     expect(screen.queryByRole('dialog',{name:'查看文件'})).not.toBeInTheDocument();
@@ -63,9 +63,9 @@ describe('成果文件右侧标签预览',()=>{
     const files=fileTable().getAllByRole('button',{name:firstFile.name});
     await user.click(files[0]);
     await user.click(files[0]);
-    expect(tabbar(container).getAllByRole('button',{name:firstFile.name})).toHaveLength(1);
+    expect(tabbar(container).getAllByRole('tab',{name:firstFile.name})).toHaveLength(1);
     await user.click(files[1]);
-    const tabs=tabbar(container).getAllByRole('button',{name:firstFile.name});
+    const tabs=tabbar(container).getAllByRole('tab',{name:firstFile.name});
     expect(tabs).toHaveLength(2);
     expect(tabs[1]).toHaveAttribute('aria-current','page');
     expect(previewFacts(firstFile.name)).toContain(secondFile.user);
@@ -81,12 +81,12 @@ describe('成果文件右侧标签预览',()=>{
     await user.click(fileTable().getByRole('button',{name:firstFile.name}));
     await user.click(fileTable().getByRole('button',{name:secondFile.name}));
     await user.click(tabbar(container).getByRole('button',{name:'关闭'+secondFile.name}));
-    expect(tabbar(container).queryByRole('button',{name:secondFile.name})).not.toBeInTheDocument();
-    expect(tabbar(container).getByRole('button',{name:firstFile.name})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).queryByRole('tab',{name:secondFile.name})).not.toBeInTheDocument();
+    expect(tabbar(container).getByRole('tab',{name:firstFile.name})).toHaveAttribute('aria-current','page');
     expect(screen.getByRole('region',{name:firstFile.name})).toBeVisible();
     await user.click(fileTable().getByRole('button',{name:'查看'+secondFile.name}));
-    expect(tabbar(container).getAllByRole('button',{name:secondFile.name})).toHaveLength(1);
-    expect(tabbar(container).getByRole('button',{name:secondFile.name})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).getAllByRole('tab',{name:secondFile.name})).toHaveLength(1);
+    expect(tabbar(container).getByRole('tab',{name:secondFile.name})).toHaveAttribute('aria-current','page');
     expect(screen.getByRole('region',{name:secondFile.name})).toBeVisible();
   });
 
@@ -99,24 +99,24 @@ describe('成果文件右侧标签预览',()=>{
     expect(lastState.rightMaximized).toBe(false);
     expect(screen.getByRole('table',{name:'成果文件列表'})).toBeVisible();
     expect(screen.getByRole('region',{name:firstFile.name})).toBeVisible();
-    expect(tabbar(container).getByRole('button',{name:firstFile.name})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).getByRole('tab',{name:firstFile.name})).toHaveAttribute('aria-current','page');
   });
 
   it('切换项目清除文件标签，同 ID 文件不会串用其他项目内容',async()=>{
     const user=userEvent.setup();const {container}=render(<Harness/>);
     await user.click(fileTable().getByRole('button',{name:firstFile.name}));
     await selectProject(user,projectA,projectB);
-    expect(tabbar(container).queryByRole('button',{name:firstFile.name})).not.toBeInTheDocument();
-    expect(tabbar(container).getByRole('button',{name:'成果概览'})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).queryByRole('tab',{name:firstFile.name})).not.toBeInTheDocument();
+    expect(tabbar(container).getByRole('tab',{name:'成果概览'})).toHaveAttribute('aria-current','page');
     expect(screen.queryByRole('region',{name:firstFile.name})).not.toBeInTheDocument();
     await user.click(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name:'测井数据'}));
     await user.click(fileTable().getByRole('button',{name:'项目乙独立文件.las'}));
     expect(previewFacts('项目乙独立文件.las')).toContain(projectB.name);
     expect(previewFacts('项目乙独立文件.las')).toContain('项目乙上传人');
     await selectProject(user,projectB,projectA);
-    expect(tabbar(container).queryByRole('button',{name:'项目乙独立文件.las'})).not.toBeInTheDocument();
-    expect(tabbar(container).queryByRole('button',{name:firstFile.name})).not.toBeInTheDocument();
-    expect(tabbar(container).getByRole('button',{name:'成果概览'})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).queryByRole('tab',{name:'项目乙独立文件.las'})).not.toBeInTheDocument();
+    expect(tabbar(container).queryByRole('tab',{name:firstFile.name})).not.toBeInTheDocument();
+    expect(tabbar(container).getByRole('tab',{name:'成果概览'})).toHaveAttribute('aria-current','page');
   });
 
   it('删除正在预览的文件关闭对应标签并返回成果概览',async()=>{
@@ -124,8 +124,8 @@ describe('成果文件右侧标签预览',()=>{
     await user.click(fileTable().getByRole('button',{name:firstFile.name}));
     await user.click(fileTable().getByRole('button',{name:'删除'+firstFile.name}));
     await user.click(within(screen.getByRole('dialog',{name:'删除文件'})).getByRole('button',{name:'确认删除'}));
-    expect(tabbar(container).queryByRole('button',{name:firstFile.name})).not.toBeInTheDocument();
-    expect(tabbar(container).getByRole('button',{name:'成果概览'})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).queryByRole('tab',{name:firstFile.name})).not.toBeInTheDocument();
+    expect(tabbar(container).getByRole('tab',{name:'成果概览'})).toHaveAttribute('aria-current','page');
     expect(screen.queryByRole('region',{name:firstFile.name})).not.toBeInTheDocument();
     expect(fileTable().queryByRole('button',{name:firstFile.name})).not.toBeInTheDocument();
     expect(resultFilesCache[projectA.id].map(file=>file.id)).toEqual([secondFile.id]);
@@ -145,11 +145,11 @@ describe('成果文件右侧标签预览',()=>{
     await user.click(fileTable().getByRole('button',{name:'实测记录.txt'}));
     expect(await screen.findByLabelText('文件文本内容')).toHaveTextContent('井号: TEST-2026');
     expect(screen.getByLabelText('文件文本内容').textContent).toBe(content);
-    expect(tabbar(container).getByRole('button',{name:'实测记录.txt'})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).getByRole('tab',{name:'实测记录.txt'})).toHaveAttribute('aria-current','page');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await user.click(fileTable().getByRole('button',{name:'删除实测记录.txt'}));
     await user.click(within(screen.getByRole('dialog',{name:'删除文件'})).getByRole('button',{name:'确认删除'}));
     expect(getResultFileSource(newProject.id,uploaded.id)).toBeUndefined();
-    expect(tabbar(container).getByRole('button',{name:'成果概览'})).toHaveAttribute('aria-current','page');
+    expect(tabbar(container).getByRole('tab',{name:'成果概览'})).toHaveAttribute('aria-current','page');
   });
 });

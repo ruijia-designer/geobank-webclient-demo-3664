@@ -65,9 +65,9 @@ describe('顶部中英文切换',()=>{
     expect(content.scrollTop).toBe(240);
     expect(screen.getByRole('heading',{name:'Results overview'})).toBeInTheDocument();
     expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button',{name:'Integrated maps'}));
+    await user.click(screen.getByRole('tab',{name:'Integrated maps'}));
     expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
-    await user.click(screen.getAllByRole('button',{name:'设计文档.doc'})[0]);
+    await user.click(screen.getAllByRole('tab',{name:'设计文档.doc'})[0]);
     expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:'Restore'}));
     expect(screen.getByRole('button',{name:'Upload results'})).toBeInTheDocument();

@@ -66,11 +66,11 @@ describe('成果页本轮客户流程',()=>{
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(resultFilesCache.current).toBeUndefined();
   await user.click(screen.getByRole('button',{name:'最大化当前右侧栏目'}));
   expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button',{name:'综合成图'}));
+  await user.click(screen.getByRole('tab',{name:'综合成图'}));
   expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button',{name:'成果概览'}));
+  await user.click(screen.getByRole('tab',{name:'成果概览'}));
   expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button',{name:'综合成图'}));
+  await user.click(screen.getByRole('tab',{name:'综合成图'}));
   await user.click(screen.getByRole('button',{name:'隐藏成果视图'}));
   expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
   expect(screen.queryByRole('button',{name:'最大化当前右侧栏目'})).not.toBeInTheDocument();
@@ -133,7 +133,7 @@ describe('成果页本轮客户流程',()=>{
  });
  it('独立最大化与隐藏成果视图可恢复原右栏状态及页签',async()=>{
   const user=userEvent.setup();const {container}=render(<Harness/>);
-  await user.click(screen.getByRole('button',{name:'综合成图'}));
+  await user.click(screen.getByRole('tab',{name:'综合成图'}));
   await user.click(screen.getByRole('button',{name:'最大化当前右侧栏目'}));
   const right=container.querySelector('.result-right-content') as HTMLElement;right.scrollTop=219;
   await user.click(screen.getByRole('button',{name:'隐藏成果视图'}));

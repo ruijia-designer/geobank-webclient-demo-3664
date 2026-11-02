@@ -120,7 +120,7 @@ describe('成果页三栏真实拖拽流程', () => {
     drag(divider('information'), 30);
     const split = sizes(container);
     const ratio = split.information / (1280 - split.directory);
-    await user.click(screen.getByRole('button', { name: '综合成图' }));
+    await user.click(screen.getByRole('tab', { name: '综合成图' }));
     await user.click(screen.getByRole('button', { name: '最大化当前右侧栏目' }));
     expect(screen.queryAllByRole('separator')).toHaveLength(0);
     expect(screen.queryByRole('navigation', {name:'成果目录'})).not.toBeInTheDocument();
@@ -152,7 +152,7 @@ describe('成果页三栏真实拖拽流程', () => {
     drag(divider('directory'), 20);
     drag(divider('information'), 20);
     const resized = sizes(container);
-    await user.click(screen.getByRole('button', { name: '综合成图' }));
+    await user.click(screen.getByRole('tab', { name: '综合成图' }));
     await user.click(screen.getByRole('button', { name: '关闭B1-1.las' }));
     expect(sizes(container)).toEqual(resized);
     await user.click(container.querySelector('.project-trigger')!);
@@ -160,7 +160,7 @@ describe('成果页三栏真实拖拽流程', () => {
     expect(lastApi.state.currentProjectId).toBe('0');
     expect(lastApi.state.resultTab).toBe('gis');
     expect(sizes(container)).toEqual(resized);
-    expect(screen.queryByRole('button', { name: 'B1-1.las' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'B1-1.las' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '测井数据' }));
     expect(layout(container)).toHaveClass('layout-split');
     expect(screen.getAllByRole('separator')).toHaveLength(2);
@@ -192,7 +192,7 @@ describe('成果页三栏真实拖拽流程', () => {
       expect(lastApi.state.informationMaximized).toBe(false);
     }
 
-    await user.click(screen.getByRole('button', { name: 'B1-1.las' }));
+    await user.click(screen.getByRole('tab', { name: 'B1-1.las' }));
     await user.click(directory.getByRole('button', { name: '测井数据' }));
     expect(within(information).getByRole('table', { name: '成果文件列表' })).toBeVisible();
     expect(within(right).getByRole('heading', { name: 'B1-1.las' })).toBeVisible();
