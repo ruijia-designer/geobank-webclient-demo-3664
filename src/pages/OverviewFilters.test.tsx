@@ -68,34 +68,34 @@ describe('盆地搜索多选', () => {
   it('Tab 离开最后一个盆地选项时收起菜单，保持下方控件焦点可见', async () => {
     const user = userEvent.setup();
     render(<OverviewFilters value={{}} basins={['沁水盆地']} role="admin" onApply={vi.fn()} onReset={vi.fn()} onClose={vi.fn()}/>);
-    await user.click(screen.getByRole('button', { name: '选择盆地' }));
+    await user.click(screen.getByRole('button', { name: '选择地区' }));
     screen.getByRole('checkbox', { name: '沁水盆地' }).focus();
     await user.tab();
-    expect(screen.queryByRole('group', { name: '盆地选项' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: '地区选项' })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: '仅显示可查阅项目' })).toHaveFocus();
   });
 
   it('跨搜索保留多选，清空搜索仍选中，标签可单独移除，无结果不丢失选择', async () => {
     const user = userEvent.setup(), onApply = vi.fn();
     render(<OverviewFilters value={{}} basins={['沁水盆地', '鄂尔多斯盆地', '四川盆地']} role="admin" onApply={onApply} onReset={vi.fn()} onClose={vi.fn()}/>);
-    await user.click(screen.getByRole('button', { name: '选择盆地' }));
-    const search = screen.getByRole('textbox', { name: '搜索盆地' });
+    await user.click(screen.getByRole('button', { name: '选择地区' }));
+    const search = screen.getByRole('textbox', { name: '搜索地区' });
     await user.type(search, '沁水');
     expect(screen.queryByRole('checkbox', { name: '鄂尔多斯盆地' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: '沁水盆地' }));
     await user.clear(search); await user.type(search, '鄂尔');
     await user.click(screen.getByRole('checkbox', { name: '鄂尔多斯盆地' }));
-    expect(screen.getByRole('button', { name: '选择盆地' })).toHaveTextContent('已选 2 个盆地');
+    expect(screen.getByRole('button', { name: '选择地区' })).toHaveTextContent('已选 2 个地区');
     await user.clear(search);
     expect(screen.getByRole('checkbox', { name: '沁水盆地' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: '鄂尔多斯盆地' })).toBeChecked();
     await user.type(search, '不存在的盆地');
-    expect(screen.getByText('无匹配盆地')).toBeVisible();
-    expect(within(screen.getByRole('group', { name: '盆地选项' })).queryAllByRole('checkbox')).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: '移除盆地：沁水盆地' }));
-    expect(screen.getByRole('button', { name: '选择盆地' })).toHaveTextContent('已选 1 个盆地');
-    expect(screen.queryByRole('button', { name: '移除盆地：沁水盆地' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '移除盆地：鄂尔多斯盆地' })).toBeInTheDocument();
+    expect(screen.getByText('无匹配地区')).toBeVisible();
+    expect(within(screen.getByRole('group', { name: '地区选项' })).queryAllByRole('checkbox')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: '移除地区：沁水盆地' }));
+    expect(screen.getByRole('button', { name: '选择地区' })).toHaveTextContent('已选 1 个地区');
+    expect(screen.queryByRole('button', { name: '移除地区：沁水盆地' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '移除地区：鄂尔多斯盆地' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '应用筛选' }));
     expect(onApply).toHaveBeenCalledWith({ basin: ['鄂尔多斯盆地'] });
   });
@@ -103,12 +103,12 @@ describe('盆地搜索多选', () => {
   it('键盘打开、Esc返回焦点，外部点击收起且保留选择', async () => {
     const user = userEvent.setup();
     render(<OverviewFilters value={{ basin: ['沁水盆地'] }} basins={['沁水盆地']} role="admin" onApply={vi.fn()} onReset={vi.fn()} onClose={vi.fn()}/>);
-    const trigger = screen.getByRole('button', { name: '选择盆地' });
+    const trigger = screen.getByRole('button', { name: '选择地区' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     trigger.focus(); await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('textbox', { name: '搜索盆地' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: '搜索地区' })).toHaveFocus();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('group', { name: '盆地选项' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: '地区选项' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
     await user.click(trigger); await user.click(screen.getByRole('textbox', { name: '起始年度' }));
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -116,7 +116,7 @@ describe('盆地搜索多选', () => {
     expect(screen.getByRole('checkbox', { name: '沁水盆地' })).toBeChecked();
     await user.click(screen.getByRole('button', { name: '清空选择' }));
     expect(screen.getByRole('checkbox', { name: '沁水盆地' })).not.toBeChecked();
-    expect(screen.queryByRole('button', { name: '移除盆地：沁水盆地' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '移除地区：沁水盆地' })).not.toBeInTheDocument();
   });
 });
 
@@ -128,18 +128,18 @@ describe('概览筛选与项目列表联动', () => {
     expect(screen.queryByRole('button', { name: '重置项目类型' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '筛选项目' }));
     await user.type(screen.getByRole('textbox', { name: '起始年度' }), '2024');
-    await user.click(screen.getByRole('button', { name: '选择盆地' }));
+    await user.click(screen.getByRole('button', { name: '选择地区' }));
     await user.click(screen.getByRole('checkbox', { name: '沁水盆地' }));
     await user.click(screen.getByRole('button', { name: '应用筛选' }));
     expect(projectNames()).toEqual(['西部2025项目']);
     expect(screen.getByText('1 个项目')).toBeVisible();
     await user.click(screen.getByRole('button', { name: '筛选项目' }));
     expect(screen.getByRole('textbox', { name: '起始年度' })).toHaveValue('2024');
-    expect(screen.getByRole('button', { name: '移除盆地：沁水盆地' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '移除地区：沁水盆地' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '重置筛选条件' }));
     expect(api.state.overviewFilters).toEqual({});
     expect(screen.getByRole('textbox', { name: '起始年度' })).toHaveValue('');
-    expect(screen.getByRole('button', { name: '选择盆地' })).toHaveTextContent('全部盆地');
+    expect(screen.getByRole('button', { name: '选择地区' })).toHaveTextContent('全部地区');
     await user.click(screen.getByRole('button', { name: '关闭筛选' }));
     expect(projectNames()).toEqual(projects.map(project => project.name));
   });

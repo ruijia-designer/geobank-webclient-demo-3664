@@ -109,9 +109,9 @@ describe('概览与跨页面流程',()=>{
   await u.click(screen.getByRole('button',{name:'概览'}));
   await u.click(screen.getByRole('button',{name:'新建项目'}));
   const modal=screen.getByRole('dialog',{name:'新建项目'});
-  await u.type(within(modal).getByRole('textbox',{name:'项目名称'}),'验收项目');
-  await u.selectOptions(within(modal).getByRole('combobox',{name:'所属盆地'}),'百色盆地');
-  await u.click(within(modal).getByRole('button',{name:'项目类型'}));
+  await u.type(within(modal).getByRole('textbox',{name:'名称'}),'验收项目');
+  await u.selectOptions(within(modal).getByRole('combobox',{name:'地区'}),'百色盆地');
+  await u.click(within(modal).getByRole('button',{name:'类型'}));
   await u.click(within(modal).getByRole('option',{name:'处理'}));
   await u.click(within(modal).getByRole('option',{name:'处理 / 二维处理'}));
   await u.click(within(modal).getByRole('button',{name:'确定'}));

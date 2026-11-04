@@ -1,12 +1,10 @@
-.result-tabstrip { display:flex; align-items:center; gap:3px; flex:1; min-width:0; height:100%; position:relative; }
-.result-tabstrip .result-tabs { display:flex; align-items:center; gap:3px; flex:1; min-width:0; height:40px; overflow:visible; }
-.result-file-tabs { position:relative; display:flex; align-items:center; gap:3px; flex:1; min-width:0; height:40px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
-.result-file-tabs::-webkit-scrollbar { display:none; }
-.result-tabstrip .result-tab { position:relative; container-type:inline-size; display:flex; align-items:center; flex:0 1 152px; min-width:26px; max-width:240px; height:40px; padding:0; border:0; border-radius:3px; background:#e9f0f4; }
-.result-tabstrip .result-tab:not(.is-closable) { flex:0 0 98px; min-width:98px; }
-.result-tabstrip .result-tab.active.is-closable { min-width:52px; }
+.result-tabstrip { display:flex; align-items:center; justify-content:flex-start; gap:3px; flex:1; min-width:0; height:100%; position:relative; }
+.result-tabstrip .result-tabs { position:relative; display:flex; align-items:center; gap:3px; flex:1; min-width:0; height:40px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+.result-tabstrip .result-tabs::-webkit-scrollbar { display:none; }
+/* Every tab uses the same width, including overview and map tabs. */
+.result-tabstrip .result-tab { position:relative; display:flex; align-items:center; flex:0 0 128px; min-width:128px; max-width:128px; height:40px; padding:0; border:0; border-radius:3px; background:#e9f0f4; }
 .result-tabstrip .result-tab.active { background:#fff; border-bottom:3px solid #0a6f9e; }
-.result-tabstrip .result-tab > button:first-child { display:flex; align-items:center; gap:9px; flex:1; min-width:0; height:100%; padding:8px 11px; border:0; background:transparent; color:var(--muted); cursor:pointer; font:inherit; font-size:12px; text-align:left; }
+.result-tabstrip .result-tab > button:first-child { display:flex; align-items:center; gap:7px; flex:1; min-width:0; height:100%; padding:8px 9px; border:0; background:transparent; color:var(--muted); cursor:pointer; font:inherit; font-size:12px; text-align:left; }
 .result-tabstrip .result-tab > button:first-child svg { flex-shrink:0; }
 .result-tabstrip .result-tab > button:first-child span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .result-tabstrip .result-tab.active > button:first-child { color:#0a6f9e; font-weight:600; }
@@ -14,15 +12,12 @@
 .result-tabstrip .result-tab.active > .tab-close { display:flex; color:#0a6f9e; }
 .result-tabstrip .result-tab > .tab-close:hover { color:#174d69; background:#dcebf3; }
 .result-tabstrip .result-tab > button:focus-visible { outline:2px solid #0a6f9e; outline-offset:-2px; border-radius:5px; }
-.result-tab-scroll { display:flex; align-items:center; justify-content:center; flex:0 0 20px; height:30px; padding:0; border:0; border-radius:3px; background:transparent; color:#526f81; cursor:pointer; }
-.result-tab-scroll:hover { background:#d8e6ee; color:#0a6f9e; }
-.result-tab-scroll:disabled { background:transparent; color:#aebfc9; cursor:default; }
-.result-tab-scroll:focus-visible { outline:2px solid #0a6f9e; outline-offset:-2px; }
-@container (max-width:110px) {
-  .result-tabstrip .result-tab.is-closable > button:first-child { gap:5px; padding:8px 6px; }
-  .result-tabstrip .result-tab > .tab-close { flex-basis:24px; width:24px; height:28px; padding:5px; }
-}
-@container (max-width:70px) {
-  .result-tabstrip .result-tab.is-closable > button:first-child { gap:3px; padding:8px 4px; overflow:hidden; }
-  .result-tabstrip .result-tab.is-closable > button:first-child span { text-overflow:clip; }
-}
+.result-tabs-menu-trigger { display:flex; align-items:center; justify-content:center; flex:0 0 30px; height:30px; padding:0; border:0; border-radius:3px; background:transparent; color:#526f81; cursor:pointer; }
+.result-tabs-menu-trigger:hover,.result-tabs-menu-trigger.active { background:#d8e6ee; color:#0a6f9e; }
+.result-tabs-menu-trigger:focus-visible,.result-tabs-menu button:focus-visible { outline:2px solid #0a6f9e; outline-offset:-2px; }
+.result-tabs-menu { position:absolute; top:calc(100% + 5px); right:0; z-index:30; width:320px; max-width:calc(100vw - 32px); max-height:min(420px,65vh); overflow:auto; padding:6px; border:1px solid #d2e0e8; border-radius:6px; background:#fff; box-shadow:0 10px 32px #173a5329; }
+.result-tabs-menu > button { display:flex; align-items:center; gap:10px; width:100%; min-height:38px; padding:9px 10px; border:0; border-radius:4px; background:transparent; color:var(--ink); font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.result-tabs-menu > button > svg { flex-shrink:0; }
+.result-tabs-menu > button > span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.result-tabs-menu > button:hover,.result-tabs-menu > button:focus-visible { background:#f0f6fa; }
+.result-tabs-menu > button[aria-checked=true] { background:#e9f4fa; color:#096e9a; }

@@ -5,12 +5,13 @@ import { useTranslation } from '../i18n';
 import type { ProjectTypeOption } from '../services/projectClassification';
 
 interface Props {
+  label?: string;
   options: ProjectTypeOption[];
   value: string;
   onChange: (id: string) => void;
 }
 
-export function ProjectTypePicker({ options, value, onChange }: Props) {
+export function ProjectTypePicker({ label = '项目类型', options, value, onChange }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -122,8 +123,8 @@ export function ProjectTypePicker({ options, value, onChange }: Props) {
     }
   };
 
-  return <div className="field type-picker"><span>{t('项目类型')}<em>*</em></span>
-    <button ref={trigger} className="select-trigger" aria-label={t('项目类型')} aria-haspopup="listbox" aria-expanded={open}
+  return <div className="field type-picker"><span>{t(label)}<em>*</em></span>
+    <button ref={trigger} className="select-trigger" aria-label={t(label)} aria-haspopup="listbox" aria-expanded={open}
       aria-controls={open ? optionsId : undefined} onClick={() => {
         setOpen(current => !current); setQuery(''); setBranches(selected ? ancestors(selected.id) : []);
       }}>{selected?.path.map(part => t(part)).join(' / ') || t('请选择最末级项目类型')}<ChevronDown size={17}/></button>

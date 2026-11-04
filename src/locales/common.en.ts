@@ -1,4 +1,7 @@
 const commonEnglish: Record<string, string> = {
+  '全部地区':'All regions','选择地区':'Select regions','已选 {count} 个地区':'{count} regions selected',
+  '地区选项':'Region options','搜索地区':'Search regions','无匹配地区':'No matching regions','移除地区：{name}':'Remove region: {name}',
+  '请选择所属地区':'Select a region','请填写名称，选择所属地区和最末级项目类型':'Enter a name and select a region and leaf project type.',
   '概览': 'Overview', '成果': 'Results', '检索': 'Search', '统计': 'Statistics', '审批': 'Approvals', '基准': "Reference", '工具': 'Tools',
   '物探数据银行': 'Geophysical Data Bank', '物探标志': 'GeoBank logo', '深耕数据价值　赋能智慧勘探': 'Unlock data value · Empower exploration',
   '顶部导航': 'Main navigation', '此栏目暂无设计画板': 'This section is not available in the demo', 'Demo 用户菜单': 'Demo account menu',

@@ -20,8 +20,8 @@ export function projectBriefSummary(project: Project, translate: (label: string)
   const overview: SummaryField[] = [
     ['年度', project.year || '—'],
     ['地区', project.basin || '—'],
-    ['项目类型', project.type ? translate(project.type) : '—'],
-    ['满覆盖面积', numberLabel(details.fullFoldAreaKm2, ' km²')],
+    ['类型', project.type ? translate(project.type) : '—'],
+    ['大小（km² / km）', project.area || '—'],
   ];
   let parameterTitle: string | undefined;
   let parameters: SummaryField[] = [];

@@ -21,6 +21,21 @@ function Harness({ tabs = items, initial = 'overview' }: { tabs?: ResultTabItem[
     onSelect={id => { onSelect(id); setActiveId(id); }} onClose={onClose}/>;
 }
 
+function mockTabOffsets(list: HTMLElement) {
+  within(list).getAllByRole('tab').forEach((tab, index) => {
+    Object.defineProperties(tab.parentElement!, {
+      offsetLeft: { configurable: true, value: index * 131 },
+      offsetWidth: { configurable: true, value: 128 },
+    });
+  });
+}
+
+function expectMenuItems(labels: string[]) {
+  const entries = screen.getAllByRole('menuitemradio');
+  expect(entries).toHaveLength(labels.length);
+  labels.forEach((label, index) => expect(entries[index]).toHaveAccessibleName(label));
+}
+
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe('成果浏览器式选项卡', () => {
@@ -29,10 +44,10 @@ describe('成果浏览器式选项卡', () => {
     render(<Harness/>);
     const overview = screen.getByRole('tab', { name: '成果概览' });
     const map = screen.getByRole('tab', { name: '综合成图' });
-    const fileScroller = screen.getByRole('tablist', { name: '成果选项卡' }).querySelector('.result-file-tabs');
-    expect(fileScroller).not.toContainElement(overview);
-    expect(fileScroller).not.toContainElement(map);
-    expect(fileScroller).toContainElement(screen.getByRole('tab', { name: '井A.las' }));
+    const list = screen.getByRole('tablist', { name: '成果选项卡' });
+    expect(list).toContainElement(overview);
+    expect(list).toContainElement(map);
+    expect(list).toContainElement(screen.getByRole('tab', { name: '井A.las' }));
     expect(overview).toHaveAttribute('aria-selected', 'true');
     expect(overview).toHaveAttribute('aria-controls', 'preview-panel');
     await user.click(overview);
@@ -71,46 +86,140 @@ describe('成果浏览器式选项卡', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('多个标签直接显示在横向标签条中并可切换，不提供下拉列表入口', async () => {
+  it('菜单只列截断或隐藏标签，选择后移除新可见标签并列入左侧隐藏标签', async () => {
     const user = userEvent.setup();
     const manyTabs: ResultTabItem[] = Array.from({ length: 12 }, (_, index) => ({
-      id: `file-${index}`, label: `成果${index}.las`, Icon: FileText, closable: index > 0,
+      id: `file-${index}`, label: `项目成果长名称-${index}-测井数据.las`, Icon: FileText, closable: index > 0,
     }));
     render(<Harness tabs={manyTabs} initial="file-0"/>);
-    const strip = within(screen.getByRole('tablist', { name: '成果选项卡' }));
-    expect(strip.getAllByRole('tab')).toHaveLength(12);
-    expect(screen.queryByRole('button', { name: '已打开的选项卡' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-    await user.click(strip.getByRole('tab', { name: '成果11.las' }));
+    const list = screen.getByRole('tablist', { name: '成果选项卡' });
+    Object.defineProperty(list.parentElement!, 'clientWidth', { configurable: true, value: 430 });
+    Object.defineProperties(list, {
+      clientWidth: { configurable: true, value: 397 },
+      scrollWidth: { configurable: true, value: 12 * 131 - 3 },
+    });
+    mockTabOffsets(list);
+    fireEvent(window, new Event('resize'));
+    const trigger = screen.getByRole('button', { name: '超出标签栏的标签' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveAttribute('title', '超出标签栏的标签');
+    await user.click(trigger);
+    expect(screen.getByRole('menu', { name: '超出标签栏的标签' })).toBeVisible();
+    expectMenuItems(manyTabs.slice(3).map(item => item.label));
+    expect(screen.getByRole('menuitemradio', { name: manyTabs[3].label })).toHaveFocus();
+    await user.click(screen.getByRole('menuitemradio', { name: manyTabs[11].label }));
     expect(onSelect).toHaveBeenLastCalledWith('file-11');
-    expect(strip.getByRole('tab', { name: '成果11.las' })).toHaveAttribute('aria-selected', 'true');
-    await user.click(strip.getByRole('tab', { name: '成果3.las' }));
+    const selected = within(list).getByRole('tab', { name: manyTabs[11].label });
+    expect(selected).toHaveAttribute('aria-selected', 'true');
+    expect(selected).toHaveAttribute('title', manyTabs[11].label);
+    expect(selected).toHaveFocus();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(selected.parentElement!.offsetLeft).toBeGreaterThanOrEqual(list.scrollLeft);
+    expect(selected.parentElement!.offsetLeft + selected.parentElement!.offsetWidth).toBeLessThanOrEqual(list.scrollLeft + list.clientWidth);
+    await user.click(trigger);
+    expectMenuItems(manyTabs.slice(0, 9).map(item => item.label));
+    expect(screen.queryByRole('menuitemradio', { name: manyTabs[11].label })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemradio', { name: manyTabs[3].label }));
     expect(onSelect).toHaveBeenLastCalledWith('file-3');
-    expect(strip.getByRole('tab', { name: '成果3.las' })).toHaveAttribute('aria-selected', 'true');
-    expect(strip.getAllByRole('tab')).toHaveLength(12);
+    expect(within(list).getByRole('tab', { name: manyTabs[3].label })).toHaveAttribute('aria-selected', 'true');
+    expect(within(list).getByRole('tab', { name: manyTabs[3].label })).toHaveFocus();
   });
 
-  it('固定概览激活时仍随文件区宽度变化显示或收起滚动箭头', () => {
+  it('滚动和缩放刷新两端截断标签，容忍 1px 边缘误差并保持有效菜单焦点', async () => {
+    const user = userEvent.setup();
     render(<Harness/>);
-    const fileScroller = screen.getByRole('tablist', { name: '成果选项卡' }).querySelector('.result-file-tabs') as HTMLElement;
+    const list = screen.getByRole('tablist', { name: '成果选项卡' });
     let viewportWidth = 600;
-    Object.defineProperties(fileScroller, {
-      clientWidth: { configurable: true, get: () => viewportWidth },
-      scrollWidth: { configurable: true, value: 400 },
+    Object.defineProperty(list.parentElement!, 'clientWidth', { configurable: true, get: () => viewportWidth });
+    Object.defineProperties(list, {
+      clientWidth: { configurable: true, get: () => viewportWidth - 33 },
+      scrollWidth: { configurable: true, value: 4 * 131 - 3 },
     });
+    mockTabOffsets(list);
     fireEvent(window, new Event('resize'));
+    expect(screen.queryByRole('button', { name: '超出标签栏的标签' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '向右滚动选项卡' })).not.toBeInTheDocument();
-
-    viewportWidth = 220;
+    viewportWidth = 320;
     fireEvent(window, new Event('resize'));
     expect(screen.getByRole('tab', { name: '成果概览' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: '向左滚动选项卡' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '向右滚动选项卡' })).toBeEnabled();
-
-    viewportWidth = 600;
-    fireEvent(window, new Event('resize'));
+    expect(screen.getAllByRole('button', { name: '超出标签栏的标签' })).toHaveLength(1);
+    const trigger = screen.getByRole('button', { name: '超出标签栏的标签' });
+    expect(trigger).toBeVisible();
     expect(screen.queryByRole('button', { name: '向左滚动选项卡' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '向右滚动选项卡' })).not.toBeInTheDocument();
+    await user.click(trigger);
+    expectMenuItems(['井A.las', '井B.las']);
+    expect(screen.getByRole('menuitemradio', { name: '井A.las' })).toHaveFocus();
+
+    // Both outer tabs are clipped; the middle map tab remains fully visible.
+    list.scrollLeft = 65;
+    fireEvent.scroll(list);
+    expectMenuItems(['成果概览', '井A.las', '井B.las']);
+    expect(screen.getByRole('menuitemradio', { name: '井A.las' })).toHaveFocus();
+    expect(screen.getByRole('menuitemradio', { name: '成果概览' })).toHaveAttribute('aria-checked', 'true');
+
+    viewportWidth = 290;
+    fireEvent(window, new Event('resize'));
+    expectMenuItems(['综合成图', '井A.las', '井B.las']);
+    expect(trigger).toHaveAttribute('title', '超出标签栏的标签');
+    expect(screen.getByRole('menuitemradio', { name: '井A.las' })).toHaveFocus();
+
+    // A 1px clip on each side is tolerated; a 2px clip is included.
+    list.scrollLeft = 132;
+    fireEvent.scroll(list);
+    expectMenuItems(['成果概览', '井B.las']);
+    expect(screen.getByRole('menuitemradio', { name: '成果概览' })).toHaveFocus();
+    list.scrollLeft = 133;
+    fireEvent.scroll(list);
+    expectMenuItems(['成果概览', '综合成图', '井B.las']);
+    list.scrollLeft = 131;
+    fireEvent.scroll(list);
+    expectMenuItems(['成果概览', '井A.las', '井B.las']);
+
+    viewportWidth = 540;
+    fireEvent(window, new Event('resize'));
+    expect(screen.queryByRole('button', { name: '超出标签栏的标签' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '成果概览' })).toHaveFocus();
+    expect(screen.queryByRole('button', { name: '向左滚动选项卡' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '向右滚动选项卡' })).not.toBeInTheDocument();
+  });
+
+  it('下拉支持键盘选择、Escape 返回入口与点击外部收起', async () => {
+    const user = userEvent.setup();
+    render(<Harness/>);
+    const list = screen.getByRole('tablist', { name: '成果选项卡' });
+    Object.defineProperty(list.parentElement!, 'clientWidth', { configurable: true, value: 300 });
+    Object.defineProperties(list, {
+      clientWidth: { configurable: true, value: 267 },
+      scrollWidth: { configurable: true, value: 4 * 131 - 3 },
+    });
+    mockTabOffsets(list);
+    fireEvent(window, new Event('resize'));
+    const trigger = screen.getByRole('button', { name: '超出标签栏的标签' });
+    trigger.focus();
+    await user.keyboard('{ArrowDown}');
+    expectMenuItems(['井A.las', '井B.las']);
+    expect(screen.getByRole('menuitemradio', { name: '井A.las' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitemradio', { name: '井B.las' })).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(screen.getByRole('menuitemradio', { name: '井A.las' })).toHaveFocus();
+    await user.keyboard('{End}{Enter}');
+    expect(onSelect).toHaveBeenLastCalledWith('file-b');
+    expect(screen.getByRole('tab', { name: '井B.las' })).toHaveFocus();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(trigger);
+    expectMenuItems(['成果概览', '综合成图']);
+    expect(screen.getByRole('menuitemradio', { name: '成果概览' })).toHaveFocus();
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('menuitemradio', { name: '综合成图' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('同名文件按各自ID独立切换和关闭', async () => {
@@ -139,15 +248,15 @@ describe('成果浏览器式选项卡', () => {
     }));
     const props = { items: manyTabs, activeId: manyTabs[activeIndex].id, onSelect, onClose, panelId: 'preview-panel' };
     const { rerender } = render(<ResultTabs {...props}/>);
-    const list = screen.getByRole('tablist', { name: '成果选项卡' }).querySelector('.result-file-tabs') as HTMLElement;
+    const list = screen.getByRole('tablist', { name: '成果选项卡' });
     Object.defineProperties(list, {
       clientWidth: { configurable: true, value: 250 },
-      scrollWidth: { configurable: true, get: () => list.children.length * 136 },
+      scrollWidth: { configurable: true, get: () => list.children.length * 131 - 3 },
     });
     within(list).getAllByRole('tab').forEach((tab, index) => {
       Object.defineProperties(tab.parentElement!, {
-        offsetLeft: { configurable: true, value: index * 136 },
-        offsetWidth: { configurable: true, value: 136 },
+        offsetLeft: { configurable: true, value: index * 131 },
+        offsetWidth: { configurable: true, value: 128 },
       });
     });
     list.scrollLeft = 700;

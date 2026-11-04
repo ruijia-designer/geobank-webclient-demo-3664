@@ -18,7 +18,7 @@ function Harness({page='results',section,projectId='current'}:{page?:'results'|'
 }
 beforeEach(()=>{vi.clearAllMocks();Object.keys(resultFilesCache).forEach(k=>delete resultFilesCache[k]);Object.keys(resultInfoCache).forEach(k=>delete resultInfoCache[k]);vi.stubGlobal('requestAnimationFrame',(cb:FrameRequestCallback)=>{cb(0);return 1})});
 describe('成果页真实组件流程',()=>{
- it('面积只在标签显示单位，基本信息包含新增字段且无边框',()=>{render(<Harness/>);expect(screen.getAllByText('工区面积（km²）')).toHaveLength(2);expect(screen.queryByText('96.8 km²')).not.toBeInTheDocument();expect(screen.getByText('坳陷')).toBeInTheDocument();expect(screen.getByText('凹陷')).toBeInTheDocument();expect(screen.getByText('起始日期')).toBeInTheDocument();expect(screen.queryByText('边框')).not.toBeInTheDocument()});
+ it('面积只在标签显示单位，基本信息包含新增字段且无边框',()=>{render(<Harness/>);expect(screen.getAllByText('大小（km² / km）')).toHaveLength(2);expect(screen.queryByText('96.8 km²')).not.toBeInTheDocument();expect(screen.getByText('坳陷')).toBeInTheDocument();expect(screen.getByText('凹陷')).toBeInTheDocument();expect(screen.getByText('起始日期')).toBeInTheDocument();expect(screen.queryByText('边框')).not.toBeInTheDocument()});
  it('页内编辑所有信息卡片并保存真实值，输入焦点稳定且取消不保存草稿',async()=>{
   const user=userEvent.setup();const {container}=render(<Harness/>);
   await user.click(screen.getByRole('button',{name:'编辑'}));
@@ -26,15 +26,15 @@ describe('成果页真实组件流程',()=>{
   const information=container.querySelector('.results-information') as HTMLElement;
   const form=within(information),name=form.getByLabelText('项目名称');
   await user.clear(name);await user.type(name,'项目测试名称');expect(name).toHaveFocus();
-  const area=form.getByLabelText('工区面积（km²）');expect(area).toHaveValue(96.8);
-  const changes:[string,string][]=[['工区面积（km²）','104.5'],['数据名','Seismic-测试'],['iline','200'],['层位（个）','11'],['井数','21'],['备注','页内编辑备注']];
+  const area=form.getByLabelText('大小（km² / km）');expect(area).toHaveValue(96.8);
+  const changes:[string,string][]=[['位置','太岳山东侧，覆盖南北两片工区。\n北部工区位于测试河谷沿线。'],['大小（km² / km）','104.5'],['数据名','Seismic-测试'],['iline','200'],['层位（个）','11'],['井数','21'],['备注','页内编辑备注']];
   for(const [label,text] of changes){const field=form.getByLabelText(label);await user.clear(field);await user.type(field,text);}
   await user.selectOptions(form.getByLabelText('正断层'),'无');
   expect(information.querySelectorAll('.information-card input,.information-card select,.information-card textarea').length).toBeGreaterThan(30);
   await user.click(form.getByRole('button',{name:'保存'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(lastApi.state.projects.find(p=>p.id==='current')?.name).toBe('项目测试名称');
-  expect(resultInfoCache.current).toMatchObject({area:'104.5',seismicName:'Seismic-测试',iline:'200',layerCount:'11',wellCount:'21',normalFault:'无',note:'页内编辑备注'});
+  expect(resultInfoCache.current).toMatchObject({location:'太岳山东侧，覆盖南北两片工区。\n北部工区位于测试河谷沿线。',area:'104.5',seismicName:'Seismic-测试',iline:'200',layerCount:'11',wellCount:'21',normalFault:'无',note:'页内编辑备注'});
   await user.click(form.getByRole('button',{name:'编辑'}));
   await user.clear(form.getByLabelText('数据名'));await user.type(form.getByLabelText('数据名'),'未保存草稿');
   await user.click(form.getByRole('button',{name:'取消'}));

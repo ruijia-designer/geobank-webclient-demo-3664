@@ -32,11 +32,11 @@ describe('成果页本轮客户流程',()=>{
   const project=PROJECTS.find(project=>project.basin==='四川盆地')!;
   const user=userEvent.setup();render(<Harness projectId={project.id}/>);
   await user.click(screen.getByRole('button',{name:'编辑'}));
-  const basin=screen.getByRole('textbox',{name:'所属盆地'});
+  const basin=screen.getByRole('textbox',{name:'地区'});
   expect(basin).toHaveAttribute('readonly');expect(basin).toHaveValue(project.basin);
-  expect(screen.queryByRole('combobox',{name:'所属盆地'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox',{name:'地区'})).not.toBeInTheDocument();
   await user.type(basin,'不允许修改');expect(basin).toHaveValue(project.basin);
-  await user.selectOptions(screen.getByRole('combobox',{name:'所属工区'}),'大安区块');
+  await user.selectOptions(screen.getByRole('combobox',{name:'工区'}),'大安区块');
   await user.click(screen.getByRole('button',{name:'保存'}));
   expect(resultInfoCache[project.id]).toMatchObject({basin:project.basin,areaName:'大安区块'});
   await user.click(screen.getByRole('button',{name:'导入'}));
@@ -192,7 +192,7 @@ describe('成果页本轮客户流程',()=>{
   const next=getResultSummary(directories,[...INITIAL_RESULT_FILES,{id:'new',name:'new.sgy',size:'1 KB',format:'sgy',directory:'偏移叠加纯波数据',uploaded:'2026-10-18',user:'Demo'}]);
   expect(next.ready).toBe(initial.ready+1);expect(next.pending).toBe(initial.pending-1);expect(next.totalBytes).toBe(initial.totalBytes+1024);
   expect(getDownloadSummary('current')).toMatchObject({count:0,totalBytes:0,users:0});expect(bytesLabel(0)).toBe('0 B');
-  render(<Harness/>);expect(screen.getByText('成果完整度详情')).toBeVisible();expect(screen.getByText('最近数据下载动态')).toBeVisible();expect(screen.getByText('暂无下载记录')).toBeVisible();
+  render(<Harness/>);expect(screen.getByText('成果完整度')).toBeVisible();expect(screen.getByText('最近下载')).toBeVisible();expect(screen.getByText('暂无下载记录')).toBeVisible();
  });
  it('完整度明细仅展示实际有文件的目录，保留全部目录的完整度统计',()=>{
   render(<Harness/>);

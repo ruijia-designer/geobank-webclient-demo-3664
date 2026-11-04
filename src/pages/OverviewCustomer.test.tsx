@@ -70,15 +70,15 @@ describe('概览及客户联动要求',()=>{
     await user.click(screen.getByRole('button',{name:'新建项目'}));
     const modal=screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button',{name:'确定'}));
-    expect(within(modal).getByRole('alert')).toHaveTextContent('所属盆地和最末级项目类型');
-    await user.type(within(modal).getByLabelText('项目名称'),'分类联动演示');
-    await user.selectOptions(within(modal).getByLabelText('所属盆地'),'新增基准盆地');
-    await user.click(within(modal).getByRole('button',{name:'项目类型'}));
+    expect(within(modal).getByRole('alert')).toHaveTextContent('所属地区和最末级项目类型');
+    await user.type(within(modal).getByLabelText('名称'),'分类联动演示');
+    await user.selectOptions(within(modal).getByLabelText('地区'),'新增基准盆地');
+    await user.click(within(modal).getByRole('button',{name:'类型'}));
     expect(screen.getByRole('option',{name:'采集'})).toHaveAttribute('aria-expanded','true');
     const secondLevel=screen.getByRole('option',{name:'采集 / 三维陆上常规采集'});
     expect(secondLevel).toHaveTextContent(/^三维陆上常规采集$/);
     await user.click(secondLevel);
-    expect(within(modal).getByRole('button',{name:'项目类型'})).toHaveTextContent('请选择最末级项目类型');
+    expect(within(modal).getByRole('button',{name:'类型'})).toHaveTextContent('请选择最末级项目类型');
     expect(secondLevel).toHaveAttribute('aria-expanded','true');
     await user.click(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'}));
     await user.click(within(modal).getByRole('button',{name:'确定'}));
@@ -130,7 +130,7 @@ describe('概览及客户联动要求',()=>{
     });
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
-    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
     await user.click(trigger);
     const list=within(modal).getByRole('listbox',{name:'项目类型选项'});
     const popup=list.parentElement!;
@@ -151,7 +151,7 @@ describe('概览及客户联动要求',()=>{
     expect(popup.style.top).toBe(initialTop);expect(popup.style.height).toBe(initialHeight);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();expect(modal).toBeVisible();expect(trigger).toHaveFocus();
-    await user.click(trigger);await user.click(within(modal).getByLabelText('项目名称'));
+    await user.click(trigger);await user.click(within(modal).getByLabelText('名称'));
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     vi.restoreAllMocks();
   });
@@ -159,8 +159,8 @@ describe('概览及客户联动要求',()=>{
   it('新建项目按完整类型路径搜索，空结果保留表单，重新打开恢复全部选项',async()=>{
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
-    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
-    await user.type(within(modal).getByLabelText('项目名称'),'搜索类型演示');
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
+    await user.type(within(modal).getByLabelText('名称'),'搜索类型演示');
     await user.click(trigger);
     const search=within(modal).getByRole('searchbox',{name:'搜索项目类型'});
     expect(search).toHaveFocus();
@@ -170,7 +170,7 @@ describe('概览及客户联动要求',()=>{
     expect(screen.queryByRole('option',{name:'采集'})).not.toBeInTheDocument();
     await user.clear(search);await user.type(search,'不存在的类型');
     expect(within(modal).getByRole('status')).toHaveTextContent('无匹配项目类型');
-    expect(within(modal).getByLabelText('项目名称')).toHaveValue('搜索类型演示');
+    expect(within(modal).getByLabelText('名称')).toHaveValue('搜索类型演示');
     await user.clear(search);await user.type(search,'处理 / 二维处理');
     await user.click(screen.getByRole('option',{name:'处理 / 二维处理'}));
     expect(trigger).toHaveTextContent('处理 / 二维处理');expect(trigger).toHaveFocus();
@@ -184,7 +184,7 @@ describe('概览及客户联动要求',()=>{
     demoRows.types.push({id:'third',parent:'2',name:'三级采集演示',level:3,color:'#123456'});
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
-    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
     await user.click(trigger);
     await user.keyboard('{ArrowDown}');
     const root=screen.getByRole('option',{name:'采集'});
@@ -212,7 +212,7 @@ describe('概览及客户联动要求',()=>{
     );
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
-    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'项目类型'});
+    const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
     await user.click(trigger);
     await user.click(screen.getAllByRole('option',{name:'采集 / 三维陆上常规采集'})[1]);
     expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).toHaveTextContent(/^重名分支成果$/);

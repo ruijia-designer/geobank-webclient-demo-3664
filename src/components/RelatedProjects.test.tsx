@@ -51,15 +51,15 @@ describe('成果页关联项目', () => {
     expect(screen.queryByText('演示关联')).not.toBeInTheDocument();
   });
 
-  it('基础摘要与概览保持一致，分类来自项目类型而非名称且不混用工区面积', () => {
+  it('基础摘要展示项目大小，分类来自项目类型而非名称', () => {
     const item = project({ id: 'related', name: '2024年山西省左权西乡煤层气区块三维地震处理项目及成果数据整理', area: '0' });
     const selected = project({ mapDetails: { relatedProjectIds: [item.id] } });
     render(<RelatedProjects project={selected} projects={[item]} role="admin" onOpen={onOpen}/>);
     expect(screen.getByRole('heading', { name: item.name })).toBeVisible();
     expect(screen.getByText('采集', { exact: true })).toHaveStyle({ backgroundColor: '#277DA8', color: '#ffffff' });
-    expect(screen.getAllByRole('definition').slice(0, 4).map(node => node.textContent)).toEqual(['2024', '沁水盆地', '三维陆上常规采集', '—']);
+    expect(screen.getAllByRole('definition').slice(0, 4).map(node => node.textContent)).toEqual(['2024', '沁水盆地', '三维陆上常规采集', '0']);
     expect(screen.getByRole('heading', { name: '采集参数' })).toBeVisible();
-    expect(screen.queryByRole('term', { name: '工区面积（km²）' })).not.toBeInTheDocument();
+    expect(screen.getByText('大小（km² / km）')).toBeVisible();
   });
 
   it('无查阅权限时保留项目详情，不显示查阅按钮或空操作栏', () => {
@@ -120,24 +120,24 @@ describe('成果页关联项目', () => {
     } });
     render(<RelatedProjects project={project({ mapDetails: { relatedProjectIds: [item.id] } })} projects={[item]} role="admin" onOpen={onOpen}/>);
     expect(screen.getByRole('heading', { name: title })).toBeVisible();
-    expect(screen.getAllByRole('term').map(node => node.textContent)).toEqual(['年度', '地区', '项目类型', '满覆盖面积', ...fields]);
-    expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual(['2024', '沁水盆地', type, '596 km²', ...values]);
+    expect(screen.getAllByRole('term').map(node => node.textContent)).toEqual(['年度', '地区', '类型', '大小（km² / km）', ...fields]);
+    expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual(['2024', '沁水盆地', type, '596', ...values]);
   });
 
   it('数值为零时保持显示，非有限值和缺失参数显示缺省值', () => {
-    const item = project({ id: 'zero-summary', type: '三维陆上解释', mapDetails: {
+    const item = project({ id: 'zero-summary', area: '0', type: '三维陆上解释', mapDetails: {
       fullFoldAreaKm2: 0,
       interpretation: { coverageCount: 0, binSizeMeters: [0, 0], aspectRatio: Number.NaN, maxOffsetKm: Number.POSITIVE_INFINITY },
     } });
     render(<RelatedProjects project={project({ mapDetails: { relatedProjectIds: [item.id] } })} projects={[item]} role="admin" onOpen={onOpen}/>);
-    expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual(['2024', '沁水盆地', '三维陆上解释', '0 km²', '0 次', '0 m × 0 m', '—', '—']);
+    expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual(['2024', '沁水盆地', '三维陆上解释', '0', '0 次', '0 m × 0 m', '—', '—']);
   });
 
   it('已有概览数据继续用于关联项目摘要，不为缺失的新字段补造数值', () => {
     const item = PROJECTS.find(item => item.id === '0')!;
     render(<RelatedProjects project={project({ mapDetails: { relatedProjectIds: [item.id] } })} projects={[item]} role="admin" onOpen={onOpen}/>);
     expect(screen.getAllByRole('definition').map(node => node.textContent)).toEqual([
-      item.year, item.basin, item.type, '596 km²', '550,000', '—', '25 m × 25 m', '8 km', '—',
+      item.year, item.basin, item.type, '596', '550,000', '—', '25 m × 25 m', '8 km', '—',
     ]);
   });
 });

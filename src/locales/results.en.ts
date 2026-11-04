@@ -1,4 +1,8 @@
 const resultsEnglish:Record<string,string>={
+ '位置':'Location','工区':'Work area','大小（km² / km）':'Size (km² / km)',
+ '资产总量':'Total assets','资产详情':'Asset details','最近下载':'Recent downloads',
+ '已打开的选项卡':'Open tabs','超出标签栏的标签':'Overflow tabs',
+ '搜索项目名称、地区或年度…':'Search project name, region or year…',
  '采集参数':'Acquisition parameters','解释参数':'Interpretation parameters','覆盖次数':'Fold coverage',
  '炮道密度':'Shot-trace density','原始数据量':'Raw data volume','记录长度':'Record length','采样率':'Sample rate','横纵比':'Aspect ratio','次':'times',
  '成果选项卡':'Result tabs','向左滚动选项卡':'Scroll tabs left','向右滚动选项卡':'Scroll tabs right',

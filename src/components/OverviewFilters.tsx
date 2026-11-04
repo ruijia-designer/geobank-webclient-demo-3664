@@ -45,16 +45,16 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
       <span>{t('至')}</span>
       <input ref={toInput} aria-label={t('结束年度')} aria-describedby={error ? errorId : hintId} aria-invalid={!!error} inputMode="numeric" maxLength={4} placeholder={t('结束年度')} value={draft.yearTo?.[0] || ''} onChange={event => set('yearTo', event.target.value ? [event.target.value] : [])}/>
     </div>{error && <p id={errorId} className="filter-error" role="alert">{t(error)}</p>}</fieldset>
-    <fieldset><legend>{t('所属盆地')}</legend><div className="basin-picker" ref={picker} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
-      <button ref={trigger} type="button" className="basin-trigger" aria-label={t('选择盆地')} aria-expanded={open} aria-controls={menuId} onClick={() => { setOpen(!open); setQuery(''); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); } }}>
-        <span className={selected.length ? '' : 'muted'}>{selected.length ? t('已选 {count} 个盆地', { count: selected.length }) : t('全部盆地')}</span><ChevronDown size={16} style={{ transform: open ? 'rotate(180deg)' : undefined }}/>
+    <fieldset><legend>{t('地区')}</legend><div className="basin-picker" ref={picker} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
+      <button ref={trigger} type="button" className="basin-trigger" aria-label={t('选择地区')} aria-expanded={open} aria-controls={menuId} onClick={() => { setOpen(!open); setQuery(''); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); } }}>
+        <span className={selected.length ? '' : 'muted'}>{selected.length ? t('已选 {count} 个地区', { count: selected.length }) : t('全部地区')}</span><ChevronDown size={16} style={{ transform: open ? 'rotate(180deg)' : undefined }}/>
       </button>
-      {open && <div id={menuId} className="basin-dropdown" role="group" aria-label={t('盆地选项')}>
-        <label className="basin-search"><Search size={16}/><input autoFocus aria-label={t('搜索盆地')} placeholder={t('搜索盆地')} value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/></label>
+      {open && <div id={menuId} className="basin-dropdown" role="group" aria-label={t('地区选项')}>
+        <label className="basin-search"><Search size={16}/><input autoFocus aria-label={t('搜索地区')} placeholder={t('搜索地区')} value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/></label>
         <div className="basin-dropdown-summary"><span>{t('已选 {count} 项', { count: selected.length })}</span><button type="button" onClick={() => set('basin', [])} disabled={!selected.length}>{t('清空选择')}</button></div>
-        <div className="basin-options">{options.map(basin => <label key={basin}><input type="checkbox" checked={selected.includes(basin)} onChange={() => toggleBasin(basin)}/><span>{basin}</span></label>)}{!options.length && <p className="basin-empty">{t('无匹配盆地')}</p>}</div>
+        <div className="basin-options">{options.map(basin => <label key={basin}><input type="checkbox" checked={selected.includes(basin)} onChange={() => toggleBasin(basin)}/><span>{basin}</span></label>)}{!options.length && <p className="basin-empty">{t('无匹配地区')}</p>}</div>
       </div>}
-    </div>{selected.length > 0 && <div className="selected-basins">{selected.map(basin => <span key={basin}>{basin}<button type="button" aria-label={t('移除盆地：{name}', { name: basin })} onClick={() => toggleBasin(basin)}><X size={12}/></button></span>)}</div>}</fieldset>
+    </div>{selected.length > 0 && <div className="selected-basins">{selected.map(basin => <span key={basin}>{basin}<button type="button" aria-label={t('移除地区：{name}', { name: basin })} onClick={() => toggleBasin(basin)}><X size={12}/></button></span>)}</div>}</fieldset>
     <div className="overview-filter-toggles">
       <label><input type="checkbox" checked={draft.readable?.includes('true') || false} onChange={event => set('readable', event.target.checked ? ['true'] : [])}/>{t('仅显示可查阅项目')}</label>
       <label><input type="checkbox" checked={draft.inViewport?.includes('true') || false} onChange={event => set('inViewport', event.target.checked ? ['true'] : [])}/>{t('仅显示视野范围内的项目')}</label>
