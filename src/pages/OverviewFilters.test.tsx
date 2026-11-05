@@ -5,14 +5,15 @@ import userEvent from '@testing-library/user-event';
 import type { AppApi, AppState, Filters, Project } from '../types';
 import { OverviewFilters } from '../components/OverviewFilters';
 import { initialState, PROJECTS } from '../services/demo';
-import { matchesOverviewFilters, normalizeOverviewFilters } from '../services/overviewFilters';
+import { matchesOverviewFilters, normalizeOverviewFilters, projectDimension } from '../services/overviewFilters';
 import OverviewPage from './OverviewPage';
+import { initialResultInfo, resultInfoCache, saveProjectInfo } from '../services/results';
 
 const projects: Project[] = [
-  { ...PROJECTS[0], id: 'centre', name: '中心2023项目', year: '2023', basin: '沁水盆地', point: [740, 575] },
-  { ...PROJECTS[0], id: 'east', name: '东部2024项目', year: '2024', basin: '鄂尔多斯盆地', point: [1573, 575] },
-  { ...PROJECTS[0], id: 'west', name: '西部2025项目', year: '2025', basin: '沁水盆地', point: [-93, 575] },
-  { ...PROJECTS[0], id: 'undated', name: '未填年度项目', year: '', basin: '四川盆地', point: [740, 575] },
+  { ...PROJECTS[0], id: 'centre', type: '二维陆上采集', name: '中心2023项目', year: '2023', basin: '沁水盆地', point: [740, 575] },
+  { ...PROJECTS[0], id: 'east', type: '三维陆上处理', name: '东部2024项目', year: '2024', basin: '鄂尔多斯盆地', point: [1573, 575] },
+  { ...PROJECTS[0], id: 'west', type: '二维+三维解释', name: '西部2025项目', year: '2025', basin: '沁水盆地', point: [-93, 575] },
+  { ...PROJECTS[0], id: 'undated', type: '四维地震处理', name: '未填年度项目', year: '', basin: '四川盆地', point: [740, 575] },
 ];
 let api: AppApi;
 function Harness() {
@@ -64,6 +65,73 @@ describe('概览年度范围', () => {
   });
 });
 
+describe('概览项目维数', () => {
+  it('使用页面内单选菜单，选中项可回显，点击外部不改变选择', async () => {
+    const user = userEvent.setup(), onApply = vi.fn();
+    render(<OverviewFilters value={{ dimension: ['三维'] }} basins={[]} role="admin" onApply={onApply} onReset={vi.fn()} onClose={vi.fn()}/>);
+    const trigger = screen.getByRole('combobox', { name: '项目维数' });
+    expect(trigger.tagName).toBe('BUTTON');
+    expect(trigger).toHaveTextContent('三维');
+    await user.click(trigger);
+    const list = screen.getByRole('listbox', { name: '项目维数' });
+    expect(within(list).getAllByRole('option').map(item => item.textContent)).toEqual(['全部维数', '二维', '三维', '二维+三维', '四维']);
+    expect(within(list).getByRole('option', { name: '三维' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('textbox', { name: '起始年度' }));
+    expect(screen.queryByRole('listbox', { name: '项目维数' })).not.toBeInTheDocument();
+    expect(trigger).toHaveTextContent('三维');
+    await user.click(trigger);
+    await user.click(screen.getByRole('option', { name: '全部维数' }));
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveTextContent('全部维数');
+    expect(onApply).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '应用筛选' }));
+    expect(onApply).toHaveBeenCalledWith({ dimension: [] });
+  });
+
+  it('键盘打开、导航、选择与关闭保持焦点，Tab可继续访问下一筛选项', async () => {
+    const user = userEvent.setup();
+    render(<OverviewFilters value={{}} basins={[]} role="admin" onApply={vi.fn()} onReset={vi.fn()} onClose={vi.fn()}/>);
+    const trigger = screen.getByRole('combobox', { name: '项目维数' });
+    trigger.focus();
+    await user.keyboard('{ArrowDown}{End}');
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: '四维' }).id);
+    await user.keyboard('{ArrowUp}{Enter}');
+    expect(trigger).toHaveTextContent('二维+三维');
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await user.keyboard('{ArrowUp}{Home}');
+    expect(trigger).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: '全部维数' }).id);
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveTextContent('二维+三维');
+    await user.keyboard('{ArrowDown}');
+    await user.tab();
+    expect(screen.queryByRole('listbox', { name: '项目维数' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: '仅显示可查阅项目' })).toHaveFocus();
+  });
+
+  it.each<[string, string[]]>([
+    ['二维', ['centre']], ['三维', ['east']], ['二维+三维', ['west']], ['四维', ['undated']],
+  ])('%s 只匹配对应维数，混合项目单独筛选', (dimension, expected) => {
+    expect(projects.filter(project => matchesOverviewFilters(project, { dimension: [dimension] })).map(project => project.id)).toEqual(expected);
+  });
+
+  it('优先使用明确维数与已保存项目信息，缺少维数时不误匹配', () => {
+    const item: Project = { ...projects[0], id: 'dimension-explicit', dimension: '3D' };
+    expect(projectDimension(item)).toBe('三维');
+    saveProjectInfo(item.id, { ...initialResultInfo(item), seismicDimension: '二维+三维' });
+    try {
+      expect(projectDimension(item)).toBe('二维+三维');
+      expect(matchesOverviewFilters(item, { dimension: ['二维'] })).toBe(false);
+    } finally {
+      delete resultInfoCache[item.id];
+    }
+    expect(projectDimension({ ...item, id: 'dimension-unknown', type: '井筒', dimension: undefined })).toBeUndefined();
+    expect(projectDimension({ ...item, dimension: undefined, type: '解释', typePath: ['解释', '4D 地震解释'] })).toBe('四维');
+  });
+});
+
 describe('盆地搜索多选', () => {
   it('Tab 离开最后一个盆地选项时收起菜单，保持下方控件焦点可见', async () => {
     const user = userEvent.setup();
@@ -72,7 +140,7 @@ describe('盆地搜索多选', () => {
     screen.getByRole('checkbox', { name: '沁水盆地' }).focus();
     await user.tab();
     expect(screen.queryByRole('group', { name: '地区选项' })).not.toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: '仅显示可查阅项目' })).toHaveFocus();
+    expect(screen.getByRole('combobox', { name: '项目维数' })).toHaveFocus();
   });
 
   it('跨搜索保留多选，清空搜索仍选中，标签可单独移除，无结果不丢失选择', async () => {
@@ -121,13 +189,15 @@ describe('盆地搜索多选', () => {
 });
 
 describe('概览筛选与项目列表联动', () => {
-  it('年度和盆地应用后共同筛选列表，重新打开保留条件，重置恢复全部项目', async () => {
+  it('年度、地区和项目维数共同筛选列表，重新打开保留条件，重置恢复全部项目', async () => {
     const user = userEvent.setup(); render(<Harness/>);
     expect(projectNames()).toEqual(projects.map(project => project.name));
     expect(screen.getByRole('button', { name: '项目类型' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: '重置项目类型' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '筛选项目' }));
     await user.type(screen.getByRole('textbox', { name: '起始年度' }), '2024');
+    await user.click(screen.getByRole('combobox', { name: '项目维数' }));
+    await user.click(screen.getByRole('option', { name: '二维+三维' }));
     await user.click(screen.getByRole('button', { name: '选择地区' }));
     await user.click(screen.getByRole('checkbox', { name: '沁水盆地' }));
     await user.click(screen.getByRole('button', { name: '应用筛选' }));
@@ -135,9 +205,11 @@ describe('概览筛选与项目列表联动', () => {
     expect(screen.getByText('1 个项目')).toBeVisible();
     await user.click(screen.getByRole('button', { name: '筛选项目' }));
     expect(screen.getByRole('textbox', { name: '起始年度' })).toHaveValue('2024');
+    expect(screen.getByRole('combobox', { name: '项目维数' })).toHaveTextContent('二维+三维');
     expect(screen.getByRole('button', { name: '移除地区：沁水盆地' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '重置筛选条件' }));
     expect(api.state.overviewFilters).toEqual({});
+    expect(screen.getByRole('combobox', { name: '项目维数' })).toHaveTextContent('全部维数');
     expect(screen.getByRole('textbox', { name: '起始年度' })).toHaveValue('');
     expect(screen.getByRole('button', { name: '选择地区' })).toHaveTextContent('全部地区');
     await user.click(screen.getByRole('button', { name: '关闭筛选' }));

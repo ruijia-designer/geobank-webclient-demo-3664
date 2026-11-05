@@ -1,12 +1,15 @@
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, FileText, FolderTree, Grid2X2, HardDrive, Image, Layers, MapPinned, Pencil, Plus, ScanLine, Server, Trash2, Users } from 'lucide-react';
 import type { AppApi } from '../types';
 import { ResultTypesPanel } from '../components/ResultTypesPanel';
+import { TablePagination } from '../components/TablePagination';
+import { usePaginationScroll } from '../components/usePaginationScroll';
 import { RowReorderHandle, useRowReorder } from '../components/RowReorder';
 import { Modal } from '../components/Modal';
 import { BaselineFileInput, BaselineMultiSelect, parseBaselineMultiValues } from '../components/BaselineFormControls';
 import { BASELINE_CONFIGS, baselineFilter, demoRows, saveBaselineRows, SORTABLE_BASELINE_IDS, baselineSiblings, placeBaselineRow, projectTypeParentOptions, projectTypeParentError, baselinePath } from '../services/baseline';
 import type { BaselineRow } from '../services/baseline';
+import { getProjectTypeCatalogRows, saveProjectTypeCatalogRows } from '../services/projectTypeCatalog';
 import { useTranslation } from '../i18n';
 import './BaselinePage.css';
 const icons = [Grid2X2, FileText, FolderTree, MapPinned, Layers, Image, Grid2X2, Layers, Layers, Layers, Users, Users, Users, HardDrive, Server];
@@ -15,6 +18,7 @@ type Dialog = {
     mode: 'new' | 'edit' | 'detail' | 'delete' | 'scan';
     row: BaselineRow;
 };
+const ProjectTypeColorPicker = lazy(() => import('../components/ProjectTypeColorPicker'));
 export default function BaselinePage({ api }: {
     api: AppApi;
 }) {
@@ -24,6 +28,11 @@ export default function BaselinePage({ api }: {
         : t(action) + ' ' + name;
     const section = api.state.route.section || 'types';
     const config = BASELINE_CONFIGS.find(c => c.id === section || c.title === section) || BASELINE_CONFIGS[0];
+    const isProjectTypes = config.id === 'types';
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+    const scrollRef = useRef<HTMLElement>(null);
+    const listRef = useRef<HTMLElement>(null);
     const newItemLabel = config.id === 'mining' ? '新增矿权' : '新增' + config.title;
     const displayFieldValue = (key: string, raw: string | number | undefined) => {
         const value = String(raw ?? '');
@@ -31,7 +40,7 @@ export default function BaselinePage({ api }: {
         if (field?.kind === 'multiselect') return parseBaselineMultiValues(value).map(item => t(item)).join(locale === 'en' ? ', ' : '、') || '—';
         return field?.kind === 'select' && key !== 'parent' ? t(value || '—') : value || '—';
     };
-    const [rows, setRows] = useState(demoRows[config.id]);
+    const [rows, setRows] = useState(() => isProjectTypes ? getProjectTypeCatalogRows() : demoRows[config.id]);
     const [query, setQuery] = useState('');
     const [namingQueryVersion, setNamingQueryVersion] = useState(0);
     const [draft, setDraft] = useState('');
@@ -83,9 +92,9 @@ export default function BaselinePage({ api }: {
         'aria-describedby': fieldErrors[key] ? `${formId}-${key}-error` : undefined,
     });
     const [rangeCount, setRangeCount] = useState(1);
-    useEffect(() => { setRows(demoRows[config.id]); setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); setDialog(null); setExpanded(config.id === 'types' ? ['1'] : ['1', '2', '5', '7', '10', '11', '15', '18']); }, [config.id]);
-    const update = (next: BaselineRow[]) => { setRows(saveBaselineRows(config.id, next)); };
-    const sortable = SORTABLE_BASELINE_IDS.has(config.id);
+    useEffect(() => { const nextRows = config.id === 'types' ? getProjectTypeCatalogRows() : demoRows[config.id]; setRows(nextRows); setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); setDialog(null); setPage(1); setExpanded(config.id === 'types' ? nextRows.map(row => row.id) : ['1', '2', '5', '7', '10', '11', '15', '18']); }, [config.id]);
+    const update = (next: BaselineRow[]) => { setRows(isProjectTypes ? saveProjectTypeCatalogRows(next) : saveBaselineRows(config.id, next)); };
+    const sortable = !isProjectTypes && SORTABLE_BASELINE_IDS.has(config.id);
     const filtered = baselineFilter(rows, query, codeQuery, config.tree).filter(r => !extraQuery || Object.values(r).includes(extraQuery));
     const visible = filtered.filter(r => { if (query || codeQuery)
         return true; let parent = r.parent; while (parent) {
@@ -122,9 +131,16 @@ export default function BaselinePage({ api }: {
         sorted.push(r);
         visit(r.id);
     } }; visit(); return sorted; })();
+    const pageCount = Math.max(1, Math.ceil(bodyRows.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const offset = isProjectTypes ? 0 : (currentPage - 1) * pageSize;
+    const pageRows = isProjectTypes ? bodyRows : bodyRows.slice(offset, offset + pageSize);
+    usePaginationScroll(scrollRef, listRef, currentPage, pageSize);
+    useEffect(() => { setPage(current => Math.min(current, pageCount)); }, [pageCount]);
+    useEffect(() => { setPage(1); }, [query, codeQuery, extraQuery]);
     const reorder = useRowReorder({
         items: sortable ? rows.map(row => ({ id: row.id, parentId: row.parent || undefined, label: row.name })) : [],
-        scopeKey: `${config.id}:${query}:${codeQuery}:${extraQuery}:${bodyRows.map(row => row.id).join('|')}:${dialog?.mode || ''}`,
+        scopeKey: `${config.id}:${query}:${codeQuery}:${extraQuery}:${pageRows.map(row => row.id).join('|')}:${dialog?.mode || ''}`,
         onReorder: (sourceId, targetId, placement) => {
             const source = rows.find(row => row.id === sourceId);
             const target = rows.find(row => row.id === targetId);
@@ -137,17 +153,17 @@ export default function BaselinePage({ api }: {
     const secondary = ['areas', 'mining', 'imagery', 'datum', 'velocity', 'servers'].includes(config.id);
     const secondaryKey = config.id === 'mining' ? 'type' : config.id === 'imagery' ? 'service' : config.id === 'servers' ? 'primary' : 'basin';
     const secondaryLabel = config.id === 'mining' ? '类型' : config.id === 'imagery' ? '服务类型' : config.id === 'servers' ? '是否主节点' : '盆地';
-    return <div className="baseline-layout"><aside className="baseline-sidebar"><h2>{t('基准')}</h2><nav aria-label={t('基准栏目')}>{BASELINE_CONFIGS.map((c, i) => { const Icon = icons[i]; return <Fragment key={c.id}>{navigationGroupStarts.has(c.id) && <hr className="baseline-nav-divider" aria-hidden="true"/>}<button className={c.id === config.id ? 'active' : ''} onClick={() => api.navigate({ page: 'baseline', section: c.id })}><Icon size={19}/>{t(c.title)}</button></Fragment>; })}</nav></aside><main className="baseline-main"><div className="page-heading"><h1>{t(config.title)}</h1><p>{t(config.description)}</p></div><form className="card baseline-filters" onSubmit={e => { e.preventDefault(); setQuery(draft); if (config.id === 'naming') setNamingQueryVersion(version => version + 1); setCodeQuery(codeDraft); setExtraQuery(extra); }}>{secondary && <label className="field">{t(secondaryLabel)}<select value={extra} onChange={e => setExtra(e.target.value)}><option value="">{t('全部')}</option>{[...new Set(rows.map(r => String(r[secondaryKey] || '')).filter(Boolean))].map(x => <option key={x} value={x}>{t(x)}</option>)}</select></label>}<label className="field">{t(config.id === 'naming' ? '搜索' : '名称')}<input placeholder={t('请输入')} value={draft} onChange={e => setDraft(e.target.value)}/></label>{config.id === 'structure' && <label className="field">{t('编码')}<input placeholder={t('请输入')} value={codeDraft} onChange={e => setCodeDraft(e.target.value)}/></label>}<div className="filter-actions"><button type="button" className="button" onClick={() => { setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); }}>{t('重置')}</button><button className="button primary">{t('查询')}</button></div></form>
- {config.id === 'naming' ? <ResultTypesPanel query={query} queryVersion={namingQueryVersion} onCategoryChange={() => { setDraft(''); setQuery(''); }} onSave={() => api.notify(t('成果类型已保存'))}/> : <section className="card baseline-list" data-baseline={config.id}><header><h2>{t(config.title + '列表')}</h2><div>{config.tree && config.id === 'structure' && <button className="button" onClick={() => setExpanded(expanded.length ? [] : rows.map(r => r.id))}>{t(expanded.length ? '收起全部' : '展开全部')}</button>}<button className="button primary" onClick={() => open('new')}><Plus size={16}/>{t(config.id === 'structure' ? '新增盆地' : newItemLabel)}</button></div></header>
- <div className="table-wrap"><table {...reorder.tableProps}><colgroup>{config.id !== 'types' && <col className="baseline-sequence-column"/>}{config.columns.map(([key]) => <col key={key}/>)}<col/></colgroup><thead><tr>{config.id !== 'types' && <th className="baseline-sequence-cell">#</th>}{config.columns.map(([key, label]) => <th key={key}>{t(label)}</th>)}<th className="baseline-actions-heading">{t('操作')}</th></tr></thead><tbody>{bodyRows.map((r, index) => { const children = rows.some(x => x.parent === r.id); return <tr key={r.id} {...reorder.rowProps(r.id)}>{config.id !== 'types' && <td className="baseline-sequence-cell">{index + 1}</td>}{config.columns.map(([key]) => <td key={key}>{key === 'name' ? <div className="tree-name" style={{ paddingLeft: ((r.level || 1) - 1) * 24 }}>{config.tree && (children ? <button className="icon-button tree-toggle" aria-label={rowActionLabel(expanded.includes(r.id) ? '收起' : '展开', r.name)} onClick={() => toggle(r.id)}>{expanded.includes(r.id) ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}</button> : <span className="tree-spacer"/>)}<button className="link-button" onClick={() => open('detail', r)}>{r.name}</button></div> : key === 'color' ? <span className="color-swatch" style={{ backgroundColor: String(r.color) }}>{r.color}</span> : displayFieldValue(key, r[key])}</td>)}<td className="baseline-actions-cell"><div className="row-actions baseline-row-actions">
+    return <div className="baseline-layout"><aside className="baseline-sidebar"><h2>{t('基准')}</h2><nav aria-label={t('基准栏目')}>{BASELINE_CONFIGS.map((c, i) => { const Icon = icons[i]; return <Fragment key={c.id}>{navigationGroupStarts.has(c.id) && <hr className="baseline-nav-divider" aria-hidden="true"/>}<button className={c.id === config.id ? 'active' : ''} onClick={() => api.navigate({ page: 'baseline', section: c.id })}><Icon size={19}/>{t(c.title)}</button></Fragment>; })}</nav></aside><main ref={scrollRef} className="baseline-main"><div className="page-heading"><h1>{t(config.title)}</h1><p>{t(config.description)}</p></div><form className="card baseline-filters" onSubmit={e => { e.preventDefault(); setPage(1); setQuery(draft); if (config.id === 'naming') setNamingQueryVersion(version => version + 1); setCodeQuery(codeDraft); setExtraQuery(extra); }}>{secondary && <label className="field">{t(secondaryLabel)}<select value={extra} onChange={e => setExtra(e.target.value)}><option value="">{t('全部')}</option>{[...new Set(rows.map(r => String(r[secondaryKey] || '')).filter(Boolean))].map(x => <option key={x} value={x}>{t(x)}</option>)}</select></label>}<label className="field">{t(config.id === 'naming' ? '搜索' : '名称')}<input placeholder={t('请输入')} value={draft} onChange={e => setDraft(e.target.value)}/></label>{config.id === 'structure' && <label className="field">{t('编码')}<input placeholder={t('请输入')} value={codeDraft} onChange={e => setCodeDraft(e.target.value)}/></label>}<div className="filter-actions"><button type="button" className="button" onClick={() => { setPage(1); setDraft(''); setQuery(''); setCodeDraft(''); setCodeQuery(''); setExtra(''); setExtraQuery(''); }}>{t('重置')}</button><button className="button primary">{t('查询')}</button></div></form>
+ {config.id === 'naming' ? <ResultTypesPanel query={query} queryVersion={namingQueryVersion} onCategoryChange={() => { setDraft(''); setQuery(''); }} onSave={() => api.notify(t('成果类型已保存'))}/> : <section ref={listRef} className="card baseline-list" data-baseline={config.id}><header><h2>{t(config.title + '列表')}</h2><div>{config.tree && config.id === 'structure' && <button className="button" onClick={() => setExpanded(expanded.length ? [] : rows.map(r => r.id))}>{t(expanded.length ? '收起全部' : '展开全部')}</button>}{!isProjectTypes && <button className="button primary" onClick={() => open('new')}><Plus size={16}/>{t(config.id === 'structure' ? '新增盆地' : newItemLabel)}</button>}</div></header>
+ <div className="table-wrap"><table {...reorder.tableProps}><colgroup>{config.id !== 'types' && <col className="baseline-sequence-column"/>}{config.columns.map(([key]) => <col key={key}/>)}{!isProjectTypes && <col/>}</colgroup><thead><tr>{config.id !== 'types' && <th className="baseline-sequence-cell">{t('序号')}</th>}{config.columns.map(([key, label]) => <th key={key}>{t(label)}</th>)}{!isProjectTypes && <th className="baseline-actions-heading">{t('操作')}</th>}</tr></thead><tbody>{pageRows.map((r, index) => { const children = rows.some(x => x.parent === r.id); return <tr key={r.id} {...reorder.rowProps(r.id)}>{config.id !== 'types' && <td className="baseline-sequence-cell">{offset + index + 1}</td>}{config.columns.map(([key]) => <td key={key}>{key === 'name' ? <div className="tree-name" style={{ paddingLeft: ((r.level || 1) - 1) * 24 }}>{config.tree && (children ? <button className="icon-button tree-toggle" aria-label={rowActionLabel(expanded.includes(r.id) ? '收起' : '展开', r.name)} onClick={() => toggle(r.id)}>{expanded.includes(r.id) ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}</button> : <span className="tree-spacer"/>)}{isProjectTypes ? <span className="project-type-name">{r.name}</span> : <button className="link-button" onClick={() => open('detail', r)}>{r.name}</button>}</div> : key === 'color' ? <Suspense fallback={<span className="color-swatch" style={{ backgroundColor: String(r.color) }}>{r.color}</span>}><ProjectTypeColorPicker name={r.name} value={String(r.color)} onSave={color => { update(rows.map(row => row.id === r.id ? { ...row, color } : row)); api.notify(t('已保存到本地演示数据')); }}/></Suspense> : displayFieldValue(key, isProjectTypes && key === 'code' ? r.code || r.id : r[key])}</td>)}{!isProjectTypes && <td className="baseline-actions-cell"><div className="row-actions baseline-row-actions">
  {config.tree && (r.level || 1) < (config.id === 'types' ? 2 : 3) && <button className="icon-button action-add" title={t('新增下级')} aria-label={rowActionLabel('新增下级', r.name)} onClick={() => open('new', undefined, r)}><Plus size={18}/></button>}
  <button className="icon-button action-edit" title={t('编辑')} aria-label={rowActionLabel('编辑', r.name)} onClick={() => open('edit', r)}><Pencil size={18}/></button>
  {sortable && <RowReorderHandle {...reorder.handleProps(r.id)}/>}
  {config.scan && <button className="icon-button action-scan" title={t('扫描')} aria-label={rowActionLabel('扫描', r.name)} onClick={() => open('scan', r)}><ScanLine size={18}/></button>}
  <button className="icon-button danger action-delete" title={t('删除')} aria-label={rowActionLabel('删除', r.name)} onClick={() => open('delete', r)}><Trash2 size={18}/></button>
- </div></td></tr>; })}</tbody></table>{!bodyRows.length && <div className="empty-state"><FileText size={42}/><h3>{t(query || extraQuery ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(query ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p>{!query && <button className="button primary" onClick={() => open('new')}>{t(newItemLabel)}</button>}</div>}</div>
+ </div></td>}</tr>; })}</tbody></table>{!bodyRows.length && <div className="empty-state"><FileText size={42}/><h3>{t(query || extraQuery ? '未找到匹配记录' : '暂无数据')}</h3><p>{t(query ? '调整查询条件后重新查询' : '新增后可在此查看与维护')}</p>{!query && !isProjectTypes && <button className="button primary" onClick={() => open('new')}>{t(newItemLabel)}</button>}</div>}</div>
  <span className="sr-only" role="status" aria-live="polite">{reorder.announcement}</span>
- <footer><span>{bodyRows.length ? t('共 {count} 条', { count: bodyRows.length }) : '—'}</span><span>{t('10 条 / 页')} <button className="button" disabled>{t('上一页')}</button><button className="button primary">1</button><button className="button" disabled>{t('下一页')}</button></span></footer></section>}</main>
+ {!isProjectTypes && <TablePagination total={bodyRows.length} page={currentPage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} label="基准列表分页"/>}</section>}</main>
  {dialog && <Modal title={t(dialog.mode === 'delete' ? '删除' + config.title : dialog.mode === 'scan' ? '扫描磁盘' : dialog.mode === 'new' ? newItemLabel : (dialog.mode === 'detail' ? '查看' : '编辑') + config.title)} onClose={close} wide={config.id === 'mining' || config.id === 'closure'} footer={<><button className="button" onClick={close}>{t(dialog.mode === 'detail' ? '关闭' : '取消')}</button>{dialog.mode === 'delete' ? <button className="button danger-primary" onClick={remove}>{t('确认删除')}</button> : dialog.mode === 'scan' ? <button className="button primary" onClick={() => { update(rows.map(r => r.id === form.id ? { ...r, scanned: new Date().toLocaleString('sv-SE') } : r)); close(); api.notify(t('本地演示扫描完成')); }}>{t('开始扫描')}</button> : dialog.mode !== 'detail' && <button className="button primary" onClick={save}>{t('保存')}</button>}</>}>
  {dialog.mode === 'delete' ? <p>{t('确定删除“{name}”吗？', { name: form.name })}{rows.some(r => r.parent === form.id) && t('其下级记录也将删除。')}</p> : dialog.mode === 'scan' ? <div><p>{t('磁盘：')}{form.name}</p><p>{t('挂载路径：')}{form.path}</p></div> : <><div ref={formRef} className={'form-grid baseline-form' + (config.id === 'types' ? ' baseline-type-form' : '')}>{config.id === 'structure' && <div className="baseline-tree-note">{t('上级单元：')}{rows.find(r => r.id === form.parent)?.name || t('无（顶级盆地）')}　{t('单元类型：')}{t(String(form.type || '盆地'))}　{t('等级：')}{form.level || 1}</div>}{config.fields.filter(f => { if (config.id === 'datum') {
             if (f.key === 'value')

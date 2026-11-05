@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
@@ -11,10 +13,23 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run"
   },
-  "dependencies": { "react": "19.2.6", "react-dom": "19.2.6", "lucide-react": "1.31.0" },
+  "dependencies": {
+    "element-plus": "2.14.7",
+    "lucide-react": "1.31.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "vue": "3.5.45"
+  },
   "devDependencies": {
-    "@types/react": "19.2.14", "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2", "typescript": "5.9.3", "vite": "8.0.13",
-    "vitest": "4.0.18", "jsdom": "27.4.0", "@testing-library/react": "16.3.2", "@testing-library/user-event": "14.6.1", "@testing-library/jest-dom": "6.9.1"
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "jsdom": "27.4.0",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "vitest": "4.0.18"
   }
 }

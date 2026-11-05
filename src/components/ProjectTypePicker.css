@@ -1,0 +1,16 @@
+.type-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:28px;color:#435e70}
+.type-picker-heading>span{line-height:21px}
+.type-picker-style-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--blue);font-size:12px;line-height:20px;white-space:nowrap}
+.type-picker-style-toggle:hover{background:#f0f8fb}
+.type-picker-radio-levels{display:flex;flex-direction:column;gap:12px;padding:12px;border:1px solid var(--border);border-radius:5px;background:#fff}
+.type-picker .type-picker-radio-group{border:0;margin:0;padding:0;min-width:0;flex-shrink:0}
+.type-picker-radio-options{display:flex;gap:10px;flex-wrap:wrap}
+.type-picker .type-picker-radio-option{display:flex;align-items:center;gap:8px;min-height:38px;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:#435e70;cursor:pointer;line-height:20px}
+.type-picker .type-picker-radio-option:hover,.type-picker .type-picker-radio-option.is-selected{color:var(--blue)}
+.type-picker .type-picker-radio-option input[type=radio]{width:15px;height:15px;flex:none;margin:0;padding:0;accent-color:var(--blue)}
+.type-picker .type-options-column:only-child{flex:1;max-width:none}
+.type-picker-radio-popup{position:fixed;z-index:120;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 6px 15px #183a5220}
+.type-picker .type-picker-radio-group.is-root .type-picker-radio-option.is-selected{background:#e8f3f9;box-shadow:inset 0 0 0 1px #b7d7e8}
+.type-picker .type-picker-radio-group.is-child{margin-left:12px;padding:10px 12px;border:1px solid #dbe7ef;border-left:3px solid #8fb8cf;border-radius:5px;background:#f5f9fc}
+.type-picker-radio-group.is-child .type-picker-radio-options{gap:8px}
+.type-picker .type-picker-radio-group.is-child .type-picker-radio-option.is-selected{background:#fff;box-shadow:inset 0 0 0 1px #bdd8e7}

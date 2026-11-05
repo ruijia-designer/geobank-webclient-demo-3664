@@ -57,20 +57,20 @@ describe('顶部中英文切换',()=>{
   it('成果右侧任意页签最大化均隐藏上传，语言切换保留页签和滚动，恢复后显示上传',async()=>{
     const user=userEvent.setup();window.history.replaceState(null,'','/#/results/current');render(<App/>);
     await user.click(screen.getByRole('button',{name:'最大化当前右侧栏目'}));
-    expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
     const content=document.querySelector('.result-right-content') as HTMLElement;
     content.scrollTop=240;fireEvent.scroll(content);
     await chooseLanguage(user,'English');
     expect(document.querySelector('.result-right-content')).toBe(content);
     expect(content.scrollTop).toBe(240);
     expect(screen.getByRole('heading',{name:'Results overview'})).toBeInTheDocument();
-    expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'One-click upload'})).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab',{name:'Integrated maps'}));
-    expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'One-click upload'})).not.toBeInTheDocument();
     await user.click(screen.getAllByRole('tab',{name:'设计文档.doc'})[0]);
-    expect(screen.queryByRole('button',{name:'Upload results'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'One-click upload'})).not.toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:'Restore'}));
-    expect(screen.getByRole('button',{name:'Upload results'})).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'One-click upload'})).toBeInTheDocument();
     expect(document.querySelector('.result-tab.active')).toHaveTextContent('设计文档.doc');
     expect(window.location.hash).toBe('#/results/current');
   });

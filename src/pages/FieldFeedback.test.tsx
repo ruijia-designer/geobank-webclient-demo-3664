@@ -1,26 +1,30 @@
 import {useState} from 'react';
-import {beforeEach,describe,expect,it,vi} from 'vitest';
-import {fireEvent,render,screen,within} from '@testing-library/react';
+import {afterAll,beforeAll,beforeEach,describe,expect,it,vi} from 'vitest';
+import {fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ResultsPage from './ResultsPage';
 import BaselinePage from './BaselinePage';
 import {LanguageProvider} from '../i18n';
 import {initialState} from '../services/demo';
+import {PROJECT_TYPE_CATALOG_ROWS,getProjectTypeCatalogRows,saveProjectTypeCatalogRows} from '../services/projectTypeCatalog';
 import {resultInfoCache} from '../services/results';
 import type {AppApi,AppState} from '../types';
+
+beforeAll(()=>{vi.stubGlobal('ResizeObserver',class{observe(){}unobserve(){}disconnect(){}});});
+afterAll(()=>vi.unstubAllGlobals());
 
 function Harness({baseline=false}:{baseline?:boolean}){
  const [state,setState]=useState<AppState>(()=>({...initialState('admin'),route:{page:baseline?'baseline':'results',section:baseline?'types':undefined}}));
  const api:AppApi={state,setState,navigate:vi.fn(),notify:vi.fn(),deny:vi.fn(),openProject:vi.fn()};
  return <LanguageProvider>{baseline?<BaselinePage api={api}/>:<ResultsPage api={api}/>}</LanguageProvider>;
 }
-beforeEach(()=>{sessionStorage.removeItem('geobank-demo-locale');delete resultInfoCache.current;});
+beforeEach(()=>{sessionStorage.removeItem('geobank-demo-locale');delete resultInfoCache.current;saveProjectTypeCatalogRows(PROJECT_TYPE_CATALOG_ROWS);});
 
 function expectFieldError(input:HTMLElement,message:string){
  expect(input).toHaveAttribute('aria-invalid','true');
  const error=document.getElementById(input.getAttribute('aria-describedby')!);
  expect(error).toHaveTextContent(message);
- expect(input.closest('dd,label')).toContainElement(error);
+ expect(input.closest('dd,label,form')).toContainElement(error);
 }
 
 describe('字段旁的编辑反馈',()=>{
@@ -51,17 +55,29 @@ describe('字段旁的编辑反馈',()=>{
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();expect(screen.getByLabelText('结束日期')).not.toHaveAttribute('aria-invalid');
   expect(resultInfoCache.current).toBeUndefined();
  });
- it('基准名称和颜色错误分别显示，保存定位尚未修正的字段，取消重开清除',async()=>{
-  const user=userEvent.setup();render(<Harness baseline/>);await user.click(screen.getByRole('button',{name:'新增项目类型'}));
-  let dialog=within(screen.getByRole('dialog'));
-  const name=dialog.getByLabelText(/名称/),color=dialog.getByLabelText('颜色值');
-  await user.clear(color);await user.type(color,'bad');await user.click(dialog.getByRole('button',{name:'保存'}));
-  expect(name).toHaveFocus();expectFieldError(name,'请输入名称');expectFieldError(color,'六位颜色值');
-  await user.type(name,'临时分类');expect(name).not.toHaveAttribute('aria-invalid');
-  await user.click(dialog.getByRole('button',{name:'保存'}));expect(color).toHaveFocus();
-  await user.clear(color);await user.type(color,'#123ABC');expect(color).not.toHaveAttribute('aria-invalid');expect(dialog.queryByRole('alert')).not.toBeInTheDocument();
-  await user.clear(name);await user.click(dialog.getByRole('button',{name:'保存'}));
-  await user.click(dialog.getByRole('button',{name:'取消'}));await user.click(screen.getByRole('button',{name:'新增项目类型'}));
-  dialog=within(screen.getByRole('dialog'));expect(dialog.queryByRole('alert')).not.toBeInTheDocument();expect(dialog.getByLabelText(/名称/)).not.toHaveAttribute('aria-invalid');
+ it('Element拒绝非法颜色且关闭重开保留最后确认的颜色',async()=>{
+  const user=userEvent.setup();render(<Harness baseline/>);
+  const original=getProjectTypeCatalogRows()[0].color;
+  const trigger=await screen.findByRole('button',{name:'修改采集颜色'});
+  await user.click(trigger.querySelector<HTMLElement>('.el-color-picker__trigger')!);
+  let panel=await screen.findByRole('dialog');
+  let color=within(panel).getByRole('textbox');
+  await user.clear(color);await user.type(color,'not-a-color');
+  await user.click(within(panel).getByRole('button',{name:'确定'}));
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(getProjectTypeCatalogRows()[0].color).toBe(original);
+  expect(trigger.closest('td')).toHaveTextContent(String(original));
+  trigger.focus();await user.keyboard('{Enter}');
+  panel=await screen.findByRole('dialog');color=within(panel).getByRole('textbox');
+  expect(color).toHaveValue(String(original).toLowerCase());
+  await user.clear(color);await user.type(color,'#123ABC');
+  await user.click(within(panel).getByRole('button',{name:'确定'}));
+  await waitFor(()=>expect(getProjectTypeCatalogRows()[0].color).toBe('#123ABC'));
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  trigger.focus();await user.keyboard('{Enter}');
+  panel=await screen.findByRole('dialog');color=within(panel).getByRole('textbox');
+  await user.clear(color);await user.type(color,'not-a-color');await user.keyboard('{Escape}');
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(getProjectTypeCatalogRows()[0].color).toBe('#123ABC');
  });
 });

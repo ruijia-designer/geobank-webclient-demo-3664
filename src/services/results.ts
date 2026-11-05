@@ -35,7 +35,7 @@ const note = '精细标定、对比追踪 T5、T6、T8、Tg、Tg3、Tg4-1、TgAr
 export function initialResultInfo(p: Project): ResultInfo {
     const empty = p.id.startsWith('created-');
     return { name: p.name, basin: p.basin, areaName: '', depression: '', concavity: '', location: empty ? '' : p.id === 'current' ? '太岳山东侧' : '', area: p.area, client: '', contractor: '', start: empty ? '' : '2024-05-30', end: empty ? '' : '2024-11-15', year: p.year, note: empty ? '' : note,
-        seismicName:'', seismicDomain:'', seismicDimension:'', seismicSize:empty?'':'3.65', seismicSample:'',
+        seismicName:'', seismicDomain:'', seismicDimension:p.dimension || '', seismicSize:empty?'':'3.65', seismicSample:'',
         iline:empty?'':'189', xline:empty?'':'21', xloc:empty?'':'181', istep:empty?'':'1', xstep:empty?'':'1', yloc:empty?'':'185',
         normalFault:empty?'':'有', reverseFault:empty?'':'有', strikeSlip:empty?'':'无', buriedHill:empty?'':'无', channel:empty?'':'有', cave:empty?'':'无', slope:empty?'':'有', saltDome:empty?'':'无', intrusive:empty?'':'无', unconformity:empty?'':'有',
         layerCount:empty?'':'9', faultCount:empty?'':'135', wellCount:empty?'':'18', curveCount:empty?'':'18', hasTimeDepth:empty?'':'有' };
@@ -49,7 +49,7 @@ export const resultFilesCache: Record<string, ResultFile[]> = {};
 export function saveProjectInfo(id:string,info:ResultInfo){resultInfoCache[id]={...info};return resultInfoCache[id]}
 export function saveDirectoryFiles(id:string,files:ResultFile[]){resultFilesCache[id]=files.map(f=>({...f}));return resultFilesCache[id]}
 export function importProjectInformation(info:ResultInfo){return {...info,location:'太岳山东侧',area:'96.8',start:'2024-05-30',end:'2024-11-15',year:'2024'}}
-export function appendUploadedFiles(current:ResultFile[],files:ResultFile[],directory:string){return [...current,...files.map((f,i)=>({...f,id:'uploaded-'+Date.now()+'-'+i,directory,uploaded:new Date().toLocaleString('sv-SE'),user:'Demo'}))]}
+export function appendUploadedFiles(current:ResultFile[],files:ResultFile[],directory:string){return [...current,...files.map(f=>({...f,id:'uploaded-'+crypto.randomUUID(),directory,uploaded:new Date().toLocaleString('sv-SE'),user:'Demo'}))]}
 export function removeFiles(files:ResultFile[],ids:string[]){return files.filter(f=>!ids.includes(f.id))}
 export function bytesLabel(n: number) {
     const bytes = Number.isFinite(n) ? Math.max(0,n) : 0;

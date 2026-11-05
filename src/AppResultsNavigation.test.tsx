@@ -78,18 +78,24 @@ describe('真实成果草稿与全局导航联动', () => {
     render(<App/>);
     await user.click(screen.getByRole('button', { name: '编辑' }));
     fireEvent.change(screen.getByRole('textbox', { name: '项目名称' }), { target: { value: '保存后退出的项目名称' } });
+    await user.selectOptions(screen.getByRole('combobox', { name: '地震数据维度' }), '二维+三维');
     await user.click(screen.getByRole('button', { name: 'Demo 用户菜单' }));
     await user.click(screen.getByRole('menuitem', { name: /退出登录/ }));
     const dialog = screen.getByRole('dialog', { name: '未保存的修改' });
     await user.click(within(dialog).getByRole('button', { name: '保存并继续' }));
     expect(screen.getByRole('heading', { name: '欢迎登录' })).toBeVisible();
     expect(resultInfoCache['0'].name).toBe('保存后退出的项目名称');
+    expect(resultInfoCache['0'].seismicDimension).toBe('二维+三维');
+    expect(JSON.parse(sessionStorage.getItem('geobank-demo-return')!).projects.find((project: { id: string }) => project.id === '0').dimension)
+      .toBe('二维+三维');
     expect(JSON.parse(sessionStorage.getItem('geobank-demo-return')!).projects.find((project: { id: string }) => project.id === '0').name)
       .toBe('保存后退出的项目名称');
     await user.type(screen.getByRole('textbox', { name: '用户名' }), 'Demo');
     await user.type(screen.getByLabelText('密码', { exact: true }), 'demo123{Enter}');
     expect(window.location.hash).toBe('#/results/0');
     expect(document.querySelector('.project-trigger')).toHaveTextContent('保存后退出的项目名称');
+    await user.click(screen.getByRole('button', { name: '编辑' }));
+    expect(screen.getByRole('combobox', { name: '地震数据维度' })).toHaveValue('二维+三维');
   });
 
   it('取消浏览器后退后，再次后退仍是原概览目标，放弃后正常返回', async () => {

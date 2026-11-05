@@ -52,7 +52,7 @@ export function isProjectInViewport(project: Project, geometry: MapGeometry, zoo
 export function projectLayer(type: string, typePath: readonly string[] = []) {
   // A custom leaf may contain none of the five category words. Its stored
   // ancestry identifies the checkbox that owns it, before legacy-name fallback.
-  const root = typePath.find(part => ['采集', '处理', '解释', '井筒', '非地震'].includes(part));
+  const root = typePath.map(part => part.replace(/项目$/, '')).find(part => ['采集', '处理', '解释', '井筒', '非地震'].includes(part));
   if (root) return root;
   if (type.includes('非地震')) return '非地震';
   if (type.includes('采集')) return '采集';

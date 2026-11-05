@@ -34,8 +34,8 @@ const contact = [name, { key: 'address', label: '地址' }, { key: 'phone', labe
 const structure: BaselineRow[] = [['百色盆地', '4501', '盆地', 1, ''], ['东部坳陷', '450101', '坳陷', 2, '1'], ['田东凹陷', '', '凹陷', 3, '2'], ['田阳凹陷', '', '凹陷', 3, '2'], ['南部隆起', '450103', '坳陷', 2, '1'], ['靖西凸起', '', '凹陷', 3, '5'], ['西部坳陷', '450102', '坳陷', 2, '1'], ['百色凹陷', '', '凹陷', 3, '7'], ['那坡凹陷', '', '凹陷', 3, '7'], ['北部湾盆地', '8403', '盆地', 1, ''], ['北部坳陷', '840301', '坳陷', 2, '10'], ['福山凹陷', '', '凹陷', 3, '11'], ['海中凹陷', '', '凹陷', 3, '11'], ['涠西南凹陷', '', '凹陷', 3, '11'], ['东部隆起', '840304', '坳陷', 2, '10'], ['涠洲凸起', '', '凹陷', 3, '15'], ['斜阳凸起', '', '凹陷', 3, '15'], ['南部坳陷', '840303', '坳陷', 2, '10'], ['昌化凹陷', '', '凹陷', 3, '18']].map(([n, c, t, l, p], i) => ({ id: String(i + 1), name: String(n), code: String(c), type: String(t), level: Number(l), parent: String(p) }));
 export const BASELINE_CONFIGS: BaselineConfig[] = [
     {
-        id: 'types', title: '项目类型', description: '维护最多二级项目分类，分别设置各级类型的显示颜色', tree: true,
-        columns: [['name', '名称'], ['color', '颜色']],
+        id: 'types', title: '项目类型', description: '查看项目分类与编码，点击色块设置各级类型的显示颜色', tree: true,
+        columns: [['name', '名称'], ['code', '编码'], ['color', '颜色']],
         fields: [{ key: 'parent', label: '上级类型', kind: 'select', options: [] }, name, { key: 'color', label: '颜色', kind: 'color' }],
         rows: [
             { id: '1', name: '采集', color: '#277DA8', level: 1 },

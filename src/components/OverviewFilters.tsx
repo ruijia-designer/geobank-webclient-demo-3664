@@ -1,9 +1,89 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
 import type { Filters, Role } from '../types';
 import { useTranslation } from '../i18n';
-import { normalizeOverviewFilters, yearRangeError } from '../services/overviewFilters';
+import { normalizeOverviewFilters, PROJECT_DIMENSIONS, yearRangeError } from '../services/overviewFilters';
 import './overview-filters.css';
+
+const dimensionChoices = ['', ...PROJECT_DIMENSIONS];
+
+function ProjectDimensionPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [placement, setPlacement] = useState({ upward: false, maxHeight: 220 });
+  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
+  const optionButtons = useRef<(HTMLButtonElement | null)[]>([]);
+  const optionsId = useId();
+  const close = (restoreFocus = false) => { setOpen(false); if (restoreFocus) trigger.current?.focus(); };
+  const show = (index = Math.max(0, dimensionChoices.indexOf(value as typeof dimensionChoices[number]))) => {
+    setActiveIndex(index);
+    setOpen(true);
+  };
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = trigger.current?.getBoundingClientRect();
+      const bounds = root.current?.closest('.overview-filters')?.getBoundingClientRect();
+      if (!rect) return;
+      const below = Math.min(bounds?.bottom ?? window.innerHeight, window.innerHeight) - rect.bottom - 12;
+      const above = rect.top - Math.max(bounds?.top ?? 0, 0) - 12;
+      const upward = below < 200 && above > below;
+      setPlacement({ upward, maxHeight: Math.max(80, Math.min(220, upward ? above : below)) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
+  useLayoutEffect(() => {
+    const option = open ? optionButtons.current[activeIndex] : null;
+    const list = option?.parentElement;
+    if (!option || !list) return;
+    if (option.offsetTop < list.scrollTop) list.scrollTop = option.offsetTop;
+    else if (option.offsetTop + option.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = option.offsetTop + option.offsetHeight - list.clientHeight;
+    }
+  }, [open, activeIndex]);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [open]);
+  const navigate = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close(true); return; }
+    if (event.key === 'Tab' && open) { close(); return; }
+    if ((event.key === 'Enter' || event.key === ' ') && open) {
+      event.preventDefault(); onChange(dimensionChoices[activeIndex]); close(true); return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    if (!open) { show(event.key === 'Home' ? 0 : event.key === 'End' ? dimensionChoices.length - 1 : undefined); return; }
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? dimensionChoices.length - 1
+      : (activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + dimensionChoices.length) % dimensionChoices.length;
+    setActiveIndex(next);
+  };
+  return <div className="basin-picker dimension-picker" ref={root} onKeyDown={navigate} onBlur={event => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+  }}>
+    <button ref={trigger} type="button" role="combobox" className="basin-trigger" aria-label={t('项目维数')}
+      aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? optionsId : undefined}
+      aria-activedescendant={open ? `${optionsId}-${activeIndex}` : undefined} onClick={() => open ? close() : show()}>
+      <span className={value ? '' : 'muted'}>{t(value || '全部维数')}</span><ChevronDown size={16} aria-hidden="true" style={{ transform: open ? 'rotate(180deg)' : undefined }}/>
+    </button>
+    {open && <div id={optionsId} className="basin-dropdown dimension-options" role="listbox" aria-label={t('项目维数')}
+      style={{ maxHeight: placement.maxHeight, ...(placement.upward ? { top: 'auto', bottom: 'calc(100% + 6px)' } : {}) }}>
+      {dimensionChoices.map((dimension, index) => <button key={dimension} id={`${optionsId}-${index}`} type="button" role="option" tabIndex={-1}
+        className={index === activeIndex ? 'is-highlighted' : undefined} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActiveIndex(index)}
+        ref={element => { optionButtons.current[index] = element; }} aria-selected={value === dimension}
+        onClick={() => { onChange(dimension); close(true); }}>
+        <span>{t(dimension || '全部维数')}</span>{value === dimension && <Check size={16} aria-hidden="true"/>}
+      </button>)}
+    </div>}
+  </div>;
+}
 
 export function OverviewFilters({ value, basins, role, onApply, onReset, onClose }: {
   value: Filters; basins: string[]; role: Role;
@@ -20,7 +100,7 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
   useEffect(() => {
     if (!open) return;
     const outside = (event: MouseEvent) => { if (!picker.current?.contains(event.target as Node)) setOpen(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+    const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
     document.addEventListener('mousedown', outside); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('mousedown', outside); document.removeEventListener('keydown', escape); };
   }, [open]);
@@ -55,6 +135,7 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
         <div className="basin-options">{options.map(basin => <label key={basin}><input type="checkbox" checked={selected.includes(basin)} onChange={() => toggleBasin(basin)}/><span>{basin}</span></label>)}{!options.length && <p className="basin-empty">{t('无匹配地区')}</p>}</div>
       </div>}
     </div>{selected.length > 0 && <div className="selected-basins">{selected.map(basin => <span key={basin}>{basin}<button type="button" aria-label={t('移除地区：{name}', { name: basin })} onClick={() => toggleBasin(basin)}><X size={12}/></button></span>)}</div>}</fieldset>
+    <fieldset><legend>{t('项目维数')}</legend><ProjectDimensionPicker value={draft.dimension?.[0] || ''} onChange={dimension => set('dimension', dimension ? [dimension] : [])}/></fieldset>
     <div className="overview-filter-toggles">
       <label><input type="checkbox" checked={draft.readable?.includes('true') || false} onChange={event => set('readable', event.target.checked ? ['true'] : [])}/>{t('仅显示可查阅项目')}</label>
       <label><input type="checkbox" checked={draft.inViewport?.includes('true') || false} onChange={event => set('inViewport', event.target.checked ? ['true'] : [])}/>{t('仅显示视野范围内的项目')}</label>

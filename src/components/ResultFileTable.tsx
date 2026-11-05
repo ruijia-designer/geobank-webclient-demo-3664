@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Eye, FileText, FolderOpen, ListPlus, Trash2 } from 'lucide-react';
+import { TablePagination } from './TablePagination';
 import { useTranslation } from '../i18n';
 import type { ResultFile } from '../services/results';
 
@@ -61,16 +62,8 @@ export function ResultFileTable({ files, selected, onSelect, onView, onFields, o
           </div></td>
         </tr>)}</tbody>
       </table>
-      {!files.length && <div className="empty-state"><FolderOpen size={44}/><h3>{t('暂无文件')}</h3><p>{t('上传后可在当前成果目录查看')}</p><button className="button primary" onClick={onUpload}>{t('上传文件')}</button></div>}
+      {!files.length && <div className="empty-state"><FolderOpen size={44}/><h3>{t('暂无文件')}</h3><p>{t('上传后可在当前成果目录查看')}</p><button className="button primary" onClick={onUpload}>{t('上传成果')}</button></div>}
     </div>
-    <nav className="result-file-pagination" aria-label={t('文件分页')}>
-      <span className="file-page-summary" aria-live="polite">{t('第 {start}–{end} 条，共 {total} 条', { start: files.length ? offset + 1 : 0, end: Math.min(offset + pageSize, files.length), total: files.length })}</span>
-      <label><span className="sr-only">{t('每页行数')}</span><select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
-        {[20, 30, 50, 100, 200].map(count => <option key={count} value={count}>{t('{count} 条/页', { count })}</option>)}
-      </select></label>
-      <button className="button small" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>{t('上一页')}</button>
-      <span>{t('第 {page} / {pages} 页', { page: currentPage, pages: pageCount })}</span>
-      <button className="button small" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>{t('下一页')}</button>
-    </nav>
+    <TablePagination label="文件分页" total={files.length} page={currentPage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize}/>
   </div>;
 }

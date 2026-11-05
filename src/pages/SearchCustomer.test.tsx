@@ -23,7 +23,7 @@ describe('检索中英文状态一致性',()=>{
   expect(screen.getByLabelText('Search keyword')).toHaveValue('沁水盆地');expect(screen.getByLabelText('Project result count')).toHaveTextContent('1');
   expect(lastApi.state.search).toMatchObject({field:'basin',query:'沁水盆地',draft:'沁水盆地',filters:{year:['2024']}});
   expect(screen.getByRole('heading',{name:SEARCH_RECORDS[0].name})).toBeVisible();
-  expect(screen.getByText('1–1 of 1 results')).toBeVisible();
+  expect(screen.getByText('1–1 of 1 records')).toBeVisible();
   await user.click(screen.getByRole('button',{name:'切换中文'}));
   expect(screen.getByLabelText('检索字段')).toHaveDisplayValue('盆地/工区');expect(screen.getByLabelText('检索关键词')).toHaveValue('沁水盆地');
   expect(screen.getByRole('checkbox',{name:/2024/})).toBeChecked();

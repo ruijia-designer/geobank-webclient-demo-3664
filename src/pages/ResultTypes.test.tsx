@@ -14,7 +14,7 @@ const notify = vi.fn();
 const baselineProjectTypes = structuredClone(BASELINE_CONFIGS.find(config => config.id === 'types')!.rows);
 const expectedCounts = [37, 30, 27, 25, 36];
 const categoryHeaders = ['采集项目', '处理项目', '解释项目', '井筒项目', '非地震项目'];
-const headers = ['处理项目', '适用项目', '成果编号', '中文目录', '英文目录', '命名规则', '备注', '操作'];
+const headers = ['处理项目', '编码', '适用项目', '成果编号', '中文目录', '英文目录', '命名规则', '备注', '操作'];
 const fieldLabels: Record<string, string> = {
     groupName: '名称', name: '名称', applicableProjects: '适用项目', number: '成果编号',
     chineseDirectory: '中文目录', englishDirectory: '英文目录', namingRule: '命名规则', notes: '备注',
@@ -117,7 +117,7 @@ describe('成果类型完整数据', () => {
 });
 
 describe('成果类型页面操作', () => {
-    it('重命名原 tab，默认处理，两级分类共用数据列，五类均显示操作列和新增分类入口', async () => {
+    it('默认处理，五类均完整显示编码和数据列，仅保留编辑与排序', async () => {
         const user = userEvent.setup();
         render(<Harness />);
         expect(screen.getByRole('heading', { name: '成果类型', level: 1 })).toBeVisible();
@@ -137,17 +137,19 @@ describe('成果类型页面操作', () => {
             expect(within(table()).queryAllByRole('textbox')).toHaveLength(0);
             expect(table().querySelectorAll('input,textarea')).toHaveLength(0);
         }
-        expect(screen.getByRole('button', { name: '新增分类' })).toBeVisible();
+        expect(screen.queryByRole('button', { name: '新增分类' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^(新增|删除)/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '下一页' })).not.toBeInTheDocument();
         const firstGroup = groupRow('nonseismic', '基本信息');
-        for (const label of ['新增基本信息下级', '编辑基本信息', '拖动排序基本信息', '删除基本信息']) {
+        for (const label of ['编辑基本信息', '拖动排序基本信息']) {
             expect(within(firstGroup).getByRole('button', { name: label })).toBeVisible();
         }
-        expect(within(within(firstGroup).getAllByRole('cell').at(-1)!).getAllByRole('button')).toHaveLength(4);
+        expect(within(within(firstGroup).getAllByRole('cell').at(-1)!).getAllByRole('button')).toHaveLength(2);
         const firstItem = row(seedItem('nonseismic', '基本信息', '项目信息'));
-        for (const label of ['编辑项目信息', '拖动排序项目信息', '删除项目信息']) {
+        for (const label of ['编辑项目信息', '拖动排序项目信息']) {
             expect(within(firstItem).getByRole('button', { name: label })).toBeVisible();
         }
-        expect(within(firstItem).getAllByRole('button')).toHaveLength(3);
+        expect(within(firstItem).getAllByRole('button')).toHaveLength(2);
         expect(within(firstItem).queryByRole('button', { name: /^新增/ })).not.toBeInTheDocument();
         expect(within(table()).queryByRole('button', { name: /^(上移|下移)/ })).not.toBeInTheDocument();
     });
@@ -342,7 +344,7 @@ describe('成果类型页面操作', () => {
 });
 
 describe('成果类型适用项目选择', () => {
-    it('五类新增和编辑均只提供本类别末级选项，选择及保存相互隔离', async () => {
+    it('五类编辑均只提供本类别末级选项，选择及保存相互隔离', async () => {
         const user = userEvent.setup();
         render(<Harness />);
         const scenarios: Array<{ id: ResultTypeCategoryId; paths: string[] }> = [
@@ -354,7 +356,8 @@ describe('成果类型适用项目选择', () => {
         ];
         for (const { id, paths } of scenarios) {
             await user.selectOptions(screen.getByRole('combobox', { name: '数据类别' }), id);
-            fireEvent.click(within(groupRow(id, '基本信息')).getByRole('button', { name: '新增基本信息下级' }));
+            openEditor(row(seedItem(id, '基本信息', '项目信息')));
+            chooseProjects([]);
             let options = within(projectOptions());
             expect(options.getAllByRole('checkbox')).toHaveLength(paths.length);
             for (const path of paths) expect(options.getByRole('checkbox', { name: path })).toBeEnabled();

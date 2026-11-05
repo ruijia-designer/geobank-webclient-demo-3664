@@ -39,7 +39,7 @@ describe('成果页本轮客户流程',()=>{
   await user.selectOptions(screen.getByRole('combobox',{name:'工区'}),'大安区块');
   await user.click(screen.getByRole('button',{name:'保存'}));
   expect(resultInfoCache[project.id]).toMatchObject({basin:project.basin,areaName:'大安区块'});
-  await user.click(screen.getByRole('button',{name:'导入'}));
+  await user.click(screen.getByRole('button',{name:'上传成果'}));
   await user.upload(screen.getByLabelText('选择Excel文件'),new File(['demo'],'demo.xlsx'));
   expect(resultInfoCache[project.id].basin).toBe(project.basin);
   expect(lastApi.state.projects.find(row=>row.id===project.id)?.basin).toBe(project.basin);
@@ -87,7 +87,7 @@ describe('成果页本轮客户流程',()=>{
   expect(heading.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
   await user.click(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name:'岩芯'}));
   expect(heading.getByText('总大小 0 B')).toBeVisible();
-  await user.click(heading.getByRole('button',{name:'上传文件'}));
+  await user.click(heading.getByRole('button',{name:'上传成果'}));
   await user.click(screen.getByRole('button',{name:'本地上传'}));
   await user.upload(screen.getByLabelText('选择本地文件'),new File(['abc'],'core.txt'));
   await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'上传'}));
@@ -97,24 +97,25 @@ describe('成果页本轮客户流程',()=>{
 
  it('右侧最大化均隐藏顶部上传成果，其他布局显示且目录上传独立',async()=>{
   const user=userEvent.setup();render(<Harness/>);
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
-  await user.click(screen.getByRole('button',{name:'上传成果'}));
-  expect(notify).toHaveBeenCalledWith('已选择上传成果入口');
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeVisible();
+  await user.click(screen.getByRole('button',{name:'一键上传'}));
+  expect(screen.getByRole('dialog',{name:'一键上传'})).toBeVisible();
+  await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'取消'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(resultFilesCache.current).toBeUndefined();
   await user.click(screen.getByRole('button',{name:'最大化当前右侧栏目'}));
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('tab',{name:'综合成图'}));
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('tab',{name:'成果概览'}));
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('tab',{name:'综合成图'}));
   await user.click(screen.getByRole('button',{name:'隐藏成果视图'}));
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeVisible();
   expect(screen.queryByRole('button',{name:'最大化当前右侧栏目'})).not.toBeInTheDocument();
   expect(screen.queryByRole('button',{name:'还原'})).not.toBeInTheDocument();
   await user.click(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name:'测井数据'}));
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
-  await user.click(screen.getByRole('button',{name:'上传文件'}));
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeVisible();
+  await user.click(screen.getByRole('button',{name:'上传成果'}));
   expect(screen.getByRole('button',{name:'本地上传'})).toBeVisible();expect(screen.getByRole('button',{name:'远程上传'})).toBeVisible();
   await user.click(screen.getByRole('button',{name:'本地上传'}));
   const dialog=screen.getByRole('dialog');
@@ -131,12 +132,12 @@ describe('成果页本轮客户流程',()=>{
   const name=screen.getByLabelText('项目名称');await user.clear(name);await user.type(name,'用户输入不翻译');
   await user.click(screen.getByRole('button',{name:'Switch English'}));
   expect(screen.getByLabelText('Project name')).toHaveValue('用户输入不翻译');
-  expect(screen.getByRole('button',{name:'Cancel'})).toBeVisible();expect(screen.getByRole('button',{name:'Upload results'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'Cancel'})).toBeVisible();expect(screen.getByRole('button',{name:'One-click upload'})).toBeVisible();
   expect(screen.getByRole('button',{name:CURRENT_PROJECT.name})).toBeVisible();
   await user.click(screen.getByRole('button',{name:'Cancel'}));
   await user.click(within(screen.getByRole('navigation',{name:'Results catalogue'})).getByRole('button',{name:'Well log data'}));
   expect(lastApi.state.route.section).toBe('wells');
-  await user.click(screen.getByRole('button',{name:'Upload files'}));await user.click(screen.getByRole('button',{name:'Local upload'}));
+  await user.click(screen.getByRole('button',{name:'Upload results'}));await user.click(screen.getByRole('button',{name:'Local upload'}));
   expect(within(screen.getByRole('dialog')).getByText('Well data / Well log data')).toBeVisible();
   await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Cancel'}));
   await user.click(screen.getByRole('button',{name:'切换中文'}));

@@ -39,16 +39,16 @@ describe('地图项目详情卡片', () => {
     expect(within(card).queryByText('项目概况')).not.toBeInTheDocument();
     expect(within(card).queryByText('工区面积（km²）')).not.toBeInTheDocument();
     expect(within(card).getAllByRole('term').map(term => term.textContent)).toEqual([
-      '年度', '地区', '项目类型', '满覆盖面积', '总炮数', '面元', '纵横比', '最大炮检距',
+      '年度', '地区', '类型', '大小（km² / km）', '总炮数', '面元（m）', '纵横比', '最大炮间距（km）',
     ]);
     expect(fieldValue(card, '年度')).toHaveTextContent('2024');
     expect(fieldValue(card, '地区')).toHaveTextContent('沁水盆地');
-    expect(fieldValue(card, '项目类型')).toHaveTextContent('三维陆上常规采集');
-    expect(fieldValue(card, '满覆盖面积')).toHaveTextContent('596 km²');
+    expect(fieldValue(card, '类型')).toHaveTextContent('三维陆上常规采集');
+    expect(fieldValue(card, '大小（km² / km）')).toHaveTextContent(/^596$/);
     expect(fieldValue(card, '总炮数')).toHaveTextContent('550,000');
-    expect(fieldValue(card, '面元')).toHaveTextContent('25 m × 25 m');
+    expect(fieldValue(card, '面元（m）')).toHaveTextContent(/^25 × 25$/);
     expect(fieldValue(card, '纵横比')).toHaveTextContent('0.8');
-    expect(fieldValue(card, '最大炮检距')).toHaveTextContent('8 km');
+    expect(fieldValue(card, '最大炮间距（km）')).toHaveTextContent(/^8$/);
     expect(within(card).getByText('暂无关联项目')).toBeVisible();
     expect(within(card).getByRole('button', { name: '查阅成果' })).toBeVisible();
   });
@@ -57,17 +57,17 @@ describe('地图项目详情卡片', () => {
     const missing = project({ year: '', basin: '' });
     const { rerender } = render(<ProjectMapCard project={missing} projects={[missing]} role="admin" onClose={onClose} onOpen={onOpen}/>);
     let card = screen.getByRole('region', { name: '项目详情' });
-    for (const label of ['年度', '地区', '满覆盖面积', '总炮数', '面元', '纵横比', '最大炮检距']) {
+    for (const label of ['年度', '地区', '大小（km² / km）', '总炮数', '面元（m）', '纵横比', '最大炮间距（km）']) {
       expect(fieldValue(card, label)).toHaveTextContent(/^—$/);
     }
     const zero = project({ mapDetails: { fullFoldAreaKm2: 0, processing: { shotCount: 0, binSizeMeters: [0, 0], aspectRatio: 0, maxOffsetKm: 0 } } });
     rerender(<ProjectMapCard project={zero} projects={[zero]} role="admin" onClose={onClose} onOpen={onOpen}/>);
     card = screen.getByRole('region', { name: '项目详情' });
-    expect(fieldValue(card, '满覆盖面积')).toHaveTextContent('0 km²');
+    expect(fieldValue(card, '大小（km² / km）')).toHaveTextContent(/^0$/);
     expect(fieldValue(card, '总炮数')).toHaveTextContent(/^0$/);
-    expect(fieldValue(card, '面元')).toHaveTextContent('0 m × 0 m');
+    expect(fieldValue(card, '面元（m）')).toHaveTextContent(/^0 × 0$/);
     expect(fieldValue(card, '纵横比')).toHaveTextContent(/^0$/);
-    expect(fieldValue(card, '最大炮检距')).toHaveTextContent('0 km');
+    expect(fieldValue(card, '最大炮间距（km）')).toHaveTextContent(/^0$/);
   });
 
   it('标题分类取自类型而非项目名称，一级标签与二级色条不受归档状态影响', () => {
@@ -140,7 +140,7 @@ describe('地图项目详情卡片', () => {
     expect(within(card).getByText('Acquisition', { exact: true })).toBeVisible();
     expect(fieldValue(card, 'Region')).toHaveTextContent('沁水盆地');
     expect(within(card).getByRole('button', { name: 'View results' })).toBeVisible();
-    expect(fieldValue(card, 'Full-fold area')).toHaveTextContent('596 km²');
+    expect(fieldValue(card, 'Size (km² / km)')).toHaveTextContent(/^596$/);
     expect(fieldValue(card, 'Total shots')).toHaveTextContent('550,000');
     await user.click(within(card).getByRole('button', { name: 'View related project: ' + related.name }));
     expect(onOpen).toHaveBeenCalledWith(related);

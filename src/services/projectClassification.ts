@@ -1,5 +1,6 @@
 import type { Project } from '../types';
 import { demoRows } from './baseline';
+import { getCreationProjectTypeOptions, getProjectTypeCatalogRows } from './projectTypeCatalog';
 
 export interface ProjectTypeOption {
   id: string;
@@ -11,7 +12,7 @@ export interface ProjectTypeOption {
   leaf: boolean;
 }
 
-/** Read the editable baseline cache, so changes are available when creating the next project. */
+/** Keep the legacy catalogue for existing projects and result-type associations. */
 export function getProjectTypeOptions(): ProjectTypeOption[] {
   const rows = demoRows.types;
   return rows.map(row => {
@@ -34,7 +35,8 @@ export function getBasinOptions(): string[] {
 }
 
 export function projectTypeColor(project: Pick<Project, 'type'|'typeId'|'typePath'>): string {
-  const types = getProjectTypeOptions();
+  const isCatalogue = project.typeId?.startsWith('catalog-');
+  const types = isCatalogue ? getCreationProjectTypeOptions() : getProjectTypeOptions();
   const selected = types.find(type => type.id === project.typeId)
     || types.find(type => type.path.join('/') === project.typePath?.join('/'))
     || types.find(type => type.name === project.type);
@@ -42,12 +44,12 @@ export function projectTypeColor(project: Pick<Project, 'type'|'typeId'|'typePat
   const roots = ['采集', '处理', '解释', '井筒', '非地震'];
   const root = roots.find(name => project.typePath?.[0]?.includes(name))
     || roots.find(name => project.type.includes(name));
-  return types.find(type => type.level === 1 && type.name === root)?.color || '#647C97';
+  return types.find(type => type.level === 1 && (isCatalogue ? type.name.replace(/项目$/, '') : type.name) === root)?.color || '#647C97';
 }
 
 /** Short display label only; retain the project's stored leaf type and color. */
 export function projectTypeLabel(project: Pick<Project, 'type'|'typeId'|'typePath'>): string {
-  const types = getProjectTypeOptions();
+  const types = project.typeId?.startsWith('catalog-') ? getCreationProjectTypeOptions() : getProjectTypeOptions();
   const path = types.find(type => type.id === project.typeId)?.path || project.typePath || [];
   const roots = ['非地震', '采集', '处理', '解释', '井筒'];
   return roots.find(name => path[0]?.includes(name))
@@ -62,7 +64,9 @@ export function projectCardClassification(project: Pick<Project, 'type'|'typeId'
   secondaryColor: string;
   textColor: '#ffffff';
 } {
-  const types = getProjectTypeOptions(), rows = demoRows.types;
+  const isCatalogue = project.typeId?.startsWith('catalog-');
+  const types = isCatalogue ? getCreationProjectTypeOptions() : getProjectTypeOptions();
+  const rows = isCatalogue ? getProjectTypeCatalogRows() : demoRows.types;
   const path = project.typePath || [];
   const matchesPath = (type: ProjectTypeOption, candidate: string[]) =>
     type.path.length === candidate.length && type.path.every((name, index) => name === candidate[index]);
@@ -78,7 +82,7 @@ export function projectCardClassification(project: Pick<Project, 'type'|'typeId'
     const roots = ['非地震', '采集', '处理', '解释', '井筒'];
     const root = roots.find(name => path[0]?.includes(name))
       || roots.find(name => project.type.includes(name));
-    selected = types.find(type => type.level === 1 && type.name === root);
+    selected = types.find(type => type.level === 1 && (isCatalogue ? type.name.replace(/项目$/, '') : type.name) === root);
   }
 
   // Follow IDs instead of looking up names, which can repeat in different branches.
@@ -94,7 +98,8 @@ export function projectCardClassification(project: Pick<Project, 'type'|'typeId'
     ? value : '#647C97';
   const primaryColor = color(root?.color), secondaryColor = color(secondary?.color);
   return {
-    label: root?.name || path[0] || project.type || '—',
+    // Existing cards use short category labels to select their parameter groups.
+    label: (isCatalogue ? root?.name.replace(/项目$/, '') : root?.name) || path[0] || project.type || '—',
     primaryColor,
     secondaryColor,
     textColor: '#ffffff',

@@ -36,11 +36,11 @@
 .result-project-options .project-type-label{display:inline-block;border-radius:3px;padding:2px 7px;color:#fff;font-size:var(--font-caption);white-space:nowrap}
 .result-project-options small>span:last-child{white-space:nowrap}
 .result-facts dd,.result-sgy dd,.result-geology dd{flex:1;min-width:0}
-.information-card input,.information-card select,.project-note-editor,.project-location-editor{width:100%;min-width:0;border:1px solid #cbdde8;border-radius:4px;background:#fff;color:var(--ink);padding:6px;font-size:13px}
+.information-card input,.information-card select,.project-note-editor{width:100%;min-width:0;border:1px solid #cbdde8;border-radius:4px;background:#fff;color:var(--ink);padding:6px;font-size:13px}
 .information-card input,.information-card select{height:33px}
 .information-card input[type=number]{appearance:textfield}
 .result-facts>.project-location dd{white-space:pre-wrap}
-.project-location-editor{min-height:72px;resize:vertical;line-height:1.7}
+
 .project-note-editor{min-height:110px;resize:vertical;line-height:1.7}
 .results-layout[hidden]{display:none}
 .result-tab{flex:0 0 auto;min-width:0;max-width:240px}
@@ -98,10 +98,6 @@
 .result-file-list>.table-wrap{flex:1;min-height:0}
 .result-files-table th{position:sticky;top:0;z-index:1}
 .result-files-table .file-name,.result-files-table .badge{font-size:var(--font-body);line-height:1.5}
-.result-file-pagination{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;flex-shrink:0;border-top:1px solid var(--border);background:#fff;color:var(--muted);font-size:var(--font-body)}
-.file-page-summary{margin-right:auto}
-.result-file-pagination select{height:34px;border:1px solid var(--border);border-radius:4px;padding:0 10px;color:#435e70;background:#fff}
-.result-file-pagination .button{height:34px;padding:0 16px}
 .information-card .read-only-field{background:#f3f7fa;border-color:transparent;color:var(--ink)}
 
 /* Place archive state alongside the overview title, outside the summary card. */
@@ -132,3 +128,5 @@
 .project-picker-empty .button{display:inline-flex;width:auto;background:#fff;border:1px solid var(--border)}
 .unsaved-project-name{color:var(--muted);font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 @media(max-width:1450px){.information-edit-actions{bottom:-16px;margin:16px -12px -16px;padding:12px}}
+
+.project-upload-list{max-height:42vh;overflow:auto}.project-upload-list .upload-files{width:100%}.project-upload-path{overflow-wrap:anywhere;min-width:140px}.project-upload-list select{width:100%;min-width:180px;border:1px solid var(--border);border-radius:4px;padding:7px;background:#fff;color:var(--ink)}

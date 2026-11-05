@@ -28,7 +28,7 @@ describe('成果无权限样式预览',()=>{
       await togglePreview(user);
       expect(screen.getByText(emptyMessage)).toBeVisible();
       expect(note).not.toBeVisible();
-      expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
       expect(screen.queryByRole('navigation',{name:'成果目录'})).not.toBeInTheDocument();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(window.location.hash).toBe('#/results/0');
@@ -67,7 +67,7 @@ describe('成果无权限样式预览',()=>{
     await togglePreview(user);
     view.unmount();render(<App/>);
     expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
-    expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
+    expect(screen.getByRole('button',{name:'一键上传'})).toBeVisible();
     await togglePreview(user);
     await user.click(screen.getByRole('button',{name:'选择语言'}));
     await user.click(screen.getByRole('menuitemradio',{name:'English'}));

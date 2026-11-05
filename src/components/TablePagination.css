@@ -1,0 +1,4 @@
+.table-pagination{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;flex-shrink:0;border-top:1px solid var(--border);background:#fff;color:var(--muted);font-size:var(--font-body)}
+.table-page-summary{margin-right:auto}
+.table-pagination select{height:34px;border:1px solid var(--border);border-radius:4px;padding:0 10px;color:#435e70;background:#fff}
+.table-pagination .button{height:34px;padding:0 16px}

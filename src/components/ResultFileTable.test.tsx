@@ -57,7 +57,7 @@ describe('成果文件分页', () => {
     expect(screen.getByRole('button', { name: '下一页' })).toBeDisabled();
     unmount(); render(<Harness count={0}/>);
     expect(rows()).toHaveLength(0); expect(screen.getByText('第 0–0 条，共 0 条')).toBeVisible();
-    expect(screen.getByRole('button', { name: '上传文件' })).toBeVisible();
+    expect(screen.getByRole('button', { name: '上传成果' })).toBeVisible();
     expect(screen.getByRole('checkbox', { name: '全选当前页文件' })).toBeDisabled();
   });
 });

@@ -8,7 +8,7 @@ export interface ProjectMapDetails {
  interpretation?:{coverageCount?:number;binSizeMeters?:[number,number];aspectRatio?:number;maxOffsetKm?:number};
  relatedProjectIds?:string[];
 }
-export interface Project { id:string;name:string;year:string;basin:string;type:string;area:string;point:[number,number];readable:boolean;archived:boolean;dataId?:string;typeId?:string;typePath?:string[];mapDetails?:ProjectMapDetails }
+export interface Project { id:string;name:string;year:string;basin:string;type:string;area:string;point:[number,number];readable:boolean;archived:boolean;dataId?:string;typeId?:string;typePath?:string[];dimension?:string;mapDetails?:ProjectMapDetails }
 export interface SearchRecord { id:string;name:string;basin:string;areaName:string;type:string;dimension:string;year:string;archived:boolean }
 export type Filters=Record<string,string[]>;
 export interface SearchState { field:string;query:string;draft:string;filters:Filters;ai:boolean;summaryCollapsed:boolean;sort:'relevance'|'year' }

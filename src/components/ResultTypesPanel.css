@@ -1,6 +1,6 @@
 .baseline-list[data-baseline="naming"]>header select{min-width:116px;padding:9px 30px 9px 12px;border:1px solid #dce6ec;border-radius:4px;background:#fff;color:#435e70;font:inherit}
-.baseline-list[data-baseline="naming"] .result-types-scroll{overflow-x:auto;scroll-padding-left:var(--result-types-name-width,180px);scroll-padding-right:184px}
-.baseline-list[data-baseline="naming"] .result-types-table{table-layout:fixed;min-width:calc(var(--result-types-name-width,180px) + 1514px)}
+.baseline-list[data-baseline="naming"] .result-types-scroll{overflow-x:auto;scroll-padding-left:var(--result-types-name-width,180px);scroll-padding-right:104px}
+.baseline-list[data-baseline="naming"] .result-types-table{table-layout:fixed;min-width:calc(var(--result-types-name-width,180px) + 1654px)}
 .baseline-list[data-baseline="naming"] .result-types-table th{width:auto;white-space:nowrap}
 .baseline-list[data-baseline="naming"] .result-types-table tr>:first-child{position:sticky;left:0;z-index:1}
 .baseline-list[data-baseline="naming"] .result-types-table tr>:first-child::after{content:"";position:absolute;top:0;bottom:-1px;right:-15px;width:15px;border-left:1px solid #c5d7e2;background:linear-gradient(to right,#183a5229,transparent);pointer-events:none;opacity:0;transition:opacity .15s ease}
@@ -12,7 +12,11 @@
 .result-types-column-englishDirectory{width:230px}
 .result-types-column-namingRule{width:210px}
 .result-types-column-notes{width:auto}
-.result-types-column-actions{width:184px}
+.result-types-column-actions{width:104px}
+.result-types-column-id{width:220px}
+.baseline-list[data-baseline="naming"] .baseline-row-actions{grid-template-columns:repeat(2,32px)}
+.baseline-list[data-baseline="naming"] .action-edit{grid-column:1}
+.baseline-list[data-baseline="naming"] .action-drag{grid-column:2}
 .baseline-list[data-baseline="naming"] .result-types-table td{vertical-align:middle;padding:var(--baseline-cell-block-padding) 14px}
 .result-types-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:32px;min-width:0;line-height:16px;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
 .result-types-empty{color:#8497a4}

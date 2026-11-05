@@ -30,7 +30,7 @@ describe('全局角色与 Hash 路由',()=>{
  it('普通用户直达未归档项目被拒绝，不渲染成果内容',()=>{
   window.history.replaceState(null,'','/?role=ordinary#/results/0');render(<App/>);
   expect(screen.getByRole('dialog',{name:'无浏览权限'})).toHaveTextContent('您无浏览此项目数据的权限');
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   expect(window.location.hash).toBe('#/overview');
  });
  it.each(['ordinary','admin'] as const)('%s 零可读项目时顶部成果进入完整空态，重载后保持',async role=>{
@@ -45,7 +45,7 @@ describe('全局角色与 Hash 路由',()=>{
   expect(screen.getByRole('button',{name:'成果'})).toHaveClass('active');
   expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
   expect(screen.queryByRole('navigation',{name:'成果目录'})).not.toBeInTheDocument();
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   mounted.unmount();
   render(<App/>);
   expect(window.location.hash).toBe('#/results');
@@ -66,7 +66,7 @@ describe('全局角色与 Hash 路由',()=>{
   render(<App/>);
   await u.click(screen.getByRole('button',{name:'成果'}));
   expect(window.location.hash).toBe('#/results/4');
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeVisible();
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeVisible();
   expect(screen.queryByText('您无任何可查阅的项目，请联系系统管理员。')).not.toBeInTheDocument();
   expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
  });
@@ -74,7 +74,7 @@ describe('全局角色与 Hash 路由',()=>{
   window.history.replaceState(null,'','/#/results/2');render(<App/>);
   expect(screen.getByRole('dialog',{name:'无浏览权限'})).toHaveTextContent('您无浏览此项目数据的权限');
   expect(window.location.hash).toBe('#/overview');
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
  });
 });
 describe('概览与跨页面流程',()=>{
@@ -85,7 +85,7 @@ describe('概览与跨页面流程',()=>{
   expect(screen.getByRole('region',{name:'项目详情'})).toBeInTheDocument();
   await u.dblClick(card);
   expect(window.location.hash).toBe('#/results/0');
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeInTheDocument();
   await u.click(screen.getByRole('button',{name:'概览'}));
   await u.click(screen.getByRole('button',{name:'成果'}));
   expect(window.location.hash).toBe('#/results/0');
@@ -113,10 +113,9 @@ describe('概览与跨页面流程',()=>{
   await u.selectOptions(within(modal).getByRole('combobox',{name:'地区'}),'百色盆地');
   await u.click(within(modal).getByRole('button',{name:'类型'}));
   await u.click(within(modal).getByRole('option',{name:'处理'}));
-  await u.click(within(modal).getByRole('option',{name:'处理 / 二维处理'}));
   await u.click(within(modal).getByRole('button',{name:'确定'}));
   expect(window.location.hash).toMatch(/^#\/results\/created-/);
-  expect(screen.getByRole('button',{name:'上传成果'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'一键上传'})).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'最大化当前右侧栏目'})).toBeInTheDocument();
   expect(document.querySelector('.result-right-content')).toBeVisible();
   expect(screen.queryByRole('dialog',{name:'无浏览权限'})).not.toBeInTheDocument();
@@ -131,7 +130,7 @@ describe('Demo 菜单与本地登录',()=>{
   const u=userEvent.setup();sessionStorage.clear();window.history.replaceState(null,'','/#/results/1');render(<StrictMode><App/></StrictMode>);
   expect(screen.getByRole('heading',{name:'欢迎登录'})).toBeInTheDocument();
   expect(document.body).toHaveClass('geobank-login-active');
-  expect(screen.queryByRole('button',{name:'上传成果'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'一键上传'})).not.toBeInTheDocument();
   expect(window.location.hash).toBe('#/login');
   await u.type(screen.getByRole('textbox',{name:'用户名'}),'Demo');
   await u.type(screen.getByLabelText('密码',{exact:true}),'demo123{Enter}');

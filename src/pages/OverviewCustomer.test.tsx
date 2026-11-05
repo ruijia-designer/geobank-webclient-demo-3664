@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import type { AppApi, AppState } from '../types';
 import { initialState } from '../services/demo';
 import { demoRows } from '../services/baseline';
-import { getBasinOptions, getProjectTypeOptions, projectTypeColor, projectTypeLabel } from '../services/projectClassification';
+import { getBasinOptions, projectTypeColor, projectTypeLabel } from '../services/projectClassification';
+import { PROJECT_TYPE_CATALOG_ROWS, getCreationProjectTypeOptions, saveProjectTypeCatalogRows } from '../services/projectTypeCatalog';
 import OverviewPage from './OverviewPage';
 import ApprovalPage from './ApprovalPage';
 
@@ -21,8 +22,8 @@ class TestPointerEvent extends MouseEvent {
   readonly pointerId:number;
   constructor(type:string,init:PointerEventInit={}) {super(type,init);this.pointerId=init.pointerId??1;}
 }
-beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('innerWidth',1920);vi.stubGlobal('PointerEvent',TestPointerEvent);Object.assign(demoRows,structuredClone(original));});
-afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();Object.assign(demoRows,structuredClone(original));});
+beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('innerWidth',1920);vi.stubGlobal('PointerEvent',TestPointerEvent);Object.assign(demoRows,structuredClone(original));saveProjectTypeCatalogRows(structuredClone(PROJECT_TYPE_CATALOG_ROWS));});
+afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();Object.assign(demoRows,structuredClone(original));saveProjectTypeCatalogRows(structuredClone(PROJECT_TYPE_CATALOG_ROWS));});
 
 describe('概览及客户联动要求',()=>{
   it('未归档以打开的锁图标标识，所有项目使用实色色条并保留类型提示',async()=>{
@@ -63,30 +64,58 @@ describe('概览及客户联动要求',()=>{
     rerender(<div/>);rerender(<Harness/>);expect(handle()).toHaveAttribute('aria-valuenow','390');
   });
 
-  it('新建先选基准盆地，仅最末级类型可选，成功创建携带分类与盆地',async()=>{
-    demoRows.types.push({id:'third',parent:'2',name:'三级采集演示',level:3,color:'#123456'});
+  it('新建使用新分类，采集二级必选，成功创建仅追加新项目并保留全部旧数据',async()=>{
     demoRows.structure.push({id:'basin-new',name:'新增基准盆地',type:'盆地',level:1});
     const user=userEvent.setup();render(<Harness/>);
+    const before=structuredClone(api.state.projects),legacyTypes=structuredClone(demoRows.types);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
     const modal=screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button',{name:'确定'}));
-    expect(within(modal).getByRole('alert')).toHaveTextContent('所属地区和最末级项目类型');
+    expect(within(modal).getByRole('alert')).toHaveTextContent('所属地区和项目类型');
     await user.type(within(modal).getByLabelText('名称'),'分类联动演示');
     await user.selectOptions(within(modal).getByLabelText('地区'),'新增基准盆地');
     await user.click(within(modal).getByRole('button',{name:'类型'}));
-    expect(screen.getByRole('option',{name:'采集'})).toHaveAttribute('aria-expanded','true');
-    const secondLevel=screen.getByRole('option',{name:'采集 / 三维陆上常规采集'});
-    expect(secondLevel).toHaveTextContent(/^三维陆上常规采集$/);
-    await user.click(secondLevel);
-    expect(within(modal).getByRole('button',{name:'类型'})).toHaveTextContent('请选择最末级项目类型');
-    expect(secondLevel).toHaveAttribute('aria-expanded','true');
-    await user.click(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'}));
+    expect(within(modal).getAllByRole('option').filter(option=>option.tagName==='BUTTON').map(option=>option.textContent)).toEqual(['采集','处理','解释','井筒','非地震']);
+    const parent=screen.getByRole('option',{name:'采集'});
+    expect(parent).toHaveAttribute('aria-expanded','false');
+    await user.click(parent);
+    expect(within(modal).getByRole('button',{name:'类型'})).toHaveTextContent('请选择项目类型');
+    await user.click(within(modal).getByRole('button',{name:'确定'}));
+    expect(api.state.projects).toEqual(before);
+    expect(navigate).not.toHaveBeenCalled();
+    await user.click(within(modal).getByRole('button',{name:'类型'}));
+    await user.click(screen.getByRole('option',{name:'采集 / 陆上采集'}));
     await user.click(within(modal).getByRole('button',{name:'确定'}));
     const created=api.state.projects.at(-1)!;
-    expect(created).toMatchObject({name:'分类联动演示',basin:'新增基准盆地',type:'三级采集演示',typeId:'third',typePath:['采集','三维陆上常规采集','三级采集演示'],archived:false});
+    expect(created).toMatchObject({name:'分类联动演示',basin:'新增基准盆地',type:'陆上采集',typeId:getCreationProjectTypeOptions().find(option=>option.name==='陆上采集')!.id,typePath:['采集','陆上采集'],archived:false});
     expect(navigate).toHaveBeenCalledWith({page:'results',projectId:created.id});
-    expect(getProjectTypeOptions().find(type=>type.id==='third')).toMatchObject({leaf:true,level:3});
-    expect(projectTypeColor(created)).toBe('#123456');expect(getBasinOptions()).toContain('新增基准盆地');
+    expect(api.state.projects.slice(0,-1)).toEqual(before);
+    expect(demoRows.types).toEqual(legacyTypes);
+    expect(getBasinOptions()).toContain('新增基准盆地');
+  });
+
+  it.each(['处理','解释','井筒'])('两种样式都可直接选择一级“%s”并创建',async name=>{
+    const user=userEvent.setup();render(<Harness/>);
+    for(const radio of [false,true]){
+      await user.click(screen.getByRole('button',{name:'新建项目'}));
+      const modal=screen.getByRole('dialog',{name:'新建项目'});
+      await user.type(within(modal).getByLabelText('名称'),`${name}-${radio?'单选':'级联'}`);
+      await user.selectOptions(within(modal).getByLabelText('地区'),'百色盆地');
+      if(radio){
+        await user.click(within(modal).getByRole('button',{name:'切换为分级单选'}));
+        await user.click(within(modal).getByRole('button',{name:'类型'}));
+        await user.click(within(modal).getByRole('radio',{name}));
+        expect(within(modal).queryByRole('group',{name:'项目类型选项'})).not.toBeInTheDocument();
+        expect(within(modal).getByRole('button',{name:'类型'})).toHaveTextContent(name);
+      }else{
+        await user.click(within(modal).getByRole('button',{name:'类型'}));
+        await user.click(within(modal).getByRole('option',{name}));
+        expect(within(modal).queryByRole('listbox')).not.toBeInTheDocument();
+        expect(within(modal).getByRole('button',{name:'类型'})).toHaveTextContent(name);
+      }
+      await user.click(within(modal).getByRole('button',{name:'确定'}));
+      expect(api.state.projects.at(-1)).toMatchObject({type:name,typePath:[name],typeId:getCreationProjectTypeOptions().find(option=>option.name===name)!.id});
+    }
   });
 
   it('审批侧栏和类型下拉显示简化名称，筛选值保持原类型',async()=>{
@@ -136,18 +165,17 @@ describe('概览及客户联动要求',()=>{
     const popup=list.parentElement!;
     expect(popup.style.left).toBe('100px');expect(popup.style.width).toBe('600px');
     expect(Number.parseFloat(popup.style.top)).toBeLessThan(500);
-    await user.click(within(list).getByRole('option',{name:'处理'}));
-    expect(within(list).getByRole('option',{name:'处理'})).toHaveAttribute('aria-expanded','true');
-    expect(within(list).getByRole('option',{name:'处理 / 二维处理'})).toBeEnabled();
+    await user.click(within(list).getByRole('option',{name:'采集'}));
+    expect(within(list).getByRole('option',{name:'采集'})).toHaveAttribute('aria-expanded','true');
+    expect(within(list).getByRole('option',{name:'采集 / OBN采集'})).toBeEnabled();
     const initialTop=popup.style.top,initialHeight=popup.style.height;
     expect(Number.parseFloat(initialTop)+Number.parseFloat(initialHeight)).toBe(496);
-    const search=within(modal).getByRole('searchbox',{name:'搜索项目类型'});
-    await user.type(search,'处理 / 二维处理');
-    expect(within(list).getAllByRole('option')).toHaveLength(2);
-    expect(within(list).getByRole('option',{name:'处理 / 二维处理'})).toHaveTextContent(/^二维处理$/);
-    expect(popup.style.top).toBe(initialTop);expect(popup.style.height).toBe(initialHeight);
-    await user.clear(search);await user.type(search,'不存在的类型');
-    expect(within(modal).getByRole('status')).toHaveTextContent('无匹配项目类型');
+    expect(within(modal).queryByRole('searchbox',{name:'搜索项目类型'})).not.toBeInTheDocument();
+    expect(within(list).getByRole('option',{name:'采集 / OBN采集'})).toHaveTextContent(/^OBN采集$/);
+    await user.click(within(list).getByRole('option',{name:'非地震'}));
+    expect(within(list).getByRole('option',{name:'非地震'})).toHaveAttribute('aria-expanded','true');
+    expect(within(list).getByRole('option',{name:'非地震 / 电法勘探'})).toBeEnabled();
+    expect(within(list).queryByRole('option',{name:'采集 / OBN采集'})).not.toBeInTheDocument();
     expect(popup.style.top).toBe(initialTop);expect(popup.style.height).toBe(initialHeight);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();expect(modal).toBeVisible();expect(trigger).toHaveFocus();
@@ -156,32 +184,29 @@ describe('概览及客户联动要求',()=>{
     vi.restoreAllMocks();
   });
 
-  it('新建项目按完整类型路径搜索，空结果保留表单，重新打开恢复全部选项',async()=>{
+  it('新建项目移除类型搜索栏，逐级选择与重开保留表单和已选路径',async()=>{
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
     const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
-    await user.type(within(modal).getByLabelText('名称'),'搜索类型演示');
+    await user.type(within(modal).getByLabelText('名称'),'类型选择演示');
     await user.click(trigger);
-    const search=within(modal).getByRole('searchbox',{name:'搜索项目类型'});
-    expect(search).toHaveFocus();
-    await user.type(search,' 处理 ');
-    expect(screen.getByRole('option',{name:'处理'})).toHaveAttribute('aria-expanded','true');
-    expect(screen.getByRole('option',{name:'处理 / 二维处理'})).toBeEnabled();
-    expect(screen.queryByRole('option',{name:'采集'})).not.toBeInTheDocument();
-    await user.clear(search);await user.type(search,'不存在的类型');
-    expect(within(modal).getByRole('status')).toHaveTextContent('无匹配项目类型');
-    expect(within(modal).getByLabelText('名称')).toHaveValue('搜索类型演示');
-    await user.clear(search);await user.type(search,'处理 / 二维处理');
-    await user.click(screen.getByRole('option',{name:'处理 / 二维处理'}));
-    expect(trigger).toHaveTextContent('处理 / 二维处理');expect(trigger).toHaveFocus();
-    await user.click(trigger);
-    expect(within(modal).getByRole('searchbox',{name:'搜索项目类型'})).toHaveValue('');
+    expect(within(modal).queryByRole('searchbox',{name:'搜索项目类型'})).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await user.click(screen.getByRole('option',{name:'非地震'}));
+    expect(screen.getByRole('option',{name:'非地震'})).toHaveAttribute('aria-expanded','true');
+    expect(screen.getByRole('option',{name:'非地震 / 电法勘探'})).toBeEnabled();
     expect(screen.getByRole('option',{name:'采集'})).toBeVisible();
-    expect(screen.getByRole('option',{name:'处理 / 二维处理'})).toHaveAttribute('aria-selected','true');
+    expect(within(modal).getByLabelText('名称')).toHaveValue('类型选择演示');
+    await user.click(screen.getByRole('option',{name:'非地震 / 电法勘探'}));
+    expect(trigger).toHaveTextContent('非地震 / 电法勘探');expect(trigger).toHaveFocus();
+    await user.click(trigger);
+    expect(within(modal).queryByRole('searchbox',{name:'搜索项目类型'})).not.toBeInTheDocument();
+    expect(screen.getByRole('option',{name:'采集'})).toBeVisible();
+    expect(screen.getByRole('option',{name:'非地震 / 电法勘探'})).toHaveAttribute('aria-selected','true');
+    expect(within(modal).getByLabelText('名称')).toHaveValue('类型选择演示');
   });
 
-  it('级联分类可用方向键展开三级并回到父项，仅叶子确认选择',async()=>{
-    demoRows.types.push({id:'third',parent:'2',name:'三级采集演示',level:3,color:'#123456'});
+  it('级联分类可用方向键展开二级并回到父项，仅叶子确认选择',async()=>{
     const user=userEvent.setup();render(<Harness/>);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
     const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
@@ -190,39 +215,82 @@ describe('概览及客户联动要求',()=>{
     const root=screen.getByRole('option',{name:'采集'});
     expect(root).toHaveFocus();
     await user.keyboard('{ArrowRight}');
-    const parent=screen.getByRole('option',{name:'采集 / 三维陆上常规采集'});
-    expect(parent).toHaveFocus();
-    await user.keyboard('{ArrowRight}');
-    const leaf=screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'});
-    expect(leaf).toHaveFocus();expect(leaf).toHaveTextContent(/^三级采集演示$/);
-    expect(trigger).toHaveTextContent('请选择最末级项目类型');
-    await user.keyboard('{ArrowLeft}');expect(parent).toHaveFocus();
+    const leaf=screen.getByRole('option',{name:'采集 / 陆上采集'});
+    expect(leaf).toHaveFocus();expect(leaf).toHaveTextContent(/^陆上采集$/);
+    expect(trigger).toHaveTextContent('请选择项目类型');
+    await user.keyboard('{ArrowLeft}');expect(root).toHaveFocus();
     await user.keyboard('{ArrowRight}{Enter}');
     expect(screen.queryByRole('listbox',{name:'项目类型选项'})).not.toBeInTheDocument();
-    expect(trigger).toHaveTextContent('采集 / 三维陆上常规采集 / 三级采集演示');
+    expect(trigger).toHaveTextContent('采集 / 陆上采集');
     await user.click(trigger);
-    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 三级采集演示'})).toHaveAttribute('aria-selected','true');
+    expect(screen.getByRole('option',{name:'采集 / 陆上采集'})).toHaveAttribute('aria-selected','true');
   });
 
-  it('同名二级按ID展开自己的三级，跨分支搜索后可直接选择匹配叶子',async()=>{
-    demoRows.types.push(
-      {id:'duplicate',parent:'1',name:'三维陆上常规采集',level:2,color:'#abcdef'},
-      {id:'original-leaf',parent:'2',name:'原始分支成果',level:3,color:'#123456'},
-      {id:'duplicate-leaf',parent:'duplicate',name:'重名分支成果',level:3,color:'#654321'},
-    );
+  it('切换样式保留选择，切换一级清空原二级，取消重开恢复默认级联',async()=>{
     const user=userEvent.setup();render(<Harness/>);
+    const before=structuredClone(api.state.projects);
     await user.click(screen.getByRole('button',{name:'新建项目'}));
     const modal=screen.getByRole('dialog'),trigger=within(modal).getByRole('button',{name:'类型'});
+    await user.type(within(modal).getByLabelText('名称'),'切换样式演示');
+    await user.selectOptions(within(modal).getByLabelText('地区'),'百色盆地');
     await user.click(trigger);
-    await user.click(screen.getAllByRole('option',{name:'采集 / 三维陆上常规采集'})[1]);
-    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).toHaveTextContent(/^重名分支成果$/);
-    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'})).not.toBeInTheDocument();
-    await user.type(within(modal).getByRole('searchbox',{name:'搜索项目类型'}),'原始分支成果');
-    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).not.toBeInTheDocument();
-    await user.click(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'}));
-    expect(trigger).toHaveTextContent('采集 / 三维陆上常规采集 / 原始分支成果');
+    await user.click(within(modal).getByRole('option',{name:'采集'}));
+    await user.click(within(modal).getByRole('option',{name:'采集 / 陆上采集'}));
+    await user.click(within(modal).getByRole('button',{name:'切换为分级单选'}));
+    expect(trigger).toHaveTextContent('采集 / 陆上采集');
+    expect(within(modal).queryByRole('radio')).not.toBeInTheDocument();
     await user.click(trigger);
-    expect(screen.getByRole('option',{name:'采集 / 三维陆上常规采集 / 原始分支成果'})).toHaveAttribute('aria-selected','true');
-    expect(screen.queryByRole('option',{name:'采集 / 三维陆上常规采集 / 重名分支成果'})).not.toBeInTheDocument();
+    expect(within(modal).getByRole('radio',{name:'采集'})).toBeChecked();
+    expect(within(modal).getByRole('radio',{name:'陆上采集'})).toBeChecked();
+    await user.click(within(modal).getByRole('radio',{name:'非地震'}));
+    expect(within(modal).getByRole('radio',{name:'非地震'})).toBeChecked();
+    expect(within(modal).queryByRole('radio',{name:'陆上采集'})).not.toBeInTheDocument();
+    expect(within(within(modal).getByRole('group',{name:'二级分类'})).getAllByRole('radio').some(radio=>(radio as HTMLInputElement).checked)).toBe(false);
+    await user.click(within(modal).getByRole('button',{name:'确定'}));
+    expect(within(modal).getByRole('alert')).toHaveTextContent('所属地区和项目类型');
+    expect(api.state.projects).toEqual(before);
+    expect(within(modal).queryByRole('group',{name:'项目类型选项'})).not.toBeInTheDocument();
+    await user.click(trigger);
+    await user.click(within(modal).getByRole('radio',{name:'电法勘探'}));
+    expect(trigger).toHaveTextContent('非地震 / 电法勘探');
+    expect(within(modal).queryByRole('group',{name:'项目类型选项'})).not.toBeInTheDocument();
+    await user.click(within(modal).getByRole('button',{name:'切换为级联选择'}));
+    const restoredTrigger=within(modal).getByRole('button',{name:'类型'});
+    expect(restoredTrigger).toHaveTextContent('非地震 / 电法勘探');
+    await user.click(restoredTrigger);
+    expect(within(modal).getByRole('option',{name:'非地震 / 电法勘探'})).toHaveAttribute('aria-selected','true');
+    await user.keyboard('{Escape}');
+    await user.click(within(modal).getByRole('button',{name:'切换为分级单选'}));
+    await user.click(restoredTrigger);
+    expect(within(modal).getByRole('radio',{name:'电法勘探'})).toBeChecked();
+    await user.keyboard('{Escape}');
+    expect(within(modal).queryByRole('group',{name:'项目类型选项'})).not.toBeInTheDocument();
+    expect(modal).toBeVisible();
+    expect(restoredTrigger).toHaveFocus();
+    await user.click(within(modal).getByRole('button',{name:'取消'}));
+    await user.click(screen.getByRole('button',{name:'新建项目'}));
+    const reopened=screen.getByRole('dialog',{name:'新建项目'});
+    expect(within(reopened).getByRole('button',{name:'切换为分级单选'})).toBeVisible();
+    expect(within(reopened).queryByRole('radio')).not.toBeInTheDocument();
+    expect(within(reopened).getByRole('button',{name:'类型'})).toHaveTextContent('请选择项目类型');
+    expect(api.state.projects).toEqual(before);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('分级单选提交非地震二级时保存新类型和完整路径',async()=>{
+    const user=userEvent.setup();render(<Harness/>);
+    await user.click(screen.getByRole('button',{name:'新建项目'}));
+    const modal=screen.getByRole('dialog',{name:'新建项目'});
+    await user.type(within(modal).getByLabelText('名称'),'化探项目');
+    await user.selectOptions(within(modal).getByLabelText('地区'),'百色盆地');
+    await user.click(within(modal).getByRole('button',{name:'切换为分级单选'}));
+    await user.click(within(modal).getByRole('button',{name:'类型'}));
+    await user.click(within(modal).getByRole('radio',{name:'非地震'}));
+    expect(within(within(modal).getByRole('group',{name:'二级分类'})).getAllByRole('radio').map(radio=>(radio as HTMLInputElement).value)).toEqual(
+      ['重力勘探','磁力勘探','电法勘探','化探','综合物化探'].map(name=>getCreationProjectTypeOptions().find(option=>option.name===name)!.id),
+    );
+    await user.click(within(modal).getByRole('radio',{name:'化探'}));
+    await user.click(within(modal).getByRole('button',{name:'确定'}));
+    expect(api.state.projects.at(-1)).toMatchObject({name:'化探项目',type:'化探',typePath:['非地震','化探'],typeId:getCreationProjectTypeOptions().find(option=>option.name==='化探')!.id});
   });
 });

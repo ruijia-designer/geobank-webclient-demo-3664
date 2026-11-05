@@ -133,7 +133,7 @@ describe('成果文件右侧标签预览',()=>{
 
   it('新建项目上传文本后直接预览真实内容，删除时清理原始文件来源',async()=>{
     const user=userEvent.setup();const {container}=render(<Harness project={newProject}/>);
-    await user.click(within(container.querySelector('.files-actions') as HTMLElement).getByRole('button',{name:'上传文件'}));
+    await user.click(within(container.querySelector('.files-actions') as HTMLElement).getByRole('button',{name:'上传成果'}));
     await user.click(screen.getByRole('button',{name:'本地上传'}));
     const dialog=screen.getByRole('dialog',{name:'本地上传'});
     const content='项目实测数据\n井号: TEST-2026\n深度,电阻率\n100,42.6';

@@ -15,11 +15,7 @@
 
 /* Fixed positioning escapes the modal body scroll clip and flips above when needed. */
 .type-options.type-options-floating{position:fixed;right:auto;z-index:120;margin-top:0;display:flex;flex-direction:column;overflow:hidden}
-.type-options-search{display:flex;align-items:center;gap:8px;flex:none;height:36px;margin:9px 10px;border:1px solid #b9ced9;border-radius:4px;padding:0 10px;background:#f7f9fa;color:var(--muted)}
-.type-options-search:focus-within{border-color:var(--blue);box-shadow:0 0 0 2px #0a6f9e14}
-.type-options-search svg{flex:none}
-.type-picker .type-options-search input{height:34px;border:0;padding:0;background:transparent;outline:none;font-size:14px}
-.type-options-list{min-height:0;overscroll-behavior:contain;border-top:1px solid #e0e8ed}
+.type-options-list{min-height:0;overscroll-behavior:contain}
 .type-options-columns{display:flex;flex:1;overflow-x:auto;overflow-y:hidden}
 .type-options-column{flex:1;min-width:170px;overflow-y:auto;overscroll-behavior:contain;padding:4px 0}
 .type-options-column:first-child{flex:0 0 30%;min-width:132px;max-width:180px;background:#f7fafb}

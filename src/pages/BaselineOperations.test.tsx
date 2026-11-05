@@ -1,17 +1,30 @@
 import { useState } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BaselinePage from './BaselinePage';
 import { LanguageProvider, useTranslation } from '../i18n';
 import { initialState } from '../services/demo';
 import {
     BASELINE_CONFIGS, SORTABLE_BASELINE_IDS, baselineSiblings, demoRows,
-    moveBaselineRow, normalizeBaselineOrder, placeBaselineRow, saveBaselineRows, projectTypeParentOptions, projectTypeParentError, baselinePath,
+    moveBaselineRow, normalizeBaselineOrder, placeBaselineRow, saveBaselineRows,
 } from '../services/baseline';
 import type { BaselineRow } from '../services/baseline';
+import { PROJECT_TYPE_CATALOG_ROWS, getProjectTypeCatalogRows, saveProjectTypeCatalogRows } from '../services/projectTypeCatalog';
 import type { AppApi, AppState, Route } from '../types';
 
+// jsdom does not lay out elements; Element's observer still needs a browser API.
+beforeAll(() => {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+});
+afterAll(() => vi.unstubAllGlobals());
+async function openColorPicker(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const trigger = await screen.findByRole('button', { name });
+    await user.click(trigger.querySelector<HTMLElement>('.el-color-picker__trigger')!);
+    const panel = await screen.findByRole('dialog');
+    await waitFor(() => expect(panel).toBeVisible());
+    return panel;
+}
 const notify = vi.fn();
 function Harness({ section }: { section: string }) {
     const [state, setState] = useState<AppState>({ ...initialState('admin'), route: { page: 'baseline', section } });
@@ -31,6 +44,7 @@ function dragHandle(name: string) { return screen.getByRole('button', { name: `�
 beforeEach(() => {
     vi.clearAllMocks();
     for (const config of BASELINE_CONFIGS) saveBaselineRows(config.id, config.rows);
+    saveProjectTypeCatalogRows(PROJECT_TYPE_CATALOG_ROWS);
 });
 
 describe('基准同级排序服务', () => {
@@ -97,61 +111,111 @@ describe('基准同级排序服务', () => {
 });
 
 describe('基准操作列与类型表单', () => {
-    it('仅一级类型有新增按钮，二三级保持编辑、拖动排序和删除的列槽位', () => {
-        saveBaselineRows('types', [...demoRows.types, { id: 'third', name: '三级类型', parent: '2', level: 3, color: '#277DA8' }]);
-        render(<Harness section="types" />);
-        const toggle = screen.getByRole('button', { name: '展开三维陆上常规采集' });
-        fireEvent.click(toggle);
-        const parentActions = nameRow('采集').querySelector('.baseline-row-actions') as HTMLElement;
-        expect(within(parentActions).getAllByRole('button').map(button => button.title)).toEqual(['新增下级', '编辑', '长按拖动排序', '删除']);
-        const secondLevelActions = nameRow('三维陆上常规采集').querySelector('.baseline-row-actions') as HTMLElement;
-        expect(within(secondLevelActions).getAllByRole('button').map(button => button.title)).toEqual(['编辑', '长按拖动排序', '删除']);
-        expect(within(secondLevelActions).getByTitle('编辑')).toHaveClass('action-edit');
-        const childActions = nameRow('三级类型').querySelector('.baseline-row-actions') as HTMLElement;
-        expect(within(childActions).getAllByRole('button').map(button => button.title)).toEqual(['编辑', '长按拖动排序', '删除']);
-        expect(within(childActions).getByTitle('编辑')).toHaveClass('action-edit');
-        expect(within(childActions).getByTitle('删除')).toHaveClass('action-delete');
-        expect(screen.getByRole('columnheader', { name: '操作' })).toHaveClass('baseline-actions-heading');
-        expect(screen.queryByRole('button', { name: /^查看/ })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^(上移|下移)/ })).not.toBeInTheDocument();
-    });
-    it('排序手柄短点与Escape取消不保存，父项携带子项且子项只能在同父级内排序', () => {
-        const original: BaselineRow[] = [
-            { id: '1', name: '父分类甲', color: '#112233', level: 1 },
-            { id: '2', name: '子分类甲', color: '#224466', parent: '1', level: 2 },
-            { id: '3', name: '子分类乙', color: '#335577', parent: '1', level: 2 },
-            { id: '5', name: '父分类乙', color: '#446688', level: 1 },
-            { id: '6', name: '唯一下级', color: '#557799', parent: '5', level: 2 },
-        ];
-        saveBaselineRows('types', original);
-        const cached = structuredClone(demoRows.types);
-        render(<Harness section="types" />);
-        fireEvent.click(screen.getByRole('button', { name: '展开父分类乙' }));
-        fireEvent.click(dragHandle('父分类甲'));
-        expect(demoRows.types).toEqual(cached);
-        reorder(dragHandle('父分类甲'), 'ArrowDown', false);
-        expect(demoRows.types).toEqual(cached);
-        const handle = dragHandle('父分类甲');
-        fireEvent.keyDown(handle, { key: 'Enter' });
-        expect(handle).toHaveAttribute('aria-pressed', 'true');
-        fireEvent.keyDown(handle, { key: 'ArrowDown' });
-        expect(demoRows.types).toEqual(cached);
-        fireEvent.keyDown(handle, { key: 'Enter' });
-        expect(demoRows.types.map(row => row.id)).toEqual(['5', '6', '1', '2', '3']);
-        expect(dragHandle('唯一下级')).toBeDisabled();
-        reorder(dragHandle('子分类甲'), 'ArrowUp');
-        expect(demoRows.types.map(row => row.id)).toEqual(['5', '6', '1', '2', '3']);
-        reorder(dragHandle('子分类甲'), 'ArrowDown');
-        expect(demoRows.types.map(row => row.id)).toEqual(['5', '6', '1', '3', '2']);
-        for (const row of cached) expect(demoRows.types.find(entry => entry.id === row.id)).toEqual(row);
-    });
-    it('一级项目类型和二级构造单元仍可通过行按钮新增下级', async () => {
+    it('基准显示新的混合层级目录，旧子类与总条数不再显示', async () => {
+        const legacy = structuredClone(demoRows.types);
         const user = userEvent.setup();
         render(<Harness section="types" />);
-        await user.click(screen.getByRole('button', { name: '新增采集下级' }));
-        expect(within(screen.getByRole('dialog')).getByRole('combobox', { name: '上级类型' })).toHaveValue('1');
-        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
-        await user.click(within(screen.getByRole('navigation', { name: '基准栏目' })).getByRole('button', { name: '构造单元' }));
+        expect(tableRows()).toHaveLength(14);
+        expect(screen.getByText('陆上采集')).toBeVisible();
+        expect(screen.getByText('化探')).toBeVisible();
+        expect(screen.queryByText('三维陆上常规采集')).not.toBeInTheDocument();
+        expect(screen.queryByText('二维处理')).not.toBeInTheDocument();
+        expect(screen.queryByText(/^共 \d+ 条$/)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '收起处理' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: '收起非地震' }));
+        expect(screen.queryByText('化探')).not.toBeInTheDocument();
+        expect(screen.getByText('处理')).toBeVisible();
+        expect(demoRows.types).toEqual(legacy);
+    });
+    it('项目类型完整展示名称编码和颜色，仅允许折叠与点击色块编辑', async () => {
+        const user = userEvent.setup();
+        saveProjectTypeCatalogRows([...getProjectTypeCatalogRows(), { id: 'third', code: 'CUSTOM-003', name: '三级类型', parent: 'catalog-land', level: 3, color: '#277DA8' }]);
+        render(<Harness section="types" />);
+        expect(screen.getAllByRole('columnheader').map(header => header.textContent)).toEqual(['名称', '编码', '颜色']);
+        expect(tableRows()).toHaveLength(getProjectTypeCatalogRows().length);
+        expect(screen.getByText('CUSTOM-003')).toBeVisible();
+        expect(screen.queryByRole('button', { name: /^新增|^编辑|^拖动排序|^删除/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('combobox', { name: '每页行数' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '采集' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: '收起采集' }));
+        expect(screen.queryByText('三级类型')).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: '展开采集' }));
+        expect(screen.getByText('三级类型')).toBeVisible();
+        const before = structuredClone(getProjectTypeCatalogRows());
+        const panel = await openColorPicker(user, '修改陆上采集颜色');
+        expect(panel).not.toHaveAttribute('aria-modal', 'true');
+        expect(within(panel).queryByRole('textbox', { name: '名称' })).not.toBeInTheDocument();
+        const color = within(panel).getByRole('textbox');
+        await user.clear(color);
+        await user.type(color, '#112233');
+        expect(getProjectTypeCatalogRows()).toEqual(before);
+        await user.click(within(panel).getByRole('button', { name: '确定' }));
+        await waitFor(() => expect(getProjectTypeCatalogRows()).toEqual(before.map(row => row.id === 'catalog-land' ? { ...row, color: '#112233' } : row)));
+        expect(screen.getByRole('button', { name: '修改陆上采集颜色' }).closest('td')).toHaveTextContent('#112233');
+    });
+    it('Element选色支持键盘打开、Escape取消及确认后重新挂载保留颜色', async () => {
+        const user = userEvent.setup();
+        const view = render(<Harness section="types" />);
+        const swatch = await screen.findByRole('button', { name: '修改采集颜色' });
+        const original = getProjectTypeCatalogRows()[0].color;
+        swatch.focus();
+        await user.keyboard('{Enter}');
+        let panel = await screen.findByRole('dialog');
+        let color = within(panel).getByRole('textbox');
+        await user.clear(color);
+        await user.type(color, '#123456');
+        await user.tab();
+        expect(getProjectTypeCatalogRows()[0].color).toBe(original);
+        await user.keyboard('{Escape}');
+        await waitFor(() => expect(panel).not.toBeInTheDocument());
+        expect(getProjectTypeCatalogRows()[0].color).toBe(original);
+        expect(notify).not.toHaveBeenCalled();
+        swatch.focus();
+        await user.keyboard('{Enter}');
+        panel = await screen.findByRole('dialog');
+        color = within(panel).getByRole('textbox');
+        expect(color).toHaveValue(String(original).toLowerCase());
+        await user.clear(color);
+        await user.type(color, '#abcdef');
+        await user.click(within(panel).getByRole('button', { name: '确定' }));
+        await waitFor(() => expect(getProjectTypeCatalogRows()[0].color).toBe('#ABCDEF'));
+        view.unmount();
+        render(<Harness section="types" />);
+        expect((await screen.findByRole('button', { name: '修改采集颜色' })).closest('td')).toHaveTextContent('#ABCDEF');
+    });
+    it('分页切换数量并保持连续序号，筛选重置首页，删除末页后回退', async () => {
+        const user = userEvent.setup();
+        saveBaselineRows('mining', Array.from({ length: 41 }, (_, i) => ({ id: String(i + 1), name: `矿权${i + 1}`, type: '探矿权' })));
+        render(<Harness section="mining" />);
+        expect(screen.getByRole('columnheader', { name: '序号' })).toBeVisible();
+        expect(tableRows()).toHaveLength(20);
+        expect(screen.getByRole('combobox', { name: '每页行数' }).querySelectorAll('option')).toHaveLength(5);
+        await user.click(screen.getByRole('button', { name: '下一页' }));
+        expect(tableRows()[0]).toHaveTextContent('矿权21');
+        expect(within(tableRows()[0]).getAllByRole('cell')[0]).toHaveTextContent(/^21$/);
+        await user.click(screen.getByRole('button', { name: '重置' }));
+        expect(screen.getByText('第 1 / 3 页')).toBeVisible();
+        await user.click(screen.getByRole('button', { name: '下一页' }));
+        await user.click(screen.getByRole('button', { name: '查询' }));
+        expect(screen.getByText('第 1 / 3 页')).toBeVisible();
+        await user.click(screen.getByRole('button', { name: '下一页' }));
+        await user.click(screen.getByRole('button', { name: '下一页' }));
+        await user.click(screen.getByRole('button', { name: '删除矿权41' }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '确认删除' }));
+        expect(screen.getByText('第 2 / 2 页')).toBeVisible();
+        expect(tableRows()).toHaveLength(20);
+        await user.selectOptions(screen.getByRole('combobox', { name: '每页行数' }), '30');
+        expect(tableRows()).toHaveLength(30);
+        expect(screen.getByText('第 1 / 2 页')).toBeVisible();
+        await user.click(screen.getByRole('button', { name: '下一页' }));
+        await user.type(screen.getByRole('textbox', { name: '名称' }), '矿权1');
+        await user.click(screen.getByRole('button', { name: '查询' }));
+        expect(tableRows()).toHaveLength(11);
+        expect(screen.getByText('第 1 / 1 页')).toBeVisible();
+    });
+    it('二级构造单元仍可通过行按钮新增下级', async () => {
+        const user = userEvent.setup();
+        render(<Harness section="structure" />);
         await user.click(screen.getByRole('button', { name: '新增东部坳陷下级' }));
         expect(screen.getByRole('dialog')).toHaveTextContent('上级单元：东部坳陷');
         expect(screen.getByRole('dialog')).toHaveTextContent('等级：3');
@@ -277,99 +341,40 @@ describe('基准操作列与类型表单', () => {
         const dialog = within(screen.getByRole('dialog'));
         expect(dialog.queryByLabelText(/排序值|显示顺序/)).not.toBeInTheDocument();
     });
-    it('新增表单保留三级分类支持，上级下拉显示路径且不包含第三级', async () => {
-        const user = userEvent.setup();
-        render(<Harness section="types" />);
-        expect(screen.queryByRole('button', { name: '新增三维陆上常规采集下级' })).not.toBeInTheDocument();
-        await user.click(screen.getByRole('button', { name: '新增项目类型' }));
-        let dialog = screen.getByRole('dialog');
-        await user.selectOptions(within(dialog).getByRole('combobox', { name: '上级类型' }), '2');
-        expect(within(dialog).getByRole('combobox', { name: '上级类型' })).toHaveValue('2');
-        expect(within(dialog).getByRole('option', { name: '采集 / 三维陆上常规采集' })).toBeInTheDocument();
-        await user.type(within(dialog).getByRole('textbox', { name: /名称/ }), '三级类型');
-        await user.click(within(dialog).getByRole('button', { name: '保存' }));
-        expect(screen.getByRole('button', { name: '三级类型' })).toBeInTheDocument();
-        const record = demoRows.types.find(row => row.name === '三级类型')!;
-        expect(record).toMatchObject({ parent: '2', level: 3 });
-        expect(screen.queryByRole('button', { name: '新增三级类型下级' })).not.toBeInTheDocument();
-        await user.click(screen.getByRole('button', { name: '编辑三级类型' }));
-        dialog = screen.getByRole('dialog');
-        expect(within(dialog).queryByRole('option', { name: /三级类型/ })).not.toBeInTheDocument();
-    });
-    it('父类型可带着下级改为二级，同时将原子类型更新为三级', async () => {
-        const user = userEvent.setup();
-        render(<Harness section="types" />);
-        await user.click(screen.getByRole('button', { name: '编辑采集' }));
-        const dialog = screen.getByRole('dialog');
-        const parent = within(dialog).getByRole('combobox', { name: '上级类型' });
-        expect(within(parent).queryByRole('option', { name: '采集' })).not.toBeInTheDocument();
-        expect(within(parent).queryByRole('option', { name: '采集 / 三维陆上常规采集' })).not.toBeInTheDocument();
-        await user.selectOptions(parent, '5');
-        await user.click(within(dialog).getByRole('button', { name: '保存' }));
-        expect(demoRows.types.find(row => row.id === '1')).toMatchObject({ parent: '5', level: 2 });
-        expect(demoRows.types.find(row => row.id === '2')).toMatchObject({ parent: '1', level: 3 });
-        expect(baselinePath(demoRows.types, '2')).toBe('处理 / 采集 / 三维陆上常规采集');
-    });
-    it('有三级子孙时更换父级不能生成第四级，父选项排除自己及子孙防环', async () => {
-        const user = userEvent.setup();
-        saveBaselineRows('types', [...demoRows.types, { id: 'third', name: '三级类型', parent: '2', level: 3, color: '#277DA8' }]);
-        expect(projectTypeParentOptions(demoRows.types, '1').map(option => option.value)).not.toContain('1');
-        expect(projectTypeParentOptions(demoRows.types, '1').map(option => option.value)).not.toContain('2');
-        expect(projectTypeParentOptions(demoRows.types, '1').map(option => option.value)).not.toContain('third');
-        expect(projectTypeParentError(demoRows.types, { ...demoRows.types[0], parent: '2' })).toBe('上级类型不能是自身或下级类型');
-        render(<Harness section="types" />);
-        await user.click(screen.getByRole('button', { name: '编辑采集' }));
-        const dialog = screen.getByRole('dialog');
-        await user.selectOptions(within(dialog).getByRole('combobox', { name: '上级类型' }), '5');
-        await user.click(within(dialog).getByRole('button', { name: '保存' }));
-        expect(within(dialog).getByRole('alert')).toHaveTextContent('项目类型最多支持三级');
-        expect(demoRows.types.find(row => row.id === '1')?.level).toBe(1);
-        expect(demoRows.types.find(row => row.id === 'third')?.level).toBe(3);
-    });
-    it('类型表单必填标记跟随名称，上级与名称为两列，颜色独占紧凑一行，输入焦点稳定', async () => {
-        const user = userEvent.setup();
-        render(<Harness section="types" />);
-        await user.click(screen.getByRole('button', { name: '新增项目类型' }));
-        const dialog = screen.getByRole('dialog');
-        const parent = within(dialog).getByRole('combobox', { name: '上级类型' });
-        const name = within(dialog).getByRole('textbox', { name: /名称/ });
-        const form = dialog.querySelector('.baseline-type-form')!;
-        expect(parent.closest('.field')).not.toHaveClass('full');
-        expect(name.closest('.field')).not.toHaveClass('full');
-        expect(name.closest('.field')?.querySelector('.field-label')).toHaveTextContent('名称 *');
-        expect(within(dialog).getByLabelText('选择颜色').closest('.field')).toHaveClass('full');
-        expect(form.children).toHaveLength(3);
-        await user.type(name, '新的项目类型');
-        expect(name).toHaveFocus();
-        await user.click(within(dialog).getByRole('button', { name: '保存' }));
-        expect(screen.getByRole('button', { name: '新的项目类型' })).toBeInTheDocument();
-    });
+
 });
 
 describe('基准页面中英文切换', () => {
-    it('切换语言保留弹窗草稿、原始业务名称和颜色值，返回中文可保存', async () => {
+    it('Element浮层切换语言使用对应确认文案，关闭和卸载清理浮层且保留分类名称', async () => {
         sessionStorage.removeItem('geobank-demo-locale');
         const user = userEvent.setup();
         function Switcher() {
             const { toggleLocale } = useTranslation();
             return <><button onClick={toggleLocale}>Switch language</button><Harness section="types" /></>;
         }
-        render(<LanguageProvider><Switcher /></LanguageProvider>);
-        await user.click(screen.getByRole('button', { name: '编辑采集' }));
-        let dialog = screen.getByRole('dialog');
-        const name = within(dialog).getByRole('textbox', { name: /名称/ });
-        await user.clear(name);
-        await user.type(name, '客户中文分类草稿');
+        const view = render(<LanguageProvider><Switcher /></LanguageProvider>);
+        const original = getProjectTypeCatalogRows()[0].color;
+        let panel = await openColorPicker(user, '修改采集颜色');
+        const color = within(panel).getByRole('textbox');
+        await user.clear(color);
+        await user.type(color, '#123ABC');
         await user.click(screen.getByRole('button', { name: 'Switch language' }));
-        dialog = screen.getByRole('dialog');
-        expect(dialog).toHaveAccessibleName(/Edit Project Type/);
-        expect(within(dialog).getByRole('textbox', { name: /Name/ })).toHaveValue('客户中文分类草稿');
-        expect(within(dialog).getByRole('textbox', { name: 'Color Value' })).toHaveValue('#277DA8');
-        expect(screen.getByRole('button', { name: '三维陆上常规采集' })).toBeInTheDocument();
-        expect(within(dialog).getByRole('combobox', { name: 'Parent Type' })).toHaveValue('');
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        expect(getProjectTypeCatalogRows()[0].color).toBe(original);
+        panel = await openColorPicker(user, 'Change color for 采集');
+        expect(within(panel).getByRole('textbox')).toHaveValue(String(original).toLowerCase());
+        expect(within(panel).getByRole('button', { name: 'OK' })).toBeVisible();
+        expect(screen.getByText('陆上采集')).toBeInTheDocument();
+        await user.clear(within(panel).getByRole('textbox'));
+        await user.type(within(panel).getByRole('textbox'), '#123ABC');
+        await user.click(within(panel).getByRole('button', { name: 'OK' }));
+        await waitFor(() => expect(getProjectTypeCatalogRows()[0].color).toBe('#123ABC'));
         await user.click(screen.getByRole('button', { name: 'Switch language' }));
-        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '保存' }));
-        expect(screen.getByRole('button', { name: '客户中文分类草稿' })).toBeInTheDocument();
+        panel = await openColorPicker(user, '修改采集颜色');
+        expect(within(panel).getByRole('button', { name: '确定' })).toBeVisible();
+        view.unmount();
+        await waitFor(() => expect(document.querySelector('.project-type-color-popup')).not.toBeInTheDocument());
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         sessionStorage.removeItem('geobank-demo-locale');
     });
     it('英文列头和按钮可用，同级移动与计数不改变中文记录和内部值', async () => {
@@ -377,7 +382,7 @@ describe('基准页面中英文切换', () => {
         const user = userEvent.setup();
         render(<LanguageProvider><Harness section="imagery" /></LanguageProvider>);
         expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument();
-        expect(screen.getByText('2 records')).toBeInTheDocument();
+        expect(screen.getByText(/^1–2 of 2/)).toBeInTheDocument();
         const handle = screen.getByRole('button', { name: 'Drag to reorder 中国地质分布图' });
         expect(handle).toHaveAttribute('title', 'Press and hold to reorder');
         reorder(handle, 'ArrowUp');

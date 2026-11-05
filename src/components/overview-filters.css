@@ -15,6 +15,12 @@
 .basin-trigger:hover,.basin-trigger[aria-expanded=true]{border-color:var(--blue)}
 .basin-trigger svg{flex-shrink:0}
 .basin-dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:35;border:1px solid var(--border);border-radius:6px;background:#fff;box-shadow:0 6px 20px #183a5226;overflow:hidden}
+.dimension-options{padding:4px;overflow-y:auto;overscroll-behavior:contain}
+.dimension-options button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:36px;padding:8px;border:0;border-radius:4px;background:#fff;color:var(--ink);font-size:14px;text-align:left}
+.dimension-options button:hover,.dimension-options button:focus-visible,.dimension-options button.is-highlighted{background:#f0f8fb}
+.dimension-options button[aria-selected=true]{background:#eaf5f9;color:var(--blue)}
+.dimension-options button:focus-visible{outline:2px solid #248fb7;outline-offset:-2px}
+.dimension-options button svg{flex-shrink:0}
 .overview-filters fieldset .basin-search{display:flex;align-items:center;gap:8px;margin:10px;padding:0 9px;height:34px;border:1px solid var(--border);border-radius:4px;color:var(--muted)}
 .basin-search input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font-size:13px;outline:none}
 .basin-search input:focus{outline:none;box-shadow:none}
