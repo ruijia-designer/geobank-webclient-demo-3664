@@ -88,6 +88,11 @@ function RelatedProjectsContent({ project, projects, role, onOpen, onNotify }: R
       const classification = projectCardClassification(item);
       const summary = projectBriefSummary(item, t);
       const readable = canRead(item, role);
+      const compactAction = readable && summary.parameters.length === 5;
+      const openAction = readable && <button type="button" className="related-project-open"
+        aria-label={t('查阅项目成果：{name}', { name: item.name })} onClick={() => onOpen(item)}>
+        {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>
+      </button>;
       return <li key={item.id} className="related-project-card">
         <div className="related-project-card-labels">
           <span className="related-project-category" style={{ backgroundColor: classification.primaryColor, color: classification.textColor }}>{t(classification.label)}</span>
@@ -104,14 +109,17 @@ function RelatedProjectsContent({ project, projects, role, onOpen, onNotify }: R
             {summary.parameterTitle && <div className="related-project-parameters">
               <h3>{t(summary.parameterTitle)}</h3>
               <dl className="related-project-facts">
-                {summary.parameters.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+                {summary.parameters.slice(0, compactAction ? -1 : undefined).map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
               </dl>
+              {compactAction && <div className="related-project-parameter-tail">
+                <dl className="related-project-facts">
+                  {summary.parameters.slice(-1).map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+                </dl>
+                {openAction}
+              </div>}
             </div>}
           </div>
-          {readable && <button type="button" className="related-project-open"
-            aria-label={t('查阅项目成果：{name}', { name: item.name })} onClick={() => onOpen(item)}>
-            {t('查阅成果')}<ArrowUpRight size={16} aria-hidden="true"/>
-          </button>}
+          {!compactAction && openAction}
         </div>
       </li>;
     })}</ul> : <div className="empty-state related-projects-empty"><Folder size={42} aria-hidden="true"/><h3>{t('暂无关联项目')}</h3></div>}

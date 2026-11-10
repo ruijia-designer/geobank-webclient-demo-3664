@@ -123,6 +123,16 @@
   font-weight: 600;
   line-height: 1.5;
 }
+/* A fifth parameter leaves room for the action in the same final row. */
+.related-project-parameter-tail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin-top: 12px;
+}
+.related-project-parameter-tail > .related-project-facts { grid-template-columns: minmax(0, 1fr); }
+.related-project-parameter-tail > .related-project-open { grid-column: 2 / -1; justify-self: end; }
 .related-project-card-details > .related-project-open { justify-self: end; }
 
 .related-project-facts > div { min-width: 0; }
@@ -165,7 +175,7 @@
 }
 
 @container (max-width: 560px) {
-  .related-project-facts {
+  .related-project-facts, .related-project-parameter-tail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
