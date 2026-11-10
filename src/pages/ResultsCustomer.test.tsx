@@ -147,7 +147,7 @@ describe('成果页本轮客户流程',()=>{
   const user=userEvent.setup();const {container}=render(<Harness/>);
   await user.click(screen.getByRole('button',{name:'编辑'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  const fields:[string,string][]=[['项目名称','客户页内修改'],['数据名','Seismic-2026'],['iline','200'],['层位（个）','12'],['井数','20'],['备注','客户确认备注']];
+  const fields:[string,string][]=[['项目名称','客户页内修改'],['数据名','Seismic-2026'],['iline','200'],['层位(个)','12'],['井数','20'],['备注','客户确认备注']];
   for(const [label,text] of fields){const input=screen.getByLabelText(label);await user.clear(input);await user.type(input,text);}
   await user.selectOptions(screen.getByLabelText('正断层'),'无');
   await user.selectOptions(screen.getByLabelText('是否有时深关系'),'无');

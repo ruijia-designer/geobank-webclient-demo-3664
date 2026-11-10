@@ -93,7 +93,7 @@ const approvalEnglish: Record<string, string> = {
   '道集成果': 'Gather Results',
   '速度成果': 'Velocity Results',
   '其他辅助成果': 'Other Auxiliary Results',
-  '（{count}项）': '({count} items)',
+  '({count}项)': '({count} items)',
   '已录入 0 · 未录入 {count} · 0 个文件 · 0.0 GB': 'Recorded 0 · Pending {count} · 0 files · 0.0 GB',
   '成果项名称': 'Result Item',
   '录入状态': 'Entry Status',

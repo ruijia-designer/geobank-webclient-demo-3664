@@ -64,13 +64,13 @@ export function ProjectMapCard({ project, projects, role, anchor, onClose, onOpe
     ['年度', project.year || '—'],
     ['地区', project.basin || '—'],
     ['类型', project.type ? t(project.type) : '—'],
-    ['大小（km² / km）', numberLabel(details.fullFoldAreaKm2)],
+    ['大小(km² / km)', numberLabel(details.fullFoldAreaKm2)],
   ];
   const processing = [
     ['总炮数', numberLabel(parameters?.shotCount)],
-    ['面元（m）', binSize?.length === 2 && binSize.every(Number.isFinite) ? `${numberLabel(binSize[0])} × ${numberLabel(binSize[1])}` : '—'],
+    ['面元(m)', binSize?.length === 2 && binSize.every(Number.isFinite) ? `${numberLabel(binSize[0])} × ${numberLabel(binSize[1])}` : '—'],
     ['纵横比', numberLabel(parameters?.aspectRatio)],
-    ['最大炮间距（km）', numberLabel(parameters?.maxOffsetKm)],
+    ['最大炮间距(km)', numberLabel(parameters?.maxOffsetKm)],
   ];
   const facts = (rows: string[][]) => <dl className="map-project-facts">{rows.map(([label, value]) => <div key={label}>
     <dt>{t(label)}</dt><dd>{value}</dd>

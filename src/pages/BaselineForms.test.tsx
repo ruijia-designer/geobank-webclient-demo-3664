@@ -97,7 +97,7 @@ describe('基准表单多选和文件控件', () => {
         render(<LanguageProvider><Harness section="areas"/></LanguageProvider>);
         await user.click(screen.getByRole('button', { name: '编辑大丰次凹' }));
         const modal = screen.getByRole('dialog');
-        const input = within(modal).getByLabelText('范围（GeoJSON）') as HTMLInputElement;
+        const input = within(modal).getByLabelText('范围(GeoJSON)') as HTMLInputElement;
         expect(input).toHaveAttribute('accept', '.json,.geojson,.grd,.txt');
         expect(input.id).not.toBe('');
         expect(within(modal).getByRole('button', { name: '选择文件' })).toBeEnabled();
@@ -118,7 +118,7 @@ describe('基准表单多选和文件控件', () => {
         await user.click(screen.getByRole('button', { name: '编辑白驹油田开采' }));
         const modal = screen.getByRole('dialog');
         await user.click(within(modal).getByRole('button', { name: '添加行' }));
-        const inputs = within(modal).getAllByLabelText('范围（GeoJSON）') as HTMLInputElement[];
+        const inputs = within(modal).getAllByLabelText('范围(GeoJSON)') as HTMLInputElement[];
         expect(inputs).toHaveLength(2);
         expect(new Set(inputs.map(input => input.id)).size).toBe(2);
         for (const input of inputs) expect(input).toHaveAttribute('accept', '.json,.geojson');

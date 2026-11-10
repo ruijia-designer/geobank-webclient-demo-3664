@@ -112,7 +112,7 @@ export function ProjectArchiveControl({ api, project, fileCount, totalBytes }: {
         {error && <p id={formId + '-error'} className="form-error" role="alert">{t('请输入申请理由')}</p>}
         <h3 className="archive-flow-heading">{t('审批流程')}</h3>
         <ol className="archive-approval-flow">{approvalSteps.map((step, index) => <li key={step.role}>
-          <span className="archive-step-number">{index + 1}</span><span>{t(step.role)}（{step.people}）</span>
+          <span className="archive-step-number">{index + 1}</span><span>{t(step.role)}({step.people})</span>
           {index < approvalSteps.length - 1 && <ArrowRight className="archive-step-arrow" size={16} aria-hidden="true"/>}
         </li>)}</ol>
       </form>

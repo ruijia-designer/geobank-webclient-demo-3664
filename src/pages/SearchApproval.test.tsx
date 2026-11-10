@@ -93,7 +93,7 @@ describe('审批关键词、类型、状态与详情',()=>{
  });
  it('节点弹窗和归档12项明细可以打开并关闭',async()=>{
   const user=userEvent.setup();render(<Harness page="approval" initial={approvalState('approved')}/>);
-  await user.click(screen.getByRole('button',{name:'室长审批（张室）'}));
+  await user.click(screen.getByRole('button',{name:'室长审批(张室)'}));
   expect(screen.getByRole('dialog',{name:'室长审批'})).toHaveTextContent('manager');
   expect(screen.getByRole('dialog')).toHaveTextContent('2026-10-08 17:09');
   await user.keyboard('{Escape}');

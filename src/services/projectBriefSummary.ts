@@ -21,7 +21,7 @@ export function projectBriefSummary(project: Project, translate: (label: string)
     ['年度', project.year || '—'],
     ['地区', project.basin || '—'],
     ['类型', project.type ? translate(project.type) : '—'],
-    ['大小（km² / km）', project.area || '—'],
+    ['大小(km² / km)', project.area || '—'],
   ];
   let parameterTitle: string | undefined;
   let parameters: SummaryField[] = [];
