@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, Folder, FolderUp, Link2, Search } from 'lucide-react';
+import { ArrowUpRight, Folder, Link2, Search } from 'lucide-react';
 import type { Project, Role } from '../types';
 import { useTranslation } from '../i18n';
 import { canRead, visibleProjects } from '../services/demo';
@@ -70,17 +70,19 @@ function RelatedProjectsContent({ project, projects, role, onOpen, onNotify }: R
     onNotify(t('关联关系已保存'));
   };
 
+  const renderField = ([label, value]: [string, string]) => <div key={label}>
+    <dt>{t(label)}</dt>
+    <dd className={value === '—' ? 'is-missing' : undefined}>{value}</dd>
+  </div>;
+
   return <section className="results-related related-projects" aria-labelledby={headingId}>
     <header className="related-projects-heading">
-      <div><h1 id={headingId}>{t('关联项目')}</h1>
-        {related.length > 0 && <span className="related-projects-count">{t('{count} 个项目', { count: related.length })}</span>}
-      </div>
+      <h1 id={headingId}>{t('关联项目')}</h1>
+      {related.length > 0 && <span className="related-projects-count">{t('{count} 个项目', { count: related.length })}</span>}
       <div className="related-projects-actions">
         <button type="button" className="button related-projects-manage" onClick={openEditor}
           aria-haspopup="dialog">
-          {/* Match the upload button's intrinsic width in every language. */}
-          <span className="related-projects-manage-sizer" aria-hidden="true"><FolderUp size={18}/>{t('一键上传')}</span>
-          <span className="related-projects-manage-label"><Link2 size={18} aria-hidden="true"/>{t('管理关联')}</span>
+          <Link2 size={18} aria-hidden="true"/>{t('管理关联')}
         </button>
       </div>
     </header>
@@ -104,16 +106,16 @@ function RelatedProjectsContent({ project, projects, role, onOpen, onNotify }: R
         <div className="related-project-card-details">
           <div className="related-project-summary">
             <dl className="related-project-facts">
-              {summary.overview.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+              {summary.overview.map(renderField)}
             </dl>
             {summary.parameterTitle && <div className="related-project-parameters">
               <h3>{t(summary.parameterTitle)}</h3>
               <dl className="related-project-facts">
-                {summary.parameters.slice(0, compactAction ? -1 : undefined).map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+                {summary.parameters.slice(0, compactAction ? -1 : undefined).map(renderField)}
               </dl>
               {compactAction && <div className="related-project-parameter-tail">
                 <dl className="related-project-facts">
-                  {summary.parameters.slice(-1).map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}
+                  {summary.parameters.slice(-1).map(renderField)}
                 </dl>
                 {openAction}
               </div>}

@@ -11,7 +11,7 @@ function Harness({ count = 121 }: { count?: number }) {
     format: 'las', size: '1 KB', uploaded: '2026-10-21', user: 'Demo',
   })));
   const [selected, setSelected] = useState<string[]>([]);
-  return <><output aria-label="selected IDs">{selected.join(',')}</output><ResultFileTable files={files} selected={selected} onSelect={setSelected} onView={vi.fn()} onFields={vi.fn()} onUpload={vi.fn()} onDelete={file => setFiles(previous => previous.filter(row => row.id !== file.id))}/></>;
+  return <><output aria-label="selected IDs">{selected.join(',')}</output><ResultFileTable files={files} selected={selected} onSelect={setSelected} onView={vi.fn()} onFields={vi.fn()} onDelete={file => setFiles(previous => previous.filter(row => row.id !== file.id))}/></>;
 }
 
 const rows = () => within(screen.getByRole('table', { name: '成果文件列表' })).getAllByRole('row').slice(1);
@@ -49,15 +49,30 @@ describe('成果文件分页', () => {
     expect(screen.getByRole('checkbox', { name: '选择File-1.las' })).toBeChecked();
   });
 
-  it('删除末页唯一文件后回到前一页，空目录保持有效分页和上传入口', async () => {
-    const user = userEvent.setup(); const { unmount } = render(<Harness count={51}/>);
+  it('删除末页唯一文件后回到前一页', async () => {
+    const user = userEvent.setup(); render(<Harness count={51}/>);
     await user.click(screen.getByRole('button', { name: '下一页' }));
     await user.click(screen.getByRole('button', { name: '删除File-51.las' }));
     expect(rows()).toHaveLength(50); expect(screen.getByText('第 1 / 1 页')).toBeVisible();
     expect(screen.getByRole('button', { name: '下一页' })).toBeDisabled();
-    unmount(); render(<Harness count={0}/>);
-    expect(rows()).toHaveLength(0); expect(screen.getByText('第 0–0 条，共 0 条')).toBeVisible();
-    expect(screen.getByRole('button', { name: '上传成果' })).toBeVisible();
-    expect(screen.getByRole('checkbox', { name: '全选当前页文件' })).toBeDisabled();
+  });
+
+  it('根据实际文件数切换空态、文件表及分页，显示首个文件并在清空后恢复空态', () => {
+    const file: ResultFile = { id: '1', name: '零字节文件.las', directory: '测井数据', format: 'las', size: '0 B', uploaded: '2026-10-21', user: 'Demo' };
+    const callbacks = { onSelect: vi.fn(), onView: vi.fn(), onFields: vi.fn(), onDelete: vi.fn() };
+    const { rerender } = render(<ResultFileTable files={[]} selected={[]} {...callbacks}/>);
+    const expectEmpty = () => {
+      expect(screen.getByText('此目录暂无文件')).toBeVisible();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(screen.queryByRole('navigation', { name: '文件分页' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '上传成果' })).not.toBeInTheDocument();
+    };
+    expectEmpty();
+    rerender(<ResultFileTable files={[file]} selected={[]} {...callbacks}/>);
+    expect(screen.queryByText('此目录暂无文件')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: '成果文件列表' })).getByRole('button', { name: file.name })).toBeVisible();
+    expect(screen.getByRole('navigation', { name: '文件分页' })).toHaveTextContent('第 1–1 条，共 1 条');
+    rerender(<ResultFileTable files={[]} selected={[]} {...callbacks}/>);
+    expectEmpty();
   });
 });

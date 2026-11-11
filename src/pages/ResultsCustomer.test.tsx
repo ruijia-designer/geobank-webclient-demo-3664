@@ -67,8 +67,8 @@ describe('成果页本轮客户流程',()=>{
   ];
   const user=userEvent.setup();const {container}=render(<Harness section="wells"/>);
   const heading=within(container.querySelector('.files-heading') as HTMLElement);
-  expect(heading.getByText('51个文件')).toBeVisible();
-  expect(heading.getByText('总大小 1.05 MB')).toBeVisible();
+  expect(heading.getByText('51 个文件')).toBeVisible();
+  expect(heading.getByText('1.05 MB')).toBeVisible();
   expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
   expect(heading.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('checkbox',{name:'选择small-0.las'}));
@@ -77,22 +77,23 @@ describe('成果页本轮客户流程',()=>{
   expect(screen.getByRole('checkbox',{name:'选择small-0.las'})).not.toBeChecked();
   expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
   await user.click(screen.getByRole('button',{name:'下一页'}));
-  expect(heading.getByText('总大小 1.05 MB')).toBeVisible();
+  expect(heading.getByText('1.05 MB')).toBeVisible();
   await user.click(screen.getByRole('checkbox',{name:'选择large.las'}));
   await user.click(heading.getByRole('button',{name:'删除'}));
   await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'确认删除'}));
-  expect(heading.getByText('50个文件')).toBeVisible();
-  expect(heading.getByText('总大小 50.00 KB')).toBeVisible();
+  expect(heading.getByText('50 个文件')).toBeVisible();
+  expect(heading.getByText('50.00 KB')).toBeVisible();
   expect(heading.queryByRole('button',{name:'删除'})).not.toBeInTheDocument();
   expect(heading.queryByRole('button',{name:'取消'})).not.toBeInTheDocument();
   await user.click(within(screen.getByRole('navigation',{name:'成果目录'})).getByRole('button',{name:'岩芯'}));
-  expect(heading.getByText('总大小 0 B')).toBeVisible();
+  expect(screen.getByText('此目录暂无文件')).toBeVisible();
+  expect(heading.queryByText('0 B')).not.toBeInTheDocument();
   await user.click(heading.getByRole('button',{name:'上传成果'}));
   await user.click(screen.getByRole('button',{name:'本地上传'}));
   await user.upload(screen.getByLabelText('选择本地文件'),new File(['abc'],'core.txt'));
   await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'上传'}));
-  expect(heading.getByText('1个文件')).toBeVisible();
-  expect(heading.getByText('总大小 3 B')).toBeVisible();
+  expect(heading.getByText('1 个文件')).toBeVisible();
+  expect(heading.getByText('3 B')).toBeVisible();
  });
 
  it('右侧最大化均隐藏顶部上传成果，其他布局显示且目录上传独立',async()=>{

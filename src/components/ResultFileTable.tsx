@@ -12,10 +12,9 @@ interface Props {
   onView: (file: ResultFile) => void;
   onFields: (file: ResultFile) => void;
   onDelete: (file: ResultFile) => void;
-  onUpload: () => void;
 }
 
-export function ResultFileTable({ files, selected, onSelect, onView, onFields, onDelete, onUpload }: Props) {
+export function ResultFileTable({ files, selected, onSelect, onView, onFields, onDelete }: Props) {
   const { t } = useTranslation();
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
@@ -36,6 +35,13 @@ export function ResultFileTable({ files, selected, onSelect, onView, onFields, o
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [currentPage, pageSize]);
+
+  if (files.length === 0) {
+    return <div className="result-directory-empty">
+      <FolderOpen size={24} aria-hidden="true"/>
+      <span>{t('此目录暂无文件')}</span>
+    </div>;
+  }
 
   const selectPage = (checked: boolean) => {
     const ids = pageFiles.map(file => file.id);
@@ -62,7 +68,6 @@ export function ResultFileTable({ files, selected, onSelect, onView, onFields, o
           </div></td>
         </tr>)}</tbody>
       </table>
-      {!files.length && <div className="empty-state"><FolderOpen size={44}/><h3>{t('暂无文件')}</h3><p>{t('上传后可在当前成果目录查看')}</p><button className="button primary" onClick={onUpload}>{t('上传成果')}</button></div>}
     </div>
     <TablePagination label="文件分页" total={files.length} page={currentPage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize}/>
   </div>;

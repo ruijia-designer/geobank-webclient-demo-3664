@@ -1,27 +1,20 @@
 .results-related.related-projects {
-  padding: 0 16px 20px;
+  padding: 0 16px 20px var(--results-pane-gutter);
   container-type: inline-size;
   background: #f7fafc;
 }
 
-.related-projects-heading,
-.related-projects-heading > div {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 9px;
-}
-
 .related-projects-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: var(--results-heading-height);
-  margin-bottom: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "title count actions";
+  grid-template-rows: var(--results-heading-height);
+  align-items: center;
+  column-gap: 9px;
 }
 
-.related-projects-heading > div:first-child { min-width: 0; row-gap: 2px; }
-
 .related-projects-heading h1 {
+  grid-area: title;
   margin: 0;
   font-size: var(--results-heading-font-size);
   font-weight: 600;
@@ -30,6 +23,7 @@
 }
 
 .related-projects-count {
+  grid-area: count;
   color: var(--muted);
   font-size: var(--font-caption);
   line-height: 1.5;
@@ -92,7 +86,7 @@
   margin: 0;
   color: var(--ink);
   font-size: var(--font-section);
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -120,7 +114,7 @@
   margin: 0 0 10px;
   color: var(--ink);
   font-size: var(--font-body);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
 }
 /* A fifth parameter leaves room for the action in the same final row. */
@@ -140,12 +134,14 @@
 .related-project-facts dd {
   margin: 8px 0 0;
   color: var(--ink);
-  font-size: var(--font-section);
-  font-weight: 600;
+  font-size: var(--font-body);
+  font-weight: 400;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+
+.related-project-facts dd.is-missing { color: var(--muted); }
 
 .related-project-open {
   display: inline-flex;
@@ -157,48 +153,43 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #08749e;
+  color: var(--blue);
   font: inherit;
   font-size: var(--font-body);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.related-project-open:hover { background: #edf6fa; color: #065e82; }
-.related-project-open:focus-visible { outline: 2px solid #08749e; outline-offset: 2px; }
+.related-project-open:hover { text-decoration: underline; }
+.related-project-open:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .related-projects-empty { margin-top: 24px; }
 
 @media (max-width: 1450px) {
-  .results-related.related-projects { padding: 0 16px 16px; }
+  .results-related.related-projects { padding-bottom: 16px; }
 }
 
 @container (max-width: 560px) {
+  .related-projects-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "count count";
+    grid-template-rows: minmax(36px, auto) auto;
+    padding-block: 8px;
+  }
   .related-project-facts, .related-project-parameter-tail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 /* Association controls and dialog are scoped to this module. */
-.related-projects-actions { margin-left: auto; flex-shrink: 0; }
-.related-projects-actions .related-projects-manage {
-  display: inline-grid;
-  min-width: 170px;
-  height: 38px;
-  white-space: nowrap;
+.related-projects-actions {
+  grid-area: actions;
+  display: flex;
+  justify-self: end;
+  margin-inline-end: var(--results-action-end-gap, 0px);
 }
-.related-projects-manage > span {
-  grid-area: 1 / 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: inherit;
-}
-.related-projects-manage-sizer { visibility: hidden; pointer-events: none; }
-@media (max-width: 1450px) {
-  .related-projects-actions .related-projects-manage { min-width: 136px; }
-}
+.related-projects-manage { width: var(--results-action-width, auto); }
 .modal.modal-wide.related-projects-dialog { width: min(980px, calc(100vw - 56px)); }
 .related-projects-dialog .modal-body {
   display: flex;
@@ -289,9 +280,6 @@
 .related-projects-no-matches { padding: 30px 16px; text-align: center; color: var(--muted); font-size: var(--font-body); }
 .related-projects-no-matches p { margin: 10px 0; }
 .related-projects-error { margin: 0; color: #b25757; font-size: var(--font-body); }
-@container (max-width: 560px) {
-  .related-projects-heading { padding: 10px 0; gap: 8px; }
-}
 @media (max-width: 700px) {
   .modal.modal-wide.related-projects-dialog { width: calc(100vw - 32px); }
   .related-projects-dialog > header, .related-projects-dialog > footer, .related-projects-dialog .modal-body { padding: 16px; }
