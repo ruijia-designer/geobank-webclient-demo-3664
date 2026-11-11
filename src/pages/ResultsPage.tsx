@@ -88,7 +88,7 @@ export default function ResultsPage({api,previewNoAccess=false}:{api:AppApi;prev
     return <ResultsWorkspace api={api} previewNoAccess={import.meta.env.DEV&&previewNoAccess}/>;
 }
 function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:boolean}) {
-    const {t}=useTranslation();
+    const {t, locale}=useTranslation();
     const { state, setState } = api;
     const project = resolveProject(state) || projectOptions(state)[0];
     const id = project?.id || 'current';
@@ -151,11 +151,16 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
         const heading = infoRef.current?.querySelector('header');
         if (!upload || !heading || previewNoAccess) return;
 
+        const uploadIcon = upload.querySelector('svg');
         // Follow the reference button when translations, pane sizes or view controls change.
         const alignActions = () => {
             const reference = upload.getBoundingClientRect();
             if (!reference.width) return;
             heading.style.setProperty('--results-action-width', reference.width + 'px');
+            if (uploadIcon) {
+                const contentInset = uploadIcon.getBoundingClientRect().left - reference.left - upload.clientLeft;
+                heading.style.setProperty('--results-upload-content-inset', contentInset + 'px');
+            }
             heading.style.setProperty('--results-action-end-gap', (heading.getBoundingClientRect().right - reference.right) + 'px');
         };
         alignActions();
@@ -165,7 +170,7 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
         observer.observe(upload.parentElement!);
         observer.observe(heading, { box: 'border-box' });
         return () => observer.disconnect();
-    }, [directory, layoutMode, id, state.role, previewNoAccess]);
+    }, [directory, layoutMode, id, state.role, previewNoAccess, locale]);
     useLayoutEffect(() => {
         const key = errorFocus.current;
         if (!key) return;
@@ -378,7 +383,7 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
                  </div>
                  <div className="files-actions file-upload-dropdown">
                      <button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-                         <FileUp size={17}/>{t('上传成果')}<ChevronDown size={15}/>
+                         <FileUp size={18} aria-hidden="true"/>{t('上传成果')}
                      </button>
                      {menuOpen && <div className="file-upload-menu">
                          <button onClick={() => openDialog('local')}><Upload size={17}/>{t('本地上传')}</button>
