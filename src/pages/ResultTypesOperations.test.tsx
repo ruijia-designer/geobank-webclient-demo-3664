@@ -68,7 +68,7 @@ beforeEach(() => {
 afterEach(() => saveBaselineRows('types', structuredClone(baselineProjectTypes)));
 
 describe('成果类型编辑与排序', () => {
-    it('五类完整显示稳定编码，只保留编辑和排序，不提供增删或分页', () => {
+    it('五类分组隐藏编码、成果显示稳定编码，只保留编辑和排序，不提供增删或分页', () => {
         render(<Harness />);
         for (const category of RESULT_TYPE_CATEGORIES) {
             fireEvent.change(screen.getByRole('combobox', { name: '数据类别' }), { target: { value: category.id } });
@@ -78,7 +78,7 @@ describe('成果类型编辑与排序', () => {
             expect(screen.queryByRole('button', { name: /^(新增|删除)/ })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: '下一页' })).not.toBeInTheDocument();
             for (const group of category.groups) {
-                expect(fieldText(groupRow(group), 'id')).toBe(group.id);
+                expect(groupRow(group)).not.toHaveTextContent(group.id);
                 for (const item of group.items) {
                     expect(fieldText(itemRow(item), 'id')).toBe(item.id);
                     expect(fieldText(itemRow(item), 'number')).toBe(item.number || '—');

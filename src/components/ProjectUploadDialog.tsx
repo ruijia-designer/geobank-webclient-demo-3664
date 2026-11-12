@@ -1,3 +1,4 @@
+import { SingleSelect } from './SingleSelect';
 import { useState } from 'react';
 import { FolderUp, X } from 'lucide-react';
 import { Modal } from './Modal';
@@ -37,9 +38,9 @@ export function ProjectUploadDialog({ projectName, directories, onClose, onUploa
     <div className="project-upload-list"><table className="upload-files"><thead><tr>{['文件路径', '大小', '成果目录', '操作'].map(label => <th key={label}>{t(label)}</th>)}</tr></thead>
       <tbody>{entries.map((entry, index) => <tr key={entry.path + index}>
         <td className="project-upload-path" title={entry.path}>{entry.path}</td><td>{bytesLabel(entry.file.size)}</td>
-        <td><select aria-label={t('{file}的成果目录', { file: entry.path })} value={entry.directory} onChange={event => setEntries(previous => previous.map((item, i) => i === index ? { ...item, directory: event.target.value } : item))}>
+        <td><SingleSelect aria-label={t('{file}的成果目录', { file: entry.path })} value={entry.directory} onChange={event => setEntries(previous => previous.map((item, i) => i === index ? { ...item, directory: event.target.value } : item))}>
           <option value="">{t('请选择成果目录')}</option>{groups.map(group => <optgroup key={group.name} label={t(group.name)}>{group.items.map(name => <option key={name} value={name}>{t(name)}</option>)}</optgroup>)}
-        </select></td>
+        </SingleSelect></td>
         <td><button className="icon-button" aria-label={t('移除{file}', { file: entry.path })} onClick={() => setEntries(previous => previous.filter((_, i) => i !== index))}><X size={16}/></button></td>
       </tr>)}{!entries.length && <tr><td colSpan={4} className="muted">{t('尚未选择文件')}</td></tr>}</tbody>
     </table></div>

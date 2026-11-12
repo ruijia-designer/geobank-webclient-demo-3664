@@ -1,10 +1,11 @@
 import {useState} from 'react';
 import {describe,it,expect,vi,beforeEach} from 'vitest';
-import {render,screen,within,waitFor} from '@testing-library/react';
+import {act,render,screen,within,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {AppApi,AppState,Route} from '../types';
 import {initialState} from '../services/demo';
 import ResultsPage from './ResultsPage';
+import {projectInfoWorkbook} from '../test/projectInfoWorkbook';
 import BaselinePage from './BaselinePage';
 import {BASELINE_CONFIGS,baselineFilter} from '../services/baseline';
 import {resultFilesCache,resultInfoCache} from '../services/results';
@@ -42,7 +43,62 @@ describe('成果页真实组件流程',()=>{
   expect(resultInfoCache.current.seismicName).toBe('Seismic-测试');
   expect(form.getByText('Seismic-测试')).toBeVisible();expect(form.queryByText('未保存草稿')).not.toBeInTheDocument();
  });
- it('Excel选择后自动回填且不添加导入确认流程',async()=>{const user=userEvent.setup();render(<Harness/>);await user.click(screen.getByRole('button',{name:'上传成果'}));await user.upload(screen.getByLabelText('选择Excel文件'),new File(['mock excel'],'info.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(notify).toHaveBeenCalledWith('Excel 文件已选择，演示信息已自动回填')});
+ it('读取 Excel 横表中的真实值和日期后直接回填当前项目',async()=>{
+  const user=userEvent.setup();render(<Harness/>);
+  await user.click(screen.getByRole('button',{name:'导入'}));
+  const file=projectInfoWorkbook([
+   ['项目名称','位置','年度','大小(km² / km)','起始日期','结束日期','井数','备注'],
+   ['实测项目','东区',2025,0,new Date(2025,0,11),'2025/2/8',0,'实测备注'],
+  ]);
+  await user.upload(screen.getByLabelText('选择Excel文件'),file);
+  await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(notify).toHaveBeenCalledWith('项目信息已导入');
+  expect(resultInfoCache.current).toMatchObject({name:'实测项目',location:'东区',year:'2025',area:'0',start:'2025-01-11',end:'2025-02-08',wellCount:'0',note:'实测备注'});
+  expect(lastApi.state.projects.find(project=>project.id==='current')?.name).toBe('实测项目');
+ });
+ it('无效 Excel 或不符合表单约束时不写入；可在同一弹窗重试',async()=>{
+  const user=userEvent.setup();render(<Harness/>);
+  await user.click(screen.getByRole('button',{name:'导入'}));
+  const input=screen.getByLabelText('选择Excel文件');
+  const invalid: [File,string][]=[
+   [new File(['fake'],'invalid.xlsx'),'无法读取 Excel 文件'],
+   [projectInfoWorkbook([['未知字段','内容']]),'未找到可导入'],
+   [projectInfoWorkbook([['位置'],['北区'],['南区']]),'请在表头下只填写一个项目'],
+   [projectInfoWorkbook([['位置','井数'],['新位置',-1]]),'井数：请输入非负数'],
+   [projectInfoWorkbook([['井数',1.5]]),'井数：请输入非负整数'],
+   [projectInfoWorkbook([['位置','起始日期'],['新位置','2025-02-30']]),'起始日期：请输入有效日期'],
+   [projectInfoWorkbook([['起始日期','结束日期'],['2025-02-01','2025-01-01']]),'结束日期不能早于起始日期'],
+   [projectInfoWorkbook([['正断层','其他']]),'正断层：请选择有效选项'],
+  ];
+  for(const [file,error] of invalid){
+   await user.upload(input,file);
+   await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent(error));
+   expect(resultInfoCache.current).toBeUndefined();
+  }
+  await user.upload(input,projectInfoWorkbook([['位置','修正位置']]));
+  await waitFor(()=>expect(resultInfoCache.current?.location).toBe('修正位置'));
+ });
+
+ it('读取 Excel 期间取消弹窗，随后完成读取也不会改动项目',async()=>{
+  const user=userEvent.setup();render(<Harness/>);
+  const original=FileReader.prototype.readAsArrayBuffer;
+  let finish: (()=>Promise<void>) | undefined;
+  const reading=vi.spyOn(FileReader.prototype,'readAsArrayBuffer').mockImplementation(function(this:FileReader,file:Blob){
+   finish=()=>new Promise<void>(resolve=>{
+    this.addEventListener('loadend',()=>resolve(),{once:true});
+    original.call(this,file);
+   });
+  });
+  try {
+   await user.click(screen.getByRole('button',{name:'导入'}));
+   await user.upload(screen.getByLabelText('选择Excel文件'),projectInfoWorkbook([['位置','应舍弃']]));
+   await waitFor(()=>expect(finish).toBeDefined());
+   await user.click(within(screen.getByRole('dialog')).getByRole('button',{name:'取消'}));
+   await act(async()=>{await finish!();});
+   expect(resultInfoCache.current).toBeUndefined();
+   expect(notify).not.toHaveBeenCalledWith('项目信息已导入');
+  } finally { reading.mockRestore(); }
+ });
  it('最大化当前右侧栏目，隐藏左侧目录，保留活动标签并恢复滚动位置',async()=>{const user=userEvent.setup();const {container}=render(<Harness/>);const info=container.querySelector('.results-information') as HTMLElement;const right=container.querySelector('.result-right-content') as HTMLElement;info.scrollTop=123;right.scrollTop=234;await user.click(screen.getByRole('tab',{name:'综合成图'}));await user.click(screen.getByRole('button',{name:'最大化当前右侧栏目'}));expect(info).not.toBeVisible();expect(screen.queryByRole('navigation',{name:'成果目录'})).not.toBeInTheDocument();expect(container.querySelector('.result-project-tools')).not.toBeVisible();expect(lastApi.state.resultTab).toBe('gis');await user.click(screen.getByRole('button',{name:'还原'}));expect(info).toBeVisible();expect(info.scrollTop).toBe(123);expect(right.scrollTop).toBe(234);expect(lastApi.state.resultTab).toBe('gis')});
  it('独立全屏与隐藏/显示保留各布局滚动、页签数量和项目',async()=>{
   const user=userEvent.setup();const {container}=render(<Harness/>);

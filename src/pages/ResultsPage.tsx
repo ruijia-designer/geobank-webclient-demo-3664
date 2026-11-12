@@ -1,6 +1,7 @@
+import { SingleSelect } from '../components/SingleSelect';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { ChevronDown, ChevronRight, ClipboardList, FileText, Folder, FolderOpen, Import, Layers, Map as MapIcon, Maximize, Minimize, Download, Pencil, RefreshCw, Search, SquareSplitHorizontal, FolderUp, FileUp, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ClipboardList, CloudUpload, FileText, Folder, FolderOpen, Import, Layers, Map as MapIcon, Maximize, Minimize, Download, Pencil, RefreshCw, Search, SquareSplitHorizontal, FolderUp, FileUp, Upload, X } from 'lucide-react';
 import type { AppApi, Project } from '../types';
 import { canRead, projectOptions, resolveProject } from '../services/demo';
 import { Modal } from '../components/Modal';
@@ -14,7 +15,7 @@ import { rememberResultFileSource, forgetResultFileSource } from '../services/re
 import { RelatedProjects } from '../components/RelatedProjects';
 import { ResultsAccessEmptyState } from '../components/ResultsAccessEmptyState';
 import { MapView } from '../components/MapView';
-import { RESULT_DIRECTORIES, REMOTE_FILES, INITIAL_RESULT_FILES, getResultDirectories, getDirectoryStatus, getResultSummary, getDownloadSummary, resultFileBytes, bytesLabel, initialResultInfo, resultFilesCache, resultInfoCache, saveProjectInfo, saveDirectoryFiles, importProjectInformation, appendUploadedFiles, removeFiles } from '../services/results';
+import { RESULT_DIRECTORIES, REMOTE_FILES, INITIAL_RESULT_FILES, getResultDirectories, getDirectoryStatus, getResultSummary, getDownloadSummary, resultFileBytes, bytesLabel, initialResultInfo, resultFilesCache, resultInfoCache, saveProjectInfo, saveDirectoryFiles, appendUploadedFiles, removeFiles } from '../services/results';
 import type { ResultFile, ResultInfo, ResultDirectory } from '../services/results';
 import {projectTypeColor,projectTypeLabel} from '../services/projectClassification';
 import { useResultColumns } from '../hooks/useResultColumns';
@@ -37,7 +38,11 @@ const numericFields=new Set(['area','seismicSize','seismicSample','layerCount','
 const integerFields=new Set(['layerCount','faultCount','wellCount','curveCount']);
 function value(v?:string) { return v || '—'; }
 type InfoErrors = Record<string, string>;
-const infoFieldOrder = [...infoLabels, ...seismicFields, ...sgyFields, ...geologyFields, ...structureFields, ...wellFields].map(([key]) => key);
+const projectInfoFields: [string, string][] = [...infoLabels, ...seismicFields, ...sgyFields, ...geologyFields, ...structureFields, ...wellFields, ['note', '备注']];
+const infoFieldOrder = projectInfoFields.map(([key]) => key);
+function infoChoices(key: string): string[] | undefined {
+    return selectFields[key] || (geologyFields.some(([name]) => name === key) || key === 'hasTimeDepth' ? ['有', '无'] : undefined);
+}
 function validateInfo(data: ResultInfo): InfoErrors {
     const errors: InfoErrors = {};
     if (!data.name.trim()) errors.name = '请输入项目名称';
@@ -55,12 +60,12 @@ function InfoTable({data,fields,editing=false,onChange,errors={},className='resu
     const {t}=useTranslation();
     const tableId = useId();
     return <div className={className}>{fields.map(([key,label])=>{
-        const choices=selectFields[key]||(geologyFields.some(([name])=>name===key)||key==='hasTimeDepth'?['有','无']:null);
+        const choices=infoChoices(key);
         const current=data[key]||'', error=errors[key], errorId=`${tableId}-${key}-error`;
         const attributes = { 'aria-label': t(label), 'data-info-field': key, 'aria-invalid': error ? true : undefined, 'aria-describedby': error ? errorId : undefined };
         return <div key={key} className={key==='location'?'span-two project-location':key==='name'||key==='seismicName'?'span-two':''}><dt>{t(label)}</dt><dd>{editing?<>
             {key==='basin'?<input className="read-only-field" aria-label={t(label)} title={t("只读")} readOnly value={value(current)}/>
-            :choices?<select {...attributes} value={current} onChange={e=>onChange?.(key,e.target.value)}><option value="">{t("请选择")}</option>{[...new Set([...choices,...(current?[current]:[])])].map(option=><option key={option} value={option}>{['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(option):option}</option>)}</select>
+            :choices?<SingleSelect {...attributes} value={current} onChange={e=>onChange?.(key,e.target.value)}><option value="">{t("请选择")}</option>{[...new Set([...choices,...(current?[current]:[])])].map(option=><option key={option} value={option}>{['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(option):option}</option>)}</SingleSelect>
             :<input {...attributes} value={current} placeholder={t("请输入")} type={key==='start'||key==='end'?'date':numericFields.has(key)||key==='year'?'number':'text'} min={numericFields.has(key)?0:undefined} step={integerFields.has(key)?1:'any'} onChange={e=>onChange?.(key,e.target.value)}/>}
             {error&&<span id={errorId} className="field-error" role="alert">{t(error)}</span>}
         </>:['seismicDomain','seismicDimension','hasTimeDepth'].includes(key)||geologyFields.some(([name])=>name===key)?t(value(current)):value(current)}</dd></div>;
@@ -69,7 +74,7 @@ function InfoTable({data,fields,editing=false,onChange,errors={},className='resu
 function Information({info,onEdit,onImport,editing,dirty,onChange,onSave,onCancel,errors}:{info:ResultInfo;onEdit:()=>void;onImport:()=>void;editing:boolean;dirty:boolean;onChange:(key:string,value:string)=>void;onSave:()=>void;onCancel:()=>void;errors:InfoErrors}){
     const {t}=useTranslation();
     const table=(fields:[string,string][],className?:string)=><InfoTable data={info} fields={fields} editing={editing} onChange={onChange} errors={errors} className={className}/>;
-    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1>{!editing&&<div className="information-heading-actions"><button className="button small" onClick={onImport}><FileUp size={16}/>{t("上传成果")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></div>}</header><section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section>{editing&&<footer className="information-edit-actions"><span role="status">{t(dirty?"有未保存的修改":"尚未修改")}</span><div><button className="button" onClick={onCancel}>{t("取消")}</button><button className="button primary" onClick={onSave}>{t("保存")}</button></div></footer>}</>;
+    return <><header className="information-heading"><h1>{t(editing?'编辑项目信息':'项目信息')}</h1>{!editing&&<div className="information-heading-actions"><button className="button small project-info-import" onClick={onImport}><Import size={16}/>{t("导入")}</button><button className="button small" onClick={onEdit}><Pencil size={16}/>{t("编辑")}</button></div>}</header><section className="card information-card"><h2><ClipboardList size={20}/>{t("基本信息")}</h2>{table(infoLabels)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地震数据信息")}</h2>{table(seismicFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("SGY道头信息")}</h2>{table(sgyFields,'result-sgy')}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("地质体类型")}</h2>{table(geologyFields,'result-geology')}</section><div className="information-pair"><section className="card information-card"><h2><ClipboardList size={20}/>{t("构造成果数据")}</h2>{table(structureFields)}</section><section className="card information-card"><h2><ClipboardList size={20}/>{t("测井数据")}</h2>{table(wellFields)}</section></div><section className="card information-card"><h2><ClipboardList size={20}/>{t("备注")}</h2>{editing?<textarea className="project-note-editor" aria-label={t("备注")} value={info.note} onChange={e=>onChange('note',e.target.value)}/>:<p className="project-note">{value(info.note)}</p>}</section>{editing&&<footer className="information-edit-actions"><span role="status">{t(dirty?"有未保存的修改":"尚未修改")}</span><div><button className="button" onClick={onCancel}>{t("取消")}</button><button className="button primary" onClick={onSave}>{t("保存")}</button></div></footer>}</>;
 }
 function OverviewContent({api,info,project,files,directories,onDirectory}:{api:AppApi;info:ResultInfo;project:Project;files:ResultFile[];directories:ResultDirectory[];onDirectory:(name:string)=>void}){
     const {t}=useTranslation();
@@ -127,6 +132,13 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
     }, [dirty, api.registerNavigationGuard]);
     const visibleLayoutBeforeHide=useRef(false);
     const [formError, setFormError] = useState('');
+    const [importing, setImporting] = useState(false);
+    const importVersion = useRef(0);
+    useLayoutEffect(() => {
+        setImporting(false);
+        // An import that finishes after closing, switching projects or changing roles must not save.
+        return () => { importVersion.current += 1; };
+    }, [dialog, id, state.role]);
     const [fieldErrors, setFieldErrors] = useState<InfoErrors>({});
     const errorFocus = useRef<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -277,11 +289,30 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
         dirtyRef.current = false;
         proceed?.();
     };
-    const importFile = (file?: File) => { if (!file)
-        return; if (!/\.xlsx?$/i.test(file.name)) {
-        setFormError('请选择 Excel 文件（.xls 或 .xlsx）');
-        return;
-    } saveInfo(importProjectInformation(info)); api.notify(t('Excel 文件已选择，演示信息已自动回填')); };
+    const importFile = async (file?: File) => {
+        if (!file) return;
+        const version = ++importVersion.current;
+        setFormError('');
+        setImporting(true);
+        try {
+            const { readProjectInfoWorkbook } = await import('../services/projectInfoImport');
+            const patch = await readProjectInfoWorkbook(file, projectInfoFields, key => {
+                const choices = infoChoices(key);
+                return choices && [...choices, ...(info[key] ? [info[key]] : [])];
+            }, t);
+            if (version !== importVersion.current) return;
+            const next = { ...info, ...patch };
+            const errors = validateInfo(next);
+            const field = projectInfoFields.find(([key]) => errors[key]);
+            if (field) throw new Error(t('{field}：{reason}', { field: t(field[1]), reason: t(errors[field[0]]) }));
+            saveInfo(next);
+            api.notify(t('项目信息已导入'));
+        } catch (error) {
+            if (version === importVersion.current) setFormError(error instanceof Error ? error.message : t('无法读取 Excel 文件，请检查文件格式及是否加密。'));
+        } finally {
+            if (version === importVersion.current) setImporting(false);
+        }
+    };
     const directoryCounts = new Map<string, number>();
     fileRows.forEach(file => directoryCounts.set(file.directory, (directoryCounts.get(file.directory) || 0) + 1));
     const currentFiles = fileRows.filter(f => f.directory === directory);
@@ -384,10 +415,11 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
                  <div className="files-actions file-upload-dropdown">
                      <button className="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                          <FileUp size={18} aria-hidden="true"/>{t('上传成果')}
+                         <ChevronDown className="file-upload-chevron" size={15} aria-hidden="true"/>
                      </button>
                      {menuOpen && <div className="file-upload-menu">
                          <button onClick={() => openDialog('local')}><Upload size={17}/>{t('本地上传')}</button>
-                         <button onClick={() => openDialog('remote')}><Folder size={17}/>{t('远程上传')}</button>
+                         <button onClick={() => openDialog('remote')}><CloudUpload size={17} aria-hidden="true"/>{t('远程上传')}</button>
                      </div>}
                  </div>
                  {selectedFiles.length > 0 && <div className="file-batch-actions">
@@ -410,9 +442,21 @@ function ResultsWorkspace({api,previewNoAccess}:{api:AppApi;previewNoAccess:bool
  {previewNoAccess&&<ResultsAccessEmptyState/>}
  {pendingChange && <Modal title={t('未保存的修改')} onClose={() => setPendingChange(null)} footer={<><button className="button" onClick={() => setPendingChange(null)}>{t('继续编辑')}</button><button className="button" onClick={() => continueChange(false)}>{t('放弃修改')}</button><button className="button primary" onClick={() => continueChange(true)}>{t('保存并继续')}</button></>}><p>{t('当前项目有未保存的修改，请选择如何继续。')}</p><p className="unsaved-project-name">{project.name}</p></Modal>}
  {dialog === 'project-upload' && <ProjectUploadDialog projectName={project.name} directories={directories} onClose={()=>setDialog(null)} onUpload={entries=>uploadEntries(entries,true)}/>}
- {dialog === 'import' && <Modal title={t("上传成果")} onClose={() => setDialog(null)} footer={<button className="button" onClick={() => setDialog(null)}>{t("取消")}</button>}><p>{t("选择 Excel 文件，自动导入当前项目的基本信息。")}</p><label className="result-file-picker"><Import size={30}/><strong>{t("选择 Excel 文件")}</strong><input type="file" accept=".xls,.xlsx" aria-label={t("选择Excel文件")} onChange={e => importFile(e.target.files?.[0])}/></label>{formError && <p className="form-error" role="alert">{t(formError)}</p>}</Modal>}
+ {dialog === 'import' && <Modal title="导入项目信息" onClose={() => setDialog(null)} footer={<button className="button" onClick={() => setDialog(null)}>{t('取消')}</button>}>
+   <p>{t('在 Excel 首张工作表按项目信息字段名填写：首行表头、次行数据，或每行填写一个字段名和对应值。')}</p>
+   <p>{t('支持 .xlsx、.xls 文件。空白单元格和只读地区会保留原值。')}</p>
+   <label className="result-file-picker"><Import size={30} aria-hidden="true"/><strong>{t('选择 Excel 文件')}</strong>
+     <input type="file" accept=".xlsx,.xls" aria-label={t('选择Excel文件')} disabled={importing} onChange={event => {
+       const file = event.currentTarget.files?.[0];
+       event.currentTarget.value = '';
+       void importFile(file);
+     }}/>
+   </label>
+   {importing && <p className="muted" role="status">{t('正在读取 Excel 文件…')}</p>}
+   {formError && <p className="form-error" role="alert">{formError}</p>}
+ </Modal>}
  {dialog === 'local' && <Modal title={t("本地上传")} onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button primary" disabled={!localFiles.length} onClick={uploadLocal}>{t("上传")}</button></>}><div className="upload-context"><p>{t("当前项目")}　<strong>{project.name}</strong></p><p>{t("成果目录")}　<strong>{directoryPath}</strong></p></div><label className="result-file-picker"><Upload size={30}/><strong>{t("选择本地文件上传至当前成果目录")}</strong><input type="file" multiple aria-label={t("选择本地文件")} onChange={e => setLocalFiles(Array.from(e.target.files || []))}/></label><h3>{t("待上传文件")}</h3><table className="upload-files"><thead><tr><th>{t("文件名")}</th><th>{t("大小")}</th><th>{t("状态")}</th></tr></thead><tbody>{localFiles.length ? localFiles.map((file,index)=><tr key={file.name+index}><td>{file.name}</td><td>{bytesLabel(file.size)}</td><td>{t("待上传")}</td></tr>) : <tr><td colSpan={3} className="muted">{t("尚未选择文件")}</td></tr>}</tbody></table></Modal>}
- {dialog === 'remote' && <Modal title={t("远程上传")} wide onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button primary" disabled={!remoteChosen.length} onClick={() => addFiles(REMOTE_FILES.filter(f => remoteChosen.includes(f.id)))}>{t("上传")}</button></>}><div className="upload-context"><p>{t("当前项目")}　<strong>{project.name}</strong></p><p>{t("成果目录")}　<strong>{directoryPath}</strong></p></div><div className="remote-source"><label className="field">{t("数据来源")}<select value={remoteSource} onChange={e => { setRemoteSource(e.target.value); setRemoteDirectory(''); setRemoteChosen([]); }}><option value="">{t("请选择远程挂载数据")}</option><option>57服务器-华北-解释项目</option><option>57服务器-处理中心-处理项目</option></select></label><button className="button" onClick={() => { setDialog(null); api.navigate({ page: 'baseline', section: 'disks' }); }}>{t("管理")}</button></div><div className="remote-panels"><section className="remote-directories"><header><h3>{t("目录")}</h3><small>{remoteSource ? 1 : 0} {t('个')}</small></header><input aria-label={t("搜索目录")} placeholder={t("搜索目录…")} value={directoryQuery} onChange={e => setDirectoryQuery(e.target.value)}/>{remoteSource && (!directoryQuery || ['测井数据',t('测井数据')].some(name=>name.toLowerCase().includes(directoryQuery.toLowerCase()))) ? <div className="remote-tree"><button onClick={() => setRemoteExpanded(!remoteExpanded)}>{remoteExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}<Folder size={17}/>{remoteSource.includes('华北') ? 'diyan_huabei' : 'chulizhongxin'}</button>{remoteExpanded && <button className={remoteDirectory ? 'active' : ''} onClick={() => { setRemoteDirectory('测井数据'); setRemoteChosen([]); }}><FolderOpen size={17}/>{t("测井数据")}</button>}</div> : <p className="remote-empty">{t("暂无目录")}</p>}</section><section className="remote-file-list"><header><h3>{t("文件列表")}</h3><small>{visibleRemote.length} {t('项')}</small><button className="icon-button" title={t("刷新文件列表")} aria-label={t("刷新文件列表")} onClick={() => api.notify(t('远程演示文件列表已刷新'))}><RefreshCw size={18}/></button></header><div className="remote-file-search"><input aria-label={t("搜索文件名")} placeholder={t("搜索文件名…")} value={remoteQuery} onChange={e => setRemoteQuery(e.target.value)}/><button className="button small" onClick={() => setRemoteChosen([])}>{t("取消选择")}</button></div><table className="upload-files"><thead><tr><th></th><th>{t("文件名")}</th><th>{t("大小")}</th><th>{t("修改时间")}</th></tr></thead><tbody>{visibleRemote.map(f => <tr key={f.id}><td><input type="checkbox" aria-label={t('选择远程{file}',{file:f.name})} checked={remoteChosen.includes(f.id)} onChange={e => setRemoteChosen(s => e.target.checked ? [...s, f.id] : s.filter(id => id !== f.id))}/></td><td>{f.name}</td><td>{f.size}</td><td>{f.uploaded}</td></tr>)}</tbody></table>{!visibleRemote.length && <p className="remote-empty">{t("暂无文件")}</p>}</section></div><section className="remote-selected"><header><h3>{t("已选文件")} <span>{remoteChosen.length}</span></h3><button className="link-button" onClick={() => setRemoteChosen([])}>{t("清空")}</button></header>{remoteChosen.length ? REMOTE_FILES.filter(f => remoteChosen.includes(f.id)).map(f => <span key={f.id}>{f.name}<button aria-label={t('取消{file}',{file:f.name})} onClick={() => setRemoteChosen(x => x.filter(id => id !== f.id))}><X size={14}/></button></span>) : <p className="muted">{t("尚未选择文件")}</p>}</section></Modal>}
+ {dialog === 'remote' && <Modal title={t("远程上传")} wide onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button primary" disabled={!remoteChosen.length} onClick={() => addFiles(REMOTE_FILES.filter(f => remoteChosen.includes(f.id)))}>{t("上传")}</button></>}><div className="upload-context"><p>{t("当前项目")}　<strong>{project.name}</strong></p><p>{t("成果目录")}　<strong>{directoryPath}</strong></p></div><div className="remote-source"><label className="field">{t("数据来源")}<SingleSelect value={remoteSource} onChange={e => { setRemoteSource(e.target.value); setRemoteDirectory(''); setRemoteChosen([]); }}><option value="">{t("请选择远程挂载数据")}</option><option>57服务器-华北-解释项目</option><option>57服务器-处理中心-处理项目</option></SingleSelect></label><button className="button" onClick={() => { setDialog(null); api.navigate({ page: 'baseline', section: 'disks' }); }}>{t("管理")}</button></div><div className="remote-panels"><section className="remote-directories"><header><h3>{t("目录")}</h3><small>{remoteSource ? 1 : 0} {t('个')}</small></header><input aria-label={t("搜索目录")} placeholder={t("搜索目录…")} value={directoryQuery} onChange={e => setDirectoryQuery(e.target.value)}/>{remoteSource && (!directoryQuery || ['测井数据',t('测井数据')].some(name=>name.toLowerCase().includes(directoryQuery.toLowerCase()))) ? <div className="remote-tree"><button onClick={() => setRemoteExpanded(!remoteExpanded)}>{remoteExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}<Folder size={17}/>{remoteSource.includes('华北') ? 'diyan_huabei' : 'chulizhongxin'}</button>{remoteExpanded && <button className={remoteDirectory ? 'active' : ''} onClick={() => { setRemoteDirectory('测井数据'); setRemoteChosen([]); }}><FolderOpen size={17}/>{t("测井数据")}</button>}</div> : <p className="remote-empty">{t("暂无目录")}</p>}</section><section className="remote-file-list"><header><h3>{t("文件列表")}</h3><small>{visibleRemote.length} {t('项')}</small><button className="icon-button" title={t("刷新文件列表")} aria-label={t("刷新文件列表")} onClick={() => api.notify(t('远程演示文件列表已刷新'))}><RefreshCw size={18}/></button></header><div className="remote-file-search"><input aria-label={t("搜索文件名")} placeholder={t("搜索文件名…")} value={remoteQuery} onChange={e => setRemoteQuery(e.target.value)}/><button className="button small" onClick={() => setRemoteChosen([])}>{t("取消选择")}</button></div><table className="upload-files"><thead><tr><th></th><th>{t("文件名")}</th><th>{t("大小")}</th><th>{t("修改时间")}</th></tr></thead><tbody>{visibleRemote.map(f => <tr key={f.id}><td><input type="checkbox" aria-label={t('选择远程{file}',{file:f.name})} checked={remoteChosen.includes(f.id)} onChange={e => setRemoteChosen(s => e.target.checked ? [...s, f.id] : s.filter(id => id !== f.id))}/></td><td>{f.name}</td><td>{f.size}</td><td>{f.uploaded}</td></tr>)}</tbody></table>{!visibleRemote.length && <p className="remote-empty">{t("暂无文件")}</p>}</section></div><section className="remote-selected"><header><h3>{t("已选文件")} <span>{remoteChosen.length}</span></h3><button className="link-button" onClick={() => setRemoteChosen([])}>{t("清空")}</button></header>{remoteChosen.length ? REMOTE_FILES.filter(f => remoteChosen.includes(f.id)).map(f => <span key={f.id}>{f.name}<button aria-label={t('取消{file}',{file:f.name})} onClick={() => setRemoteChosen(x => x.filter(id => id !== f.id))}><X size={14}/></button></span>) : <p className="muted">{t("尚未选择文件")}</p>}</section></Modal>}
  {dialog === 'delete' && <Modal title={t("删除文件")} onClose={() => setDialog(null)} footer={<><button className="button" onClick={() => setDialog(null)}>{t("取消")}</button><button className="button danger-primary" onClick={deleteFiles}>{t("确认删除")}</button></>}><p>{t('确定删除')}{deleteIds.length === 1 ? '“' + fileRows.find(f => f.id === deleteIds[0])?.name + '”' : deleteIds.length + ' '+t('个文件')}{t('吗？')}</p></Modal>}
  {dialog === 'fields' && activeFile && <Modal title={t('扩展字段')} onClose={() => setDialog(null)} footer={<button className="button" onClick={() => setDialog(null)}>{t("关闭")}</button>}><InfoTable data={{ name: activeFile.name, format: activeFile.format, size: activeFile.size, date: activeFile.uploaded, user: activeFile.user }} fields={[['name', '文件名'], ['format', '格式'], ['size', '大小'], ['date', '上传时间'], ['user', '上传人']]}/>{dialog === 'fields' && <div className="empty-state result-extra-fields"><p>{t("暂无扩展字段")}</p></div>}</Modal>}
  </>;

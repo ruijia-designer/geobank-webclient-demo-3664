@@ -1,3 +1,4 @@
+import { SingleSelect } from './SingleSelect';
 import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ChevronDown, ChevronRight, FileText, Pencil } from 'lucide-react';
@@ -228,12 +229,12 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
         <header>
             <h2>{t('项目成果类型')}</h2>
             <div>
-                <select aria-label={t('数据类别')} value={categoryId} onChange={event => {
+                <SingleSelect aria-label={t('数据类别')} value={categoryId} onChange={event => {
                     setCategoryId(event.target.value as ResultTypeCategoryId);
                     onCategoryChange();
                 }}>
                     {categories.map(entry => <option key={entry.id} value={entry.id}>{t(entry.name)}</option>)}
-                </select>
+                </SingleSelect>
             </div>
         </header>
         <div className="table-wrap result-types-scroll" role="region" aria-label={t('成果类型列表')} tabIndex={0}
@@ -262,8 +263,7 @@ export function ResultTypesPanel({ query, queryVersion, onCategoryChange, onSave
                                         <span className="result-types-text" data-field="groupName" title={group.name || undefined}>{group.name || t('分类名称')}</span>
                                     </div>
                                 </td>
-                                <td><span className="result-types-text" data-field="id" title={group.id}>{group.id}</span></td>
-                                <td colSpan={6}/>
+                                <td colSpan={tableFields.length - 1}/>
                                 {renderActions(group)}
                             </tr>
                             {isExpanded && group.items.map(item => <tr key={item.id} {...reorder.rowProps(item.id)} data-item-id={item.id}>

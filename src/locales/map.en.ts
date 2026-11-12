@@ -28,8 +28,6 @@ export const mapEnglish: Record<string, string> = {
   '底图类型': 'Basemap types',
   '地图': 'Map',
   '影像': 'Imagery',
-  '地理示意': 'Geographic schematic',
-  '设计参考影像': 'Design reference image',
   '固定演示坐标，非实时定位数据': 'Fixed demonstration coordinates, not a live location',
   '圆形定位图标': 'Circular location icon',
 };

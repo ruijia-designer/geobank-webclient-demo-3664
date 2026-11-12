@@ -22,3 +22,9 @@
 .project-type-color{display:flex;align-items:center;gap:10px;min-height:32px}
 .project-type-color>div{display:flex}
 .project-type-color-code{font-size:13px;font-variant-numeric:tabular-nums}
+@media (hover: hover) {
+    .baseline-sidebar nav button:not(.active):hover {
+        background: #f0f6f8;
+        color: var(--ink);
+    }
+}

@@ -20,7 +20,6 @@
 .baseline-list[data-baseline="naming"] .result-types-table td{vertical-align:middle;padding:var(--baseline-cell-block-padding) 14px}
 .result-types-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:32px;min-width:0;line-height:16px;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
 .result-types-empty{color:#8497a4}
-.baseline-list[data-baseline="naming"] .result-types-group td{background:#eff7fb}
 .result-types-group-name{display:flex;align-items:center;gap:2px;min-height:32px}
 .result-types-group-name>.icon-button{width:28px;height:24px;flex:0 0 28px;color:#0a6f9e}
 .result-types-group-name .result-types-text{flex:1;font-weight:600}
@@ -28,7 +27,6 @@
 .baseline-list[data-baseline="naming"] .result-types-scroll>.empty-state{position:sticky;left:0}
 .baseline-list[data-baseline="naming"] .result-types-actions{position:sticky;right:0;z-index:1;box-shadow:-4px 0 6px #183a520a}
 .baseline-list[data-baseline="naming"] td:is(:first-child,.result-types-actions){background:inherit;vertical-align:middle}
-.baseline-list[data-baseline="naming"] tr.result-types-group>td:is(:first-child,.result-types-actions){background:#eff7fb}
 .result-types-dialog .field>input{height:42px;padding:0 12px}
 .result-types-dialog .field:last-child{margin-bottom:0}
 .applicable-project-picker{position:relative;min-width:0}

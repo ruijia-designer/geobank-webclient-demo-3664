@@ -9,6 +9,11 @@ import { projectTypeColor } from '../services/projectClassification';
 import { useTranslation } from '../i18n';
 import './map.css';
 
+const basemapImages: Record<Basemap, string> = {
+  map: './assets/schematic-map.svg',
+  imagery: './assets/satellite-map.webp',
+};
+
 export interface MapViewProps {
   projects: Project[]; selectedId: string | null; zoom: number; collapsed: boolean;
   colorMode?: 'type' | 'year'; kind?: 'project' | 'data'; onToggle: () => void;
@@ -86,7 +91,7 @@ export function MapView({ projects, selectedId, focusId, zoom, collapsed, colorM
 
   return <section ref={containerRef} className="map-view" aria-label={t('项目地图')} data-basemap={basemap}>
     <div className="map-scene" style={{ width: geometry.width, height: geometry.height, left: geometry.left, top: geometry.top, transform: mapWorldTransform(geometry, zoom, focused) }}>
-      <img src={basemap === 'imagery' ? './assets/satellite-map.webp' : './assets/schematic-map.svg'} alt={t(basemap === 'imagery' ? '项目区域卫星影像' : '地理示意地图（非测绘数据）')} draggable={false}/>
+      <img src={basemapImages[basemap]} alt={t(basemap === 'imagery' ? '项目区域卫星影像' : '地理示意地图（非测绘数据）')} draggable={false}/>
       {visibleProjects.map(p => {
         const { x, y } = projectMapPoint(p);
         return <span key={p.id} className="region-polygon" aria-hidden="true" style={{ left: x * 100 + '%', top: y * 100 + '%', color: pointColor(p) }}/>;
@@ -107,7 +112,18 @@ export function MapView({ projects, selectedId, focusId, zoom, collapsed, colorM
     </div>
     <div className="map-zoom"><button className="map-round" aria-label={t('放大地图')} onClick={() => onZoom(Math.min(4, zoom + .4))}><Plus/></button><button className="map-round" aria-label={t('缩小地图')} onClick={() => onZoom(Math.max(1, zoom - .4))}><Minus/></button>
       <div className="basemap-control" ref={menuRef}><button ref={basemapButton} className="map-round" title={t('切换底图')} aria-label={t('切换底图')} aria-haspopup="menu" aria-controls={menuId} aria-expanded={basemapOpen} onClick={() => setBasemapOpen(v => !v)}><Globe/></button>
-        {basemapOpen && <div id={menuId} className="basemap-options" role="menu" aria-label={t('底图类型')}><strong>{t('切换底图')}</strong><button role="menuitemradio" aria-checked={basemap === 'map'} onClick={() => chooseBasemap('map')}><span className="basemap-thumb schematic"/><span className="basemap-label"><span>{t('地图')}</span><small>{t('地理示意')}</small></span>{basemap === 'map' && <Check size={16}/>}</button><button role="menuitemradio" aria-checked={basemap === 'imagery'} onClick={() => chooseBasemap('imagery')}><span className="basemap-thumb imagery"/><span className="basemap-label"><span>{t('影像')}</span><small>{t('设计参考影像')}</small></span>{basemap === 'imagery' && <Check size={16}/>}</button></div>}
+        {basemapOpen && (
+          <div id={menuId} className="basemap-options" role="menu" aria-label={t('底图类型')}>
+            <strong>{t('切换底图')}</strong>
+            {(['map', 'imagery'] as const).map(option => (
+              <button key={option} role="menuitemradio" aria-checked={basemap === option} onClick={() => chooseBasemap(option)}>
+                <img className="basemap-thumb" src={basemapImages[option]} alt="" width={47} height={37} draggable={false}/>
+                <span className="basemap-label">{t(option === 'map' ? '地图' : '影像')}</span>
+                {basemap === option && <Check size={16} aria-hidden="true"/>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
     <div className="coordinates" title={t('固定演示坐标，非实时定位数据')}><LocateFixed size={20} aria-label={t('圆形定位图标')}/><span className="coordinates-divider" aria-hidden="true"/><span className="coordinates-value">136.23° E, 39.89° N, 10.81</span></div>

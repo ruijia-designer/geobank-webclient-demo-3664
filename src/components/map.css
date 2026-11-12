@@ -29,6 +29,9 @@
 .layer-row.indent{padding-left:24px;color:var(--muted)}
 .layer-row label{display:flex;flex:1;align-items:center;gap:11px;font-size:14px;min-width:0;cursor:pointer}
 .layer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (hover: hover) {
+  .result-gis .layer-row:hover .layer-name { color: #041e42; }
+}
 .layer-row input,.layer-color{flex-shrink:0}
 .layer-row input{width:16px;height:16px;accent-color:#0a6f9e;margin:0}
 .layer-color{width:4px;height:12px;border-radius:2px}
@@ -55,15 +58,62 @@ button.layer-disclosure:focus-visible{outline:2px solid #0a6f9e;outline-offset:1
 .rotating svg{animation:refresh .45s ease-out}
 @keyframes refresh{to{transform:rotate(360deg)}}
 .basemap-control{position:relative}
-.basemap-options{position:absolute;right:56px;bottom:0;min-width:210px;background:white;border:1px solid #d8e3e9;border-radius:8px;box-shadow:0 5px 22px #183a5233;overflow:hidden;padding:8px;z-index:8}
-.basemap-options>strong{display:block;color:var(--muted);font-size:12px;font-weight:500;padding:5px 8px 9px}
-.basemap-options>button{display:flex;align-items:center;gap:10px;width:100%;min-height:57px;padding:7px;border:0;border-radius:5px;background:white;color:#435e70;text-align:left;font-size:14px}
-.basemap-options>button:hover,.basemap-options>button[aria-checked=true]{background:#eaf5f9}
-.basemap-label{flex:1;white-space:nowrap}
-.basemap-label>span{display:block}
-.basemap-options small{display:block;color:var(--muted);font-size:var(--font-caption);margin-top:4px}
-.basemap-thumb{width:47px;height:37px;background-position:center;background-size:cover;border:1px solid #d8e3e9;border-radius:4px;flex-shrink:0}
-.basemap-thumb.imagery{background-image:url('/assets/satellite-map.webp')}
-.basemap-thumb.schematic{background-image:url('/assets/schematic-map.svg')}
+.basemap-options {
+  position: absolute;
+  right: 56px;
+  bottom: 0;
+  z-index: 8;
+  width: 190px;
+  padding: 8px;
+  border: 1px solid #d8e3e9;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 5px 22px #183a5233;
+}
+.basemap-options > strong {
+  display: block;
+  padding: 5px 8px 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.basemap-options > button {
+  display: grid;
+  grid-template-columns: 47px 1fr 16px;
+  align-content: center;
+  align-items: end;
+  gap: 10px;
+  width: 100%;
+  min-height: 57px;
+  padding: 7px;
+  border: 0;
+  border-radius: 5px;
+  background: white;
+  color: #435e70;
+  font-size: 14px;
+  text-align: left;
+}
+.basemap-options > button + button { margin-top: 2px; }
+.basemap-thumb {
+  display: block;
+  width: 47px;
+  height: 37px;
+  object-fit: cover;
+  border: 1px solid #d8e3e9;
+  border-radius: 4px;
+}
+.basemap-label { line-height: 1.25; }
+.basemap-options > button > svg { align-self: center; }
+.basemap-options > button[aria-checked="true"] {
+  background: #c6e2f0;
+  color: #095d85;
+}
+.basemap-options > button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+@media (hover: hover) {
+  .basemap-options > button[aria-checked="false"]:hover { background: #eaf5f9; }
+}
 @media(max-width:1450px){.map-layer-controls{width:305px;right:18px}.layer-pill,.map-layer-panel header .layer-reset{padding:0 16px}}
 @media(prefers-reduced-motion:reduce){.map-scene,.map-point,.layer-pill,.map-zoom .map-round,.project-layer-panel .layer-row{transition:none}.rotating svg{animation:none}}

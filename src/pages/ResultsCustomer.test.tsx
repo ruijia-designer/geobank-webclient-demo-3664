@@ -1,8 +1,9 @@
 import {useState} from 'react';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
-import {render,screen,within} from '@testing-library/react';
+import {render,screen,within,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ResultsPage from './ResultsPage';
+import {projectInfoWorkbook} from '../test/projectInfoWorkbook';
 import {LanguageProvider,useTranslation} from '../i18n';
 import {CURRENT_PROJECT,PROJECTS,initialState} from '../services/demo';
 import type {AppApi,AppState,Project,Route} from '../types';
@@ -39,9 +40,11 @@ describe('成果页本轮客户流程',()=>{
   await user.selectOptions(screen.getByRole('combobox',{name:'工区'}),'大安区块');
   await user.click(screen.getByRole('button',{name:'保存'}));
   expect(resultInfoCache[project.id]).toMatchObject({basin:project.basin,areaName:'大安区块'});
-  await user.click(screen.getByRole('button',{name:'上传成果'}));
-  await user.upload(screen.getByLabelText('选择Excel文件'),new File(['demo'],'demo.xlsx'));
-  expect(resultInfoCache[project.id].basin).toBe(project.basin);
+  await user.click(screen.getByRole('button',{name:'导入'}));
+  const file=projectInfoWorkbook([['项目名称',null],['地区','另一盆地'],['位置','纵表实测'],['井数',0]],'xls');
+  await user.upload(screen.getByLabelText('选择Excel文件'),file);
+  await waitFor(()=>expect(resultInfoCache[project.id].location).toBe('纵表实测'));
+  expect(resultInfoCache[project.id]).toMatchObject({basin:project.basin,name:project.name,areaName:'大安区块',wellCount:'0'});
   expect(lastApi.state.projects.find(row=>row.id===project.id)?.basin).toBe(project.basin);
  });
  it('目录切换清空选择并重置分页，避免在另一个目录删除上次勾选文件',async()=>{

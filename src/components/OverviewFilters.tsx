@@ -1,3 +1,4 @@
+import { SingleSelect } from './SingleSelect';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Check, ChevronDown, Search, X } from 'lucide-react';
@@ -117,9 +118,9 @@ export function OverviewFilters({ value, basins, role, onApply, onReset, onClose
       <h2>{t('项目筛选条件')}</h2>
       <button type="button" className="button filter-close" onClick={onClose}>{t('关闭筛选')}<X size={16} aria-hidden="true"/></button>
     </header>
-    <label className="field">{t('归档类型')}<select value={draft.archived?.[0] || ''} onChange={event => set('archived', event.target.value ? [event.target.value] : [])}>
+    <label className="field">{t('归档类型')}<SingleSelect value={draft.archived?.[0] || ''} onChange={event => set('archived', event.target.value ? [event.target.value] : [])}>
       <option value="">{t('全部')}</option><option value="true">{t('已归档')}</option>{role === 'admin' && <option value="false">{t('未归档')}</option>}
-    </select></label>
+    </SingleSelect></label>
     <fieldset><legend>{t('年度范围')}<span id={hintId} className="year-range-hint">({t('支持只输入一个年份进行筛选')})</span></legend><div className="overview-year-range">
       <input ref={fromInput} aria-label={t('起始年度')} aria-describedby={error ? errorId : hintId} aria-invalid={!!error} inputMode="numeric" maxLength={4} placeholder={t('起始年度')} value={draft.yearFrom?.[0] || ''} onChange={event => set('yearFrom', event.target.value ? [event.target.value] : [])}/>
       <span>{t('至')}</span>

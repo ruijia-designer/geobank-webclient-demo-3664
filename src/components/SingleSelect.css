@@ -1,0 +1,35 @@
+.single-select-options {
+  position: fixed;
+  z-index: 110;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 20px #183a5226;
+  color: var(--ink);
+  font-size: var(--font-body);
+  text-align: start;
+}
+.single-select-options [role="option"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.single-select-options [role="option"] > span { min-width: 0; }
+.single-select-options svg { flex-shrink: 0; }
+.single-select-options [aria-selected="true"] { background: #eaf5f9; color: var(--blue); }
+.single-select-options [aria-disabled="true"] { color: var(--muted); opacity: .55; cursor: default; }
+.single-select-options .single-select-keyboard-option { outline: 2px solid var(--blue); outline-offset: -2px; }
+.single-select-group-title { padding: 8px 8px 4px; color: var(--muted); font-size: var(--font-caption); }
+@media (hover: hover) {
+  .single-select-options [role="option"]:not([aria-selected="true"], [aria-disabled="true"]):hover { background: #f0f8fb; }
+}
